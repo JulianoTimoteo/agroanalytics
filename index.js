@@ -1,4 +1,4 @@
-// index.js (VERSÃO FINAL CORRIGIDA PARA ONEDRIVE RAW LINKS)
+// index.js (VERSÃO FINAL COM FORÇAMENTO DE PROTOCOLO E REDIRECIONAMENTO)
 export default {
   async fetch(request) {
     const url = new URL(request.url).searchParams.get("url");
@@ -8,17 +8,18 @@ export default {
     }
 
     try {
-      // Força o Cloudflare a usar HTTP/1.1, resolvendo o erro QUIC/SharePoint
+      // 1. Forçar HTTP/1.1 (resolve o erro QUIC) E forçar seguir redirecionamentos (SharePoint faz muito isso)
       const r = await fetch(url, {
         method: "GET",
+        redirect: "follow", // <-- ESSENCIAL para links de compartilhamento
         headers: {
-          "User-Agent": "Mozilla/5.0", // Ajuda o SharePoint a se comportar como se fosse um navegador mais antigo
+          "User-Agent": "Mozilla/5.0",
           "Cache-Control": "no-cache"
         },
-        cf: { httpProtocol: "http1" } // CHAVE DA SOLUÇÃO
+        cf: { httpProtocol: "http1" } // CHAVE DA SOLUÇÃO QUIC
       });
 
-      // Ler o body como arrayBuffer (Excel precisa disso)
+      // 2. Ler o body como arrayBuffer
       const buf = await r.arrayBuffer();
 
       return new Response(buf, {
