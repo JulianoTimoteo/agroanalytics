@@ -333,9 +333,29 @@ class DataAnalyzer {
             data: [],
             potentialRawData: potentialData,
             requiredHourlyRates: [],
-            metaData: null
+            metaData: null,
+            lastExitTimestamp: null // NOVO: Campo adicionado
         };
     }
+
+    /**
+     * Encontra o timestamp de saída mais recente (o último registro).
+     */
+    _findLastExitTimestamp(data) {
+        let lastTimestamp = null;
+
+        data.forEach(row => {
+            // Apenas linhas que não são de agregação e que possuem um timestamp Date válido.
+            if (this.isAggregationRow(row) || !row.timestamp || !(row.timestamp instanceof Date)) return;
+            
+            if (!lastTimestamp || row.timestamp.getTime() > lastTimestamp.getTime()) {
+                lastTimestamp = row.timestamp;
+            }
+        });
+
+        return lastTimestamp;
+    }
+
 
     /**
      * Função Principal de Análise - ORQUESTRADOR
@@ -351,6 +371,9 @@ class DataAnalyzer {
         }
 
         console.log(`[ANALYZER] Iniciando análise com ${data.length} registros`);
+
+        // NOVO: Busca o último timestamp
+        const lastExitTimestamp = this._findLastExitTimestamp(data); 
 
         // --- DELEGAÇÃO PARA o MÓDULO DE KPIS ---
         const contagemViagens = this.kpisModule.countUniqueTrips(data);
@@ -430,6 +453,8 @@ class DataAnalyzer {
             equipmentDistribution,
             projecaoMoagem,
             requiredHourlyRates,
+            
+            lastExitTimestamp: lastExitTimestamp, // NOVO: Adicionado ao resultado final
 
             analyzeFrontHourly: (d) => this.timeModule.analyzeFrontHourlyComplete(d),
             data: filteredData,

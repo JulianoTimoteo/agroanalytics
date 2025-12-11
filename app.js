@@ -718,6 +718,12 @@ class AgriculturalDashboard {
         this.currentSlideIndex = 0;
         this.stopCarousel(); 
         
+        // NOVO: Limpa o display da última pesagem
+        const lastWeighingText = document.getElementById('lastWeighingText');
+        if (lastWeighingText) {
+             lastWeighingText.textContent = 'Última pesagem: Aguardando dados.';
+        }
+        
         // CORRIGIDO: Zera todos os KPIs no header (chamando o visualizer com dados zerados)
         if (this.visualizer && this.visualizer.kpisRenderer) {
             this.visualizer.kpisRenderer.updateHeaderStats({

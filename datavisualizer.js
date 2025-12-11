@@ -63,6 +63,9 @@ class DataVisualizer {
         
         const theme = this.getThemeConfig();
         
+        // NOVO: Atualiza o display da última pesagem
+        this._updateLastWeighingDisplay(analysis.lastExitTimestamp);
+        
         // --- DELEGAÇÃO ---
         this.kpisRenderer.updateHeaderStats(analysis);
         this.kpisRenderer.updateTopLists(analysis);
@@ -86,6 +89,23 @@ class DataVisualizer {
         
         this.updateMoagemTab(analysis, theme);
     }
+    
+    /**
+     * @description Atualiza o display discreto da última pesagem de saída.
+     */
+    _updateLastWeighingDisplay(timestamp) {
+        const displayEl = document.getElementById('lastWeighingText');
+        if (!displayEl) return;
+        
+        if (timestamp instanceof Date && !isNaN(timestamp.getTime())) {
+            const dateStr = timestamp.toLocaleDateString('pt-BR');
+            const timeStr = timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            displayEl.textContent = `Última pesagem: ${dateStr} às ${timeStr}`;
+        } else {
+            displayEl.textContent = 'Última pesagem: N/A';
+        }
+    }
+
 
     // O método de Moagem é complexo e usa vários submódulos, mantido aqui para orquestração
     updateMoagemTab(analysis, config) {

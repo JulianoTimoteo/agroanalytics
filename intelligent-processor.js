@@ -535,7 +535,7 @@ class IntelligentProcessor {
             'caminhoesIda': 'Caminhões  Ida',
             'caminhõesCampo': 'Caminhões  Campo',
             'caminhoesVolta': 'Caminhões  Volta',
-            'caminhoesDescarga': 'Caminhões  Descarga',
+            'caminhõesDescarga': 'Caminhões  Descarga',
             'caminhoesParados': 'Caminhões  PARADO',
             'filaExterna': 'Caminhões Fila externa',
             'carretasCarregadas': 'CARRETAS CARREGADAS'
