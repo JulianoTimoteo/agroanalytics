@@ -144,8 +144,36 @@ class DataValidator {
                 const centavos = Math.round(peso * 100);
                 if (centavos % 2 !== 0) {
                     
-                    // APLICAÇÃO DO FALLBACK: Se Frota/Viagem estiverem nulas, busca nas linhas anteriores.
-                    const { frota: frotaId, viagem: viagemId } = this._getFallbackMetadata(data, row);
+                    // CORREÇÃO CRÍTICA: Usa a viagem ORIGINAL da linha, não o ID gerado
+                    let viagemId = row.viagem || row.idViagem;
+                    let frotaId = row.frota;
+                    
+                    // Se viagem ou frota estiverem vazias, busca fallback
+                    if (!viagemId || !frotaId || viagemId === 'N/A' || frotaId === 'N/A') {
+                        const fallback = this._getFallbackMetadata(data, row);
+                        if (!viagemId || viagemId === 'N/A') viagemId = fallback.viagem;
+                        if (!frotaId || frotaId === 'N/A') frotaId = fallback.frota;
+                    }
+                    
+                    // Remove IDs gerados automaticamente se a viagem original existir
+                    if (String(viagemId).includes('NOFROTA') || String(viagemId).length > 15) {
+                        // Busca a viagem real nas linhas anteriores da mesma liberação
+                        const liberacao = row.liberacao;
+                        if (liberacao) {
+                            for (let i = data.indexOf(row) - 1; i >= 0; i--) {
+                                const prevRow = data[i];
+                                if (prevRow.liberacao === liberacao && 
+                                    prevRow.viagem && 
+                                    !String(prevRow.viagem).includes('NOFROTA') &&
+                                    String(prevRow.viagem).length < 15) {
+                                    viagemId = prevRow.viagem;
+                                    break;
+                                }
+                                // Para se mudar de liberação
+                                if (prevRow.liberacao && prevRow.liberacao !== liberacao) break;
+                            }
+                        }
+                    }
                     
                     anomalies.push({
                         type: 'PESO_IMPAR',
@@ -172,10 +200,38 @@ class DataValidator {
             const pesoTara = row.pesoTara;
             const pesoLiquido = row.peso; 
             
-            // Usa o Fallback para garantir Frota/Viagem (necessário se o dado de origem estiver incompleto)
-            const { frota: frotaId, viagem: viagemId } = this._getFallbackMetadata(data, row);
+            if (isNaN(pesoLiquido) || pesoLiquido <= 0 || this.isAggregationRow(row)) return;
             
-            if (!viagemId || isNaN(pesoLiquido) || pesoLiquido <= 0 || this.isAggregationRow(row)) return;
+            // Obtém viagem original (prioriza row.viagem)
+            let viagemId = row.viagem || row.idViagem;
+            let frotaId = row.frota;
+            
+            // Se viagem ou frota estiverem vazias, busca fallback
+            if (!viagemId || !frotaId || viagemId === 'N/A' || frotaId === 'N/A') {
+                const fallback = this._getFallbackMetadata(data, row);
+                if (!viagemId || viagemId === 'N/A') viagemId = fallback.viagem;
+                if (!frotaId || frotaId === 'N/A') frotaId = fallback.frota;
+            }
+            
+            // Remove IDs gerados se possível
+            if (String(viagemId).includes('NOFROTA') || String(viagemId).length > 15) {
+                const liberacao = row.liberacao;
+                if (liberacao) {
+                    for (let i = data.indexOf(row) - 1; i >= 0; i--) {
+                        const prevRow = data[i];
+                        if (prevRow.liberacao === liberacao && 
+                            prevRow.viagem && 
+                            !String(prevRow.viagem).includes('NOFROTA') &&
+                            String(prevRow.viagem).length < 15) {
+                            viagemId = prevRow.viagem;
+                            break;
+                        }
+                        if (prevRow.liberacao && prevRow.liberacao !== liberacao) break;
+                    }
+                }
+            }
+            
+            if (!viagemId) return;
             
             if (!isNaN(pesoBruto) && !isNaN(pesoTara)) {
                 const round2 = (num) => Math.round(num * 100) / 100;
@@ -187,10 +243,11 @@ class DataValidator {
                         anomalies.push({
                             type: 'CALCULO_PESO',
                             severity: 'critical',
-                            title: `Cálculo de Peso Incorreto (${frotaId})`,
-                            message: `Viagem ${viagemId}: Reportado ${Utils.formatNumber(round2(pesoLiquido))} t vs Calculado ${Utils.formatNumber(round2(pesoCalculado))} t.`,
-                            detail: `Diferença: ${Utils.formatNumber(diferenca, 2)} t`, 
-                            viagem: viagemId
+                            title: `Cálculo de Peso Incorreto`,
+                            message: `Viagem ${viagemId} (Frota ${frotaId}): Reportado ${Utils.formatNumber(round2(pesoLiquido))} t vs Calculado ${Utils.formatNumber(round2(pesoCalculado))} t.`,
+                            detail: `Diferença: ${Utils.formatNumber(diferenca, 2)} t | Verifique a pesagem na balança.`, 
+                            viagem: viagemId,
+                            frota: frotaId
                         });
                     }
                 }
@@ -278,14 +335,40 @@ class DataValidator {
         const anomalies = [];
         
         data.forEach(row => {
-            // Usa o Fallback para garantir Viagem (necessário se o dado de origem estiver incompleto)
-            const { viagem: viagemId } = this._getFallbackMetadata(data, row); 
-
-            if (this.isAggregationRow(row) || !row.frente || !viagemId) return; 
+            if (this.isAggregationRow(row) || !row.frente) return; 
             
             const frente = (row.frente || '').toString().trim();
             const peso = parseFloat(row.peso) || 0;
             if (!frente || peso === 0) return;
+
+            // Obtém a viagem original (prioriza row.viagem)
+            let viagemId = row.viagem || row.idViagem;
+            
+            // Se for ID gerado, busca a viagem real
+            if (!viagemId || viagemId === 'N/A' || String(viagemId).includes('NOFROTA') || String(viagemId).length > 15) {
+                const fallback = this._getFallbackMetadata(data, row);
+                viagemId = fallback.viagem;
+                
+                // Busca adicional se ainda for ID gerado
+                if (String(viagemId).includes('NOFROTA') || String(viagemId).length > 15) {
+                    const liberacao = row.liberacao;
+                    if (liberacao) {
+                        for (let i = data.indexOf(row) - 1; i >= 0; i--) {
+                            const prevRow = data[i];
+                            if (prevRow.liberacao === liberacao && 
+                                prevRow.viagem && 
+                                !String(prevRow.viagem).includes('NOFROTA') &&
+                                String(prevRow.viagem).length < 15) {
+                                viagemId = prevRow.viagem;
+                                break;
+                            }
+                            if (prevRow.liberacao && prevRow.liberacao !== liberacao) break;
+                        }
+                    }
+                }
+            }
+            
+            if (!viagemId || viagemId === 'N/A') return;
 
             const allEquipment = [];
             if (row.equipamento && !row.equipamento.toString().toUpperCase().includes('TOTAL')) allEquipment.push(row.equipamento);
@@ -301,22 +384,33 @@ class DataValidator {
             validHarvesters.forEach(harvester => {
                 const hStr = harvester.toString().trim();
                 if (!harvesterFrontMap.has(hStr)) {
-                    harvesterFrontMap.set(hStr, new Set());
+                    harvesterFrontMap.set(hStr, { frentes: new Set(), viagens: new Set() });
                 }
-                harvesterFrontMap.get(hStr).add(frente);
+                harvesterFrontMap.get(hStr).frentes.add(frente);
+                harvesterFrontMap.get(hStr).viagens.add(viagemId.toString());
             });
         });
         
-        harvesterFrontMap.forEach((frentes, harvester) => {
-            if (frentes.size > 1) {
+        harvesterFrontMap.forEach((data, harvester) => {
+            if (data.frentes.size > 1) {
+                const frentesList = Array.from(data.frentes).join(', ');
+                const viagensArray = Array.from(data.viagens);
+                const MAX_VIAGENS_DISPLAY = 5;
+                const viagensDisplay = viagensArray.slice(0, MAX_VIAGENS_DISPLAY).join(', ');
+                const additionalCount = viagensArray.length - MAX_VIAGENS_DISPLAY;
+                
+                let viagensText = `Viagens: ${viagensDisplay}`;
+                if (additionalCount > 0) viagensText += ` (+${additionalCount} outras)`;
+
                 anomalies.push({
                     type: 'COLHEDORA_CONFLITO_FRONTES',
                     severity: 'critical', 
                     title: 'Colhedora Usada em Múltiplas Frentes',
-                    message: `Colhedora ${harvester} está operando nas frentes: ${Array.from(frentes).join(', ')}.`,
-                    detail: `Verifique o planejamento e o registro de tempo/peso.`,
+                    message: `Colhedora ${harvester} está operando nas frentes: ${frentesList}.`,
+                    detail: `${viagensText} | Verifique o planejamento e o registro de tempo/peso.`,
                     colhedora: harvester, 
-                    frente: Array.from(frentes).join(', ')
+                    frente: frentesList,
+                    viagens: viagensDisplay
                 });
             }
         });
