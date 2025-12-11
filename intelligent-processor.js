@@ -33,7 +33,7 @@ class IntelligentProcessor {
                 'tipoProprietarioFa': ['TIPO PROPRIETARIO F A', 'TIPO PROPRIETARIO (F.A.)', 'TIPO PROPRIETARIO', 'PROPRIETARIO', 'TIPO PROPRIEDADE'], 
                 'qtdViagem': ['QTD VIAGEM', 'QUANTIDADE VIAGEM'],
                 'distancia': ['DIST MEDIA', 'DISTANCIA', 'KM', 'RAIO MEDIO'],
-                'status_frota': ['STATUS', 'FASE', 'FASE OPERACIONAL', 'STATUS CAMINHAO', 'SITUACAO ATUAL'] // Chave para mapeamento do status
+                'status_frota': ['STATUS', 'FASE', 'FASE OPERACIONAL', 'STATUS CAMINHAO', 'SITUACAO ATUAL'] 
             },
             'potential': {
                 'hora': ['HORA', 'HORA FIXA', 'HORA ESCALAR'],
@@ -93,7 +93,7 @@ class IntelligentProcessor {
     // --- FUNÇÃO CRÍTICA: LÊ ArrayBuffer do Worker OU File do upload manual ---
     async processFile(dataOrFile, fileName) { 
         if (dataOrFile instanceof ArrayBuffer) {
-            // Modo 1: Recebeu ArrayBuffer do Cloudflare Worker (leitura binária)
+            // Modo 1: Recebeu ArrayBuffer do Cloudflare Worker (Leitura Binária)
             const data = dataOrFile; 
             try {
                 const workbook = XLSX.read(data, { type: 'array' });
@@ -121,7 +121,7 @@ class IntelligentProcessor {
             }
             
         } else {
-            // Modo 2: Recebeu objeto File do upload manual (leitura local)
+            // Modo 2: Recebeu objeto File do upload manual (Leitura Local)
             const file = dataOrFile;
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -159,7 +159,7 @@ class IntelligentProcessor {
         }
     }
 
-    // Método que você não usa mais, mas que estava no seu código original
+    // Método de leitura de CSV (Mantido por compatibilidade, mas inutilizado pelo ArrayBuffer)
     async processCSV(csvText, fileName) {
         if (!csvText) return { type: 'UNKNOWN', fileName, data: [] };
 
@@ -282,7 +282,6 @@ class IntelligentProcessor {
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.analisado)) item.analisado = value;
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.cod_fazenda)) item.codFazenda = String(value).trim();
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.desc_fazenda)) item.descFazenda = String(value).trim();
-                // CAPTURA CRÍTICA: Mapeia o valor de STATUS/FASE para item.statusFrota
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.status_frota)) item.statusFrota = String(value).trim().toUpperCase();
             });
             
