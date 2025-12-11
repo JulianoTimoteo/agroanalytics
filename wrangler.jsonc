@@ -1,0 +1,5 @@
+{
+  "name": "agroanalytics",
+  "main": "index.js", // Se você criou o arquivo na raiz
+  "compatibility_date": "2024-01-01" 
+}
