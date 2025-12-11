@@ -8,7 +8,7 @@ class DataVisualizer {
             accent: '#FF2E63', 
             success: '#40800c',
             warning: '#FFB800', 
-            danger: '#FF2E63', 
+            danger: '#FF2E63',  
             proprio: '#40800c',
             terceiro: '#FF8C00',
             tier1: '#00F5A0', 
@@ -21,7 +21,6 @@ class DataVisualizer {
             real_moagem_color: '#00D4FF',
             meta_horaria_color: '#FF2E63' 
         };
-        this.analyzerResult = null; // Para armazenar o resultado da análise
         
         if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
             Chart.register(ChartDataLabels);
@@ -32,7 +31,7 @@ class DataVisualizer {
         this.chartsBaseRenderer = new VisualizerChartsBase(this);
         this.chartsMoagemRenderer = new VisualizerChartsMoagem(this);
         this.gridRenderer = new VisualizerGrid(this);
-        this.metasRenderer = new VisualizerMetas(this); 
+        this.metasRenderer = new VisualizerMetas(this); // NOVO: Inicializa o renderizador de Metas
     }
 
     getThemeConfig() {
@@ -62,7 +61,6 @@ class DataVisualizer {
             return;
         }
         
-        this.analyzerResult = analysis; // Armazena o resultado da análise
         const theme = this.getThemeConfig();
         
         // --- DELEGAÇÃO ---
@@ -89,61 +87,6 @@ class DataVisualizer {
         this.updateMoagemTab(analysis, theme);
     }
 
-    // --- CORREÇÃO DO ERRO applyTheme: ESTE MÉTODO ATUALIZA APENAS O TEMA DO GRÁFICO ---
-    updateTheme(analysis) {
-        const theme = this.getThemeConfig();
-        
-        // Esta função garante que as cores dos gráficos sejam redesenhadas após a mudança de tema
-        // e é chamada pelo agriculturalDashboard.toggleTheme()
-        if (!analysis && this.analyzerResult) {
-             analysis = this.analyzerResult;
-        }
-
-        // Se houver análise, recriamos os gráficos com o novo tema
-        if (analysis) {
-            this.chartsBaseRenderer.createFleetChart(analysis.distribuicaoFrota, theme);
-            this.chartsBaseRenderer.createHarvestChart(analysis.equipmentDistribution, theme); 
-            this.chartsBaseRenderer.createTimeChart(analysis.analise24h, theme);
-            this.chartsBaseRenderer.createFleetHourlyChart(analysis.fleetHourly, theme);
-            const hourlyData = analysis.analyzeFrontHourly ? analysis.analyzeFrontHourly(analysis.data) : { labels: [], datasets: [] };
-            this.chartsBaseRenderer.createFrontHourlyChart(hourlyData, theme);
-            this.updateMoagemTab(analysis, theme);
-        }
-
-        // Lógica de atualização de tema original (apenas cores)
-        Object.values(this.charts).forEach(chart => {
-            if (chart && chart.options) {
-                if (chart.options.scales) {
-                    Object.values(chart.options.scales).forEach(scale => {
-                        if (scale.grid) scale.grid.color = theme.gridColor;
-                        if (scale.ticks) scale.ticks.color = theme.fontColor;
-                        if (scale.title) scale.title.color = theme.fontColor; 
-                    });
-                }
-                
-                if (chart.options.plugins && chart.options.plugins.legend) {
-                    chart.options.plugins.legend.labels.color = theme.fontColor;
-                }
-                
-                if (chart.options.plugins && chart.options.plugins.datalabels) {
-                    if (chart.config.type === 'bar' && chart.data.datasets) {
-                        chart.data.datasets.forEach(dataset => {
-                            if (dataset.datalabels) {
-                                dataset.datalabels.color = theme.labelColor;
-                            }
-                        });
-                    }
-                    const totalDataset = chart.data.datasets.find(d => d.label === 'Total');
-                    if(totalDataset && totalDataset.datalabels) {
-                        totalDataset.datalabels.color = theme.fontColor;
-                    }
-                }
-                
-                chart.update('none');
-            }
-        });
-    }
-
     // O método de Moagem é complexo e usa vários submódulos, mantido aqui para orquestração
     updateMoagemTab(analysis, config) {
         const totalWeight = analysis ? analysis.totalPesoLiquido : 0;
@@ -156,7 +99,7 @@ class DataVisualizer {
         document.getElementById('moagemPerc').textContent = percent + "%";
         
         // --- NOVO: BARRA DE DISTRIBUIÇÃO DO PROPRIETÁRIO ---
-        this.kpisRenderer.updateOwnerDistributionBar(analysis); 
+        this.kpisRenderer.updateOwnerDistributionBar(analysis); // <--- CHAMADA ADICIONADA
         
         // --- PROJEÇÃO ---
         const projection = analysis.projecaoMoagem || { 
@@ -286,6 +229,44 @@ class DataVisualizer {
             a.click();
         }
     }
+
+    updateTheme() {
+        const theme = this.getThemeConfig();
+        
+        Object.values(this.charts).forEach(chart => {
+            if (chart && chart.options) {
+                if (chart.options.scales) {
+                    Object.values(chart.options.scales).forEach(scale => {
+                        if (scale.grid) scale.grid.color = theme.gridColor;
+                        if (scale.ticks) scale.ticks.color = theme.fontColor;
+                        if (scale.title) scale.title.color = theme.fontColor; 
+                    });
+                }
+                
+                if (chart.options.plugins && chart.options.plugins.legend) {
+                    chart.options.plugins.legend.labels.color = theme.fontColor;
+                }
+                
+                if (chart.options.plugins && chart.options.plugins.datalabels) {
+                    if (chart.config.type === 'bar' && chart.data.datasets) {
+                        chart.data.datasets.forEach(dataset => {
+                            if (dataset.datalabels) {
+                                dataset.datalabels.color = theme.labelColor;
+                            }
+                        });
+                    }
+                    const totalDataset = chart.data.datasets.find(d => d.label === 'Total');
+                    if(totalDataset && totalDataset.datalabels) {
+                        totalDataset.datalabels.color = theme.fontColor;
+                    }
+                }
+                
+                chart.update('none');
+            }
+        });
+    }
 }
 
-if (typeof window !== 'undefined') window.DataVisualizer = DataVisualizer;
+if (typeof DataVisualizer === 'undefined') {
+    window.DataVisualizer = DataVisualizer;
+}

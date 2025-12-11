@@ -102,7 +102,7 @@
                                         <p class="drop-text">Arraste e Solte seus arquivos ou pastas aqui</p>
                                         <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
                                             <i class="fas fa-file-import"></i> 
-                                            Enviar Manualmente
+                                            Selecionar Arquivo
                                         </button>
                                     </div>
                                     <div class="file-info-compact" id="fileInfo">Aguardando arquivo...</div>
@@ -110,8 +110,9 @@
 
                                 <div class="info-section upload-info-section"> 
                                     <h4>Instruções:</h4>
-                                    <p>O painel tentará buscar os arquivos **Metas, Potencial e Produção** automaticamente via Servidor HTTP local (Intranet).</p>
-                                    <p>Se a busca falhar, utilize o botão **'Enviar Manualmente'**.</p>
+                                    <p>Arraste e solte <strong>múltiplos arquivos</strong> ou uma <strong>pasta inteira</strong>
+                                        na área acima, ou utilize o botão 'Selecionar Arquivo'.</p>
+                                    <p>Formatos aceitos: Excel (.xlsx, .xls) e CSV</p>
                                     <p class="upload-warning-text">
                                         Aguarde a mensagem de "Arquivos carregados" ou "Falha no carregamento"
                                         antes de interagir com as outras abas.
@@ -121,17 +122,12 @@
                             </div>
                             <div class="analytics-card glass-card half-width hover-zoom-card">
                                 <div class="card-header">
-                                    <h3><i class="fas fa-wifi"></i> Status da Conexão de Dados</h3>
+                                    <h3><i class="fas fa-clipboard-list"></i> Relatórios de Configuração</h3>
                                 </div>
-                                <div class="card-body">
-                                    <div class="mini-list">
-                                        <p><strong>Status da Busca Automática:</strong> <span class="primary-color-bold">CONFIGURADO</span></p>
-                                        <p><strong>Fonte de Dados (URL):</strong> <code>http://172.16.13.72:8000/</code></p>
-                                        <p><strong>Arquivos Necessários:</strong> Metas.xlsx, Potencial.xlsx, Produção.xlsx</p>
-                                        <p class="text-secondary" style="font-size: 0.85rem;">
-                                            Para o consumo automático, a máquina <code>172.16.13.72</code> deve estar ligada e rodando o comando Python (`python3 -m http.server 8000`) na pasta correta.
-                                        </p>
-                                    </div>
+                                <div class="mini-list">
+                                    <p>Status de Conexão: <span class="success-color-bold">ATIVO</span></p>
+                                    <p>Última Configuração: <span class="primary-color">v1.2.3 - 2025-11-30</span></p>
+                                    <p><button class="btn-action" onclick="alert('Baixando Log de Eventos.')">Baixar Log</button></p>
                                 </div>
                             </div>
                         </div>
@@ -255,7 +251,7 @@
                                             </div>
                                             
                                             <div class="ritmo-medio-info" id="ritmoAtualFormulaContainer">
-                                            </div>
+                                                </div>
                                         </div>
                                         
                                     </div>
@@ -334,7 +330,7 @@
                                             <div class="tooltip-container">
                                                 <i class="fas fa-info-circle icon"></i>
                                                 <div class="tooltip-text">Distribuição horária de peso entre frota própria e terceiros (Ciclo 06:00 - 05:59).
-                                                    Passe o mouse sobre as barras para ver os percentuais.</div>
+                                                Passe o mouse sobre as barras para ver os percentuais.</div>
                                             </div>
                                         </div>
                                     </div>
@@ -471,7 +467,7 @@
                         </div>
                         
                         <div id="tab-metas" class="tab-pane">
-                        </div>
+                            </div>
 
                         <div id="tab-horaria" class="tab-pane">
                             <div class="analytics-row">
@@ -509,7 +505,7 @@
                         </div>
 
                     </div>
-                </div>
+                    </div>
             </section>
             
             </div> 
@@ -523,6 +519,7 @@
     </div>
     
     <footer class="dashboard-footer"></footer>
+
 
     <script src="intelligent-processor.js"></script>
     <script src="utils.js"></script>

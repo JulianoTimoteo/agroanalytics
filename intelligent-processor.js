@@ -1,4 +1,4 @@
-// intelligent-processor.js - VERSÃO COMPLETA CORRIGIDA PARA CSV (GOOGLE SHEETS)
+// intelligent-processor.js - VERSÃO FINAL CORRIGIDA PARA CLOUDFLARE WORKER / ONEDRIVE
 class IntelligentProcessor {
     constructor() {
         this.columnMappings = {
@@ -32,7 +32,8 @@ class IntelligentProcessor {
                 'liberacao': ['LIBERAÇÃO', 'LIB', 'COD LIBERACAO'], 
                 'tipoProprietarioFa': ['TIPO PROPRIETARIO F A', 'TIPO PROPRIETARIO (F.A.)', 'TIPO PROPRIETARIO', 'PROPRIETARIO', 'TIPO PROPRIEDADE'], 
                 'qtdViagem': ['QTD VIAGEM', 'QUANTIDADE VIAGEM'],
-                'distancia': ['DIST MEDIA', 'DISTANCIA', 'KM', 'RAIO MEDIO']
+                'distancia': ['DIST MEDIA', 'DISTANCIA', 'KM', 'RAIO MEDIO'],
+                'status_frota': ['STATUS', 'FASE', 'FASE OPERACIONAL', 'STATUS CAMINHAO', 'SITUACAO ATUAL'] // Chave para mapeamento do status
             },
             'potential': {
                 'hora': ['HORA', 'HORA FIXA', 'HORA ESCALAR'],
@@ -89,71 +90,94 @@ class IntelligentProcessor {
         return strValue; 
     }
 
-    // Método original usado para upload manual (lê binário do File/FileReader)
-    async processFile(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const data = e.target.result;
-                    const workbook = XLSX.read(data, { type: 'binary' }); 
-                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const rawMatrix = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null });
-                    
-                    if (!rawMatrix || rawMatrix.length === 0) {
-                        resolve({ type: 'UNKNOWN', fileName: file.name, data: [] });
-                        return;
-                    }
-
-                    const fileType = this.identifyFileTypeIntelligently(rawMatrix, file.name);
-                    
-                    if (fileType.type === 'PRODUCTION') {
-                        resolve({ type: 'PRODUCTION', fileName: file.name, data: this.processProductionData(worksheet, fileType.headerRow) });
-                    } else if (fileType.type === 'POTENTIAL') {
-                        resolve({ type: 'POTENTIAL', fileName: file.name, data: this.processPotentialData(worksheet, fileType.headerRow) });
-                    } else if (fileType.type === 'META') {
-                        resolve({ type: 'META', fileName: file.name, data: this.processMetaData(worksheet, fileType.headerRow) });
-                    } else {
-                        resolve({ type: 'UNKNOWN', fileName: file.name, data: [] });
-                    }
-                } catch (error) {
-                    console.error(`Erro:`, error);
-                    reject(error);
+    // --- FUNÇÃO CRÍTICA: LÊ ArrayBuffer do Worker OU File do upload manual ---
+    async processFile(dataOrFile, fileName) { 
+        if (dataOrFile instanceof ArrayBuffer) {
+            // Modo 1: Recebeu ArrayBuffer do Cloudflare Worker (leitura binária)
+            const data = dataOrFile; 
+            try {
+                const workbook = XLSX.read(data, { type: 'array' });
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rawMatrix = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null });
+                
+                if (!rawMatrix || rawMatrix.length === 0) {
+                    return { type: 'UNKNOWN', fileName, data: [] };
                 }
-            };
-            reader.onerror = (error) => reject(error);
-            reader.readAsBinaryString(file);
-        });
+
+                const fileType = this.identifyFileTypeIntelligently(rawMatrix, fileName);
+                
+                if (fileType.type === 'PRODUCTION') {
+                    return { type: 'PRODUCTION', fileName, data: this.processProductionData(worksheet, fileType.headerRow) };
+                } else if (fileType.type === 'POTENTIAL') {
+                    return { type: 'POTENTIAL', fileName, data: this.processPotentialData(worksheet, fileType.headerRow) };
+                } else if (fileType.type === 'META') {
+                    return { type: 'META', fileName: fileName, data: this.processMetaData(worksheet, fileType.headerRow) };
+                } else {
+                    return { type: 'UNKNOWN', fileName, data: [] };
+                }
+            } catch (error) {
+                console.error(`Erro ao processar ArrayBuffer de ${fileName}:`, error);
+                throw error;
+            }
+            
+        } else {
+            // Modo 2: Recebeu objeto File do upload manual (leitura local)
+            const file = dataOrFile;
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = e.target.result;
+                        const workbook = XLSX.read(data, { type: 'binary' }); 
+                        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const rawMatrix = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null });
+                        
+                        if (!rawMatrix || rawMatrix.length === 0) {
+                            resolve({ type: 'UNKNOWN', fileName: file.name, data: [] });
+                            return;
+                        }
+
+                        const fileType = this.identifyFileTypeIntelligently(rawMatrix, file.name);
+                        
+                        if (fileType.type === 'PRODUCTION') {
+                            resolve({ type: 'PRODUCTION', fileName: file.name, data: this.processProductionData(worksheet, fileType.headerRow) });
+                        } else if (fileType.type === 'POTENTIAL') {
+                            resolve({ type: 'POTENTIAL', fileName: file.name, data: this.processPotentialData(worksheet, fileType.headerRow) });
+                        } else if (fileType.type === 'META') {
+                            resolve({ type: 'META', fileName: file.name, data: this.processMetaData(worksheet, fileType.headerRow) });
+                        } else {
+                            resolve({ type: 'UNKNOWN', fileName: file.name, data: [] });
+                        }
+                    } catch (error) {
+                        console.error(`Erro:`, error);
+                        reject(error);
+                    }
+                };
+                reader.onerror = (error) => reject(error);
+                reader.readAsBinaryString(file);
+            });
+        }
     }
 
-    // --- NOVO MÉTODO: PROCESSA O CONTEÚDO CSV (Para Google Sheets/CSV) ---
+    // Método que você não usa mais, mas que estava no seu código original
     async processCSV(csvText, fileName) {
         if (!csvText) return { type: 'UNKNOWN', fileName, data: [] };
 
         try {
-            // 1. Converter o texto CSV em workbook (usa a biblioteca XLSX)
             const workbook = XLSX.read(csvText, { type: 'string', raw: false, cellDates: true });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
-            
-            // 2. Extrair a matriz bruta para identificação de tipo de arquivo
             const rawMatrix = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null });
 
-            // 3. Identificar o tipo do arquivo (Produção, Potencial, Meta)
             const fileType = this.identifyFileTypeIntelligently(rawMatrix, fileName);
 
             if (fileType.type === 'PRODUCTION') {
-                // Chamamos sua função de processamento de Produção existente
                 const processedData = this.processProductionData(worksheet, fileType.headerRow);
                 return { type: 'PRODUCTION', fileName, data: processedData };
-
             } else if (fileType.type === 'POTENTIAL') {
-                // Chamamos sua função de processamento de Potencial existente
                 const processedData = this.processPotentialData(worksheet, fileType.headerRow);
                 return { type: 'POTENTIAL', fileName, data: processedData };
-                
             } else if (fileType.type === 'META') {
-                // Chamamos sua função de processamento de Metas existente
                 const processedData = this.processMetaData(worksheet, fileType.headerRow);
                 return { type: 'META', fileName, data: processedData };
             }
@@ -197,18 +221,18 @@ class IntelligentProcessor {
             const normalizedRow = this.normalizeRowKeys(row);
             
             Object.keys(normalizedRow).forEach(key => {
-                const value = normalizedRow[key];
-                if (value === null || value === undefined || value === '') return;
-                const cleanKey = key.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, ' ').trim().replace(/\s+/g, ' ');
-                if (this.matchesPattern(cleanKey, this.columnMappings.production.viagem)) {
-                    if (!cleanKey.includes('QTD') && !cleanKey.includes('DIST') && !String(value).toUpperCase().includes('TOTAL')) {
-                        item.viagem = String(value).trim();
-                    }
-                } else if (this.matchesPattern(cleanKey, this.columnMappings.production.frota)) {
-                    item.frota = String(value).trim();
-                } else if (this.matchesPattern(cleanKey, this.columnMappings.production.frente)) {
-                    item.frente = String(value).trim();
-                }
+                 const value = normalizedRow[key];
+                 if (value === null || value === undefined || value === '') return;
+                 const cleanKey = key.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, ' ').trim().replace(/\s+/g, ' ');
+                 if (this.matchesPattern(cleanKey, this.columnMappings.production.viagem)) {
+                     if (!cleanKey.includes('QTD') && !cleanKey.includes('DIST') && !String(value).toUpperCase().includes('TOTAL')) {
+                         item.viagem = String(value).trim();
+                     }
+                 } else if (this.matchesPattern(cleanKey, this.columnMappings.production.frota)) {
+                     item.frota = String(value).trim();
+                 } else if (this.matchesPattern(cleanKey, this.columnMappings.production.frente)) {
+                     item.frente = String(value).trim();
+                 }
             });
 
             Object.keys(normalizedRow).forEach(key => {
@@ -258,6 +282,8 @@ class IntelligentProcessor {
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.analisado)) item.analisado = value;
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.cod_fazenda)) item.codFazenda = String(value).trim();
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.desc_fazenda)) item.descFazenda = String(value).trim();
+                // CAPTURA CRÍTICA: Mapeia o valor de STATUS/FASE para item.statusFrota
+                else if (this.matchesPattern(cleanKey, this.columnMappings.production.status_frota)) item.statusFrota = String(value).trim().toUpperCase();
             });
             
             if (!item.timestamp && (dataSaidaStr || diaBalancaStr) && horaSaidaStr) {
@@ -268,11 +294,11 @@ class IntelligentProcessor {
                     item.hora = dt.timeStr;
                 }
             } else if (!item.timestamp && horaSaidaStr) {
-                const today = new Date();
-                const [h, m] = horaSaidaStr.split(':').map(Number);
-                item.timestamp = new Date(today.getFullYear(), today.getMonth(), today.getDate(), h, m);
-                item.data = item.timestamp.toLocaleDateString('pt-BR');
-                item.hora = horaSaidaStr;
+                 const today = new Date();
+                 const [h, m] = horaSaidaStr.split(':').map(Number);
+                 item.timestamp = new Date(today.getFullYear(), today.getMonth(), today.getDate(), h, m);
+                 item.data = item.timestamp.toLocaleDateString('pt-BR');
+                 item.hora = horaSaidaStr;
             }
 
             [1, 2, 3].forEach(idx => {
@@ -401,25 +427,6 @@ class IntelligentProcessor {
         return processedData;
     }
     
-    _addToList(list, value) {
-        const valStr = String(value).trim();
-        if (valStr && valStr !== '0' && !valStr.toUpperCase().includes('TOTAL')) list.push(valStr);
-    }
-
-    generateViagemId(item) {
-        const frotaPrefix = item.frota || 'NO_FROTA'; 
-        let dateStr = 'NO_DATE', timeStr = 'NO_TIME';
-        if (item.timestamp instanceof Date) {
-            const d = item.timestamp;
-            dateStr = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-            timeStr = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-        } else if (item.data && item.hora) {
-            dateStr = item.data;
-            timeStr = item.hora;
-        }
-        return `${frotaPrefix}-${dateStr}-${timeStr}-${Math.random().toString(36).substr(2, 6)}`;
-    }
-
     processPotentialData(worksheet, headerRow) {
         const structuredData = XLSX.utils.sheet_to_json(worksheet, { range: headerRow, defval: null, raw: false, cellDates: true });
         return structuredData.map(row => {
@@ -441,7 +448,7 @@ class IntelligentProcessor {
                 }
             });
             
-            ['Caminhões  Ida', 'Caminhões  Campo', 'Caminhões  Volta', 'Caminhões  Descarga', 'Caminhões  PARADO', 'CARRETAS CARREGADAS', 'POTENCIAL', 'Caminhões Fila externa'].forEach(exactKey => {
+            ['Caminhões  Ida', 'Caminhões  Campo', 'Caminhões  Volta', 'Caminhões  Descarga', 'Caminhões  PARADO', 'CARRETAS CARREGADAS', 'POTENCIAL', 'Caminhões Fila externa'].forEach(exactKey => {
                 let value = row[exactKey]; 
                 if (!value) value = row[exactKey.replace(/\s{2,}/g, ' ')];
                 if (value != null && value !== '') item[exactKey] = this.parseNumber(value);
@@ -469,11 +476,11 @@ class IntelligentProcessor {
             'dispCaminhoes': 'DISP CAMINHÕES',
             'rotacaoMoenda': 'ROTAÇÃO DA MOENDA',
             'potencial': 'POTENCIAL',
-            'caminhoesIda': 'Caminhões  Ida',
-            'caminhoesCampo': 'Caminhões  Campo',
-            'caminhoesVolta': 'Caminhões  Volta',
-            'caminhoesDescarga': 'Caminhões  Descarga',
-            'caminhoesParados': 'Caminhões  PARADO',
+            'caminhoesIda': 'Caminhões  Ida',
+            'caminhoesCampo': 'Caminhões  Campo',
+            'caminhoesVolta': 'Caminhões  Volta',
+            'caminhoesDescarga': 'Caminhões  Descarga',
+            'caminhoesParados': 'Caminhões  PARADO',
             'filaExterna': 'Caminhões Fila externa',
             'carretasCarregadas': 'CARRETAS CARREGADAS'
         };

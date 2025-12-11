@@ -2,51 +2,48 @@
 class AgriculturalDashboard {
     constructor() {
         // Inicializa os módulos
-        this.processor = new IntelligentProcessor();
-        this.visualizer = new DataVisualizer();
-        this.validator = new DataValidator();
-        this.analyzer = new DataAnalyzer();
+        if (typeof IntelligentProcessor !== 'undefined') this.processor = new IntelligentProcessor(); 
+        if (typeof DataVisualizer !== 'undefined') this.visualizer = new DataVisualizer();
+        if (typeof DataValidator !== 'undefined') this.validator = new DataValidator();
+        if (typeof DataAnalyzer !== 'undefined') this.analyzer = new DataAnalyzer();
         
         // Estado da aplicação
-        this.data = [];
-        this.potentialData = [];
-        this.metaData = [];
+        this.data = []; 
+        this.potentialData = []; 
+        this.metaData = []; 
         this.analysisResult = null;
         this.validationResult = null;
         this.isAnimatingParticles = true;
-        this.animationFrameId = null;
+        this.animationFrameId = null; 
         
         // Estado do Carrossel
         this.currentSlideIndex = 0;
-        this.carouselInterval = null;
+        this.carouselInterval = null; 
 
         // Configuração
         this.initializeEventListeners();
         this.initializeParticles();
         this.loadTheme();
 
-        // Carrega todas as metas salvas antes de iniciar tudo
-        this.loadMeta();
+        this.loadMeta(); 
+        this.initShiftTracker(); 
 
-        // INICIALIZA O RASTREADOR DE TURNO
-        this.initShiftTracker();
-
-        // Inicia na aba Gerenciar e zera/desativa o conteúdo analítico
-        this.showTab('tab-gerenciar');
-        this.clearResults();
+        this.showTab('tab-gerenciar'); 
+        this.clearResults(); 
         
-        // Chama o processo de carregamento online ao iniciar (Prioridade 1)
+        // CORREÇÃO CRÍTICA: Inicia a busca online
         this.startLoadingProcess(); 
     }
     
     // --- MÉTODOS DE CONTROLE DO CARROSSEL ---
 
     initializeCarousel() {
-        const totalSlides = 3;
-        this.stopCarousel();
+        const totalSlides = 3; 
+
+        this.stopCarousel(); 
         this.carouselInterval = setInterval(() => {
-            this.navigateCarousel(1);
-        }, 20000);
+            this.navigateCarousel(1); 
+        }, 20000); 
 
         this.showSlide(this.currentSlideIndex);
     }
@@ -121,7 +118,6 @@ class AgriculturalDashboard {
             
             if (input) {
                 if (savedMeta && !isNaN(parseFloat(savedMeta))) {
-                    
                     input.value = savedMeta;
                 } else {
                     input.value = metas[key];
@@ -139,7 +135,7 @@ class AgriculturalDashboard {
         }
         
         if (key === 'metaMoagem') {
-            this.updateMoagemTargetDisplay();
+            this.updateMoagemTargetDisplay(); 
             if (this.data.length > 0) {
                  this.recalculateProjectionAndRender();
             } else if (this.analysisResult) {
@@ -161,9 +157,8 @@ class AgriculturalDashboard {
     }
     
     recalculateProjectionAndRender() {
-        this.showLoadingAnimation();
+        this.showLoadingAnimation(); 
 
-        // MODIFICADO: Passando this.metaData para o analyzer
         this.analysisResult = this.analyzer.analyzeAll(this.data, this.potentialData, this.metaData, this.validationResult);
         
         this.visualizer.updateDashboard(this.analysisResult);
@@ -183,9 +178,9 @@ class AgriculturalDashboard {
             let progress = 0;
             let cssClass = '';
             
-            const startA = 7 * 60 + 45;
+            const startA = 7 * 60 + 45; 
             const startB = 16 * 60;      
-            const startC = 23 * 60 + 40;
+            const startC = 23 * 60 + 40; 
 
             if (currentMinutes >= startA && currentMinutes < startB) {
                 shiftName = 'Turno A (Manhã)';
@@ -231,7 +226,7 @@ class AgriculturalDashboard {
         };
 
         updateShift();
-        setInterval(updateShift, 10000);
+        setInterval(updateShift, 10000); 
     }
 
     // --- FUNÇÕES DE ANIMAÇÃO DE CARREGAMENTO ---
@@ -248,7 +243,7 @@ class AgriculturalDashboard {
             if (overlay) {
                 overlay.classList.add('hidden');
             }
-        }, 2000);
+        }, 2000); 
     }
     
     // Função para introduzir um pequeno atraso e liberar o thread (Yield)
@@ -259,22 +254,22 @@ class AgriculturalDashboard {
     // MODIFICADO: Adiciona metaData
     async processDataAsync(productionData, potentialData, metaData) {
         // 1. Validação
-        await this._yieldControl();
+        await this._yieldControl(); 
         this.validationResult = this.validator.validateAll(productionData);
         this.renderAlerts(this.validationResult.anomalies);
         
         // 2. Análise
-        await this._yieldControl();
+        await this._yieldControl(); 
         // MODIFICADO: Passa metaData
         this.analysisResult = this.analyzer.analyzeAll(productionData, potentialData, metaData, this.validationResult);
         
         // 3. Visualização
-        await this._yieldControl();
+        await this._yieldControl(); 
         this.visualizer.updateDashboard(this.analysisResult);
-        
+
         // 4. Finalização
         this.showAnalyticsSection(true);
-        this.showTab('tab-moagem');
+        this.showTab('tab-moagem'); 
         
         this.initializeCarousel();
     }
@@ -302,11 +297,10 @@ class AgriculturalDashboard {
     initializeEventListeners() {
         const fileInput = document.getElementById('fileInput');
         if (fileInput) {
-            // CORRIGIDO: Chama a função orquestradora
-            fileInput.addEventListener('change', (e) => this.startLoadingProcess(e)); 
+            fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
         }
 
-        const dropzoneCard = document.getElementById('dropzoneCard');
+        const dropzoneCard = document.getElementById('dropzoneCard'); 
         if (dropzoneCard) {
             
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -342,8 +336,7 @@ class AgriculturalDashboard {
                 
                 if (files.length > 0) {
                     const eventMock = { target: { files: files } };
-                    // CORRIGIDO: Agora chama a função orquestradora
-                    this.startLoadingProcess(eventMock);
+                    this.handleFileUpload(eventMock);
                 }
             }, false);
         }
@@ -373,7 +366,7 @@ class AgriculturalDashboard {
         }
         
         // NOVO: Adiciona o listener para a nova função showSubTab (garantindo que o clique chame o método da classe)
-        document.querySelectorAll('.tabs-nav button').forEach(button => {
+        document.querySelectorAll('#tab-frentes .tabs-nav button').forEach(button => {
              const onclickAttr = button.getAttribute('onclick');
              if (onclickAttr && onclickAttr.includes('showSubTab')) {
                  // Substitui a chamada para usar o 'this' (o botão clicado) como segundo argumento
@@ -405,13 +398,13 @@ class AgriculturalDashboard {
         
         if (tabId === 'tab-gerenciar' && !this.isAnimatingParticles) {
             this.isAnimatingParticles = true;
-            this.initializeParticles();
+            this.initializeParticles(); 
         } else if (tabId !== 'tab-gerenciar' && this.isAnimatingParticles) {
             this.isAnimatingParticles = false;
         }
         
         if (tabId === 'tab-moagem') {
-             this.showSlide(this.currentSlideIndex);
+             this.showSlide(this.currentSlideIndex); 
              this.initializeCarousel();
         } else {
              this.stopCarousel();
@@ -423,7 +416,6 @@ class AgriculturalDashboard {
         document.documentElement.setAttribute('data-theme', savedTheme);
         const icon = document.getElementById('theme-icon');
         if (icon) {
-            this.visualizer.updateTheme(); // Chamada para atualizar as cores no DataVisualizer
             icon.className = savedTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
         }
     }
@@ -435,8 +427,7 @@ class AgriculturalDashboard {
         localStorage.setItem('theme', newTheme);
         
         if (this.analysisResult) {
-             // Chamamos o método updateTheme do DataVisualizer, que está corrigido no datavisualizer.js
-             this.visualizer.updateTheme(this.analysisResult); 
+             this.visualizer.updateDashboard(this.analysisResult);
         }
         
         const icon = document.getElementById('theme-icon');
@@ -474,7 +465,6 @@ class AgriculturalDashboard {
                 x: Math.random() * canvas.width,
                 y: Math.random() * canvas.height,
                 size: Math.random() * 2 + 1,
-           
                 speedX: Math.random() * 0.5 - 0.25,
                 speedY: Math.random() * 0.5 - 0.25,
                 color: `rgba(0, 212, 255, ${Math.random() * 0.3})`
@@ -483,8 +473,8 @@ class AgriculturalDashboard {
 
         const animate = () => {
             if (!this.isAnimatingParticles) { 
-                this.animationFrameId = null;
-                return;
+                this.animationFrameId = null; 
+                return; 
             }
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             particles.forEach(p => {
@@ -492,55 +482,63 @@ class AgriculturalDashboard {
                 p.y += p.y;
                 if (p.x < 0 || p.x > canvas.width) p.speedX *= -1;
                 if (p.y < 0 || p.y > canvas.height) p.speedY *= -1;
-          
                 ctx.fillStyle = p.color;
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
                 ctx.fill();
             });
-            this.animationFrameId = requestAnimationFrame(animate);
+            this.animationFrameId = requestAnimationFrame(animate); 
         };
-        this.animationFrameId = requestAnimationFrame(animate);
+        this.animationFrameId = requestAnimationFrame(animate); 
     }
-    
-    // --- NOVO MÉTODO: BUSCA GOOGLE SHEETS (Gratuito e 24/7) ---
+
+    // --- FUNÇÃO CRÍTICA DE BUSCA ONLINE (CLOUDFLARE WORKER) ---
     async fetchFilesFromCloud() {
-        // URLs CSV DO GOOGLE SHEETS FORNECIDOS PELO USUÁRIO
-        const sheetUrls = {
-            'Producao.xlsx': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQ3q9v4R7lM_cd_yFVe-qQlYaPHkcjXjzwf20Y06SzVJRLdJSOJo2qxEX3VJ5r84CWWxTJyFH_9W-2T/pub?output=csv',
-            'Potencial.xlsx': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR-42PmLZevHOlNeueL5i9d_h-7Lrd3lZ9JeWmadFsikoQEGWwjT47dW0qnnsHW1WHT0_mCsc7nGuoh/pub?output=csv',
-            'Metas.xlsx': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTfLo70FlylZ5IT8b142jdKnPA7xwicEChmsegtjprEhmKTCbXtqsIihbJC-mpzQDIwGJRpYwfuusdg/pub?output=csv'
+        // --------------------------------------------------------
+        // MODO: CLOUDFLARE WORKER (Proxy CORS)
+        // --------------------------------------------------------
+        
+        // URL DO SEU WORKER ATIVO
+        const WORKER_URL = 'https://agroanalytics.jtsdowload.workers.dev/?url='; 
+
+        // LINKS DE COMPARTILHAMENTO DO ONEDRIVE/SHAREPOINT (SEUS LINKS REAIS)
+        const oneDriveUrls = {
+            'Producao.xlsx': 'https://pitaa-my.sharepoint.com/:x:/g/personal/julianotimoteo_usinapitangueiras_com_br/IQAu-XZTf4dTRo4MTEsfTdPIAYD-5OHLTgUF68gW-_nRbI4?e=iuayIE',
+            'Potencial.xlsx': 'https://pitaa-my.sharepoint.com/:x:/g/personal/julianotimoteo_usinapitangueiras_com_br/IQBsDulvntQ8RZ_EoXDpQ-VnAVobVEHoi6wL2iE-4I5r6kY?e=l8Kml4',
+            'Metas.xlsx': 'https://pitaa-my.sharepoint.com/:x:/g/personal/julianotimoteo_usinapitangueiras_com_br/IQDPsvHp5stzS5_S9YNmawxeATWu1T8c6-7ZfPe5EaMLtuI?e=uGSaa1'
         };
 
         let results = [];
         let successCount = 0;
         let missingFiles = [];
 
-        for (const [name, url] of Object.entries(sheetUrls)) {
+        for (const [name, oneDriveUrl] of Object.entries(oneDriveUrls)) {
             try {
-                // Tenta buscar o arquivo do Google Sheets (CSV)
-                const response = await fetch(url);
+                this.showLoadingAnimation();
+                
+                // CONSTRUÇÃO DA URL: Worker URL + Link do OneDrive (codificado)
+                const proxyUrl = WORKER_URL + encodeURIComponent(oneDriveUrl);
+                
+                const response = await fetch(proxyUrl);
                 
                 if (!response.ok) {
-                    throw new Error(`Status HTTP ${response.status}`);
+                    throw new Error(`Status HTTP ${response.status} ao acessar o Worker.`);
                 }
                 
-                // Leitura do conteúdo como texto (CSV)
-                const csvText = await response.text();
+                // Leitura do conteúdo binário (Excel)
+                const data = await response.arrayBuffer(); 
 
-                // Novo método no IntelligentProcessor para lidar com CSV
-                const result = await this.processor.processCSV(csvText, name);
+                // Processamento do IntelligentProcessor (que aceita ArrayBuffer)
+                const result = await this.processor.processFile(data, name);
                 
                 if (result && Array.isArray(result.data) && result.data.length > 0) {
                     results.push(result);
                     successCount++;
                 } else {
-                     // Arquivo encontrado, mas vazio ou inválido
                      missingFiles.push(name + ' (Vazio/Inválido)');
                 }
 
             } catch (error) {
-                // Falha na busca
                 missingFiles.push(name);
             }
         }
@@ -549,7 +547,93 @@ class AgriculturalDashboard {
     }
 
 
-    // MODIFICADO: Função que agora orquestra o carregamento (Busca Online OU Upload Manual)
+    async handleFileUpload(event) {
+        this.showLoadingAnimation(); 
+        
+        const files = Array.from(event.target.files);
+        if (files.length === 0) return;
+
+        this.data = [];
+        this.potentialData = [];
+        this.metaData = []; 
+        this.clearResults(); 
+        this.stopCarousel(); 
+
+        let productionData = [];
+        let potentialData = [];
+        let metaData = []; 
+        let productionFilesCount = 0;
+        let potentialFilesCount = 0;
+        let metaFilesCount = 0; 
+        const fileInfoElement = document.getElementById('fileInfo');
+        
+        try {
+            for (const file of files) {
+                if (file.name.startsWith('.')) continue; 
+                if (!file.name.toLowerCase().match(/\.(xlsx|xls|csv)$/)) continue;
+                
+                try {
+                    // NOTE: This processFile call is for local file upload (FileReader), not the Worker.
+                    const result = await this.processor.processFile(file);
+                    
+                    if (result && Array.isArray(result.data) && result.data.length > 0) {
+                        
+                        if (result.type === 'PRODUCTION') {
+                            productionData = productionData.concat(result.data);
+                            productionFilesCount++;
+                        } else if (result.type === 'POTENTIAL') {
+                            potentialData = potentialData.concat(result.data);
+                            potentialFilesCount++;
+                        } 
+                        else if (result.type === 'META') {
+                             metaData = metaData.concat(result.data);
+                             metaFilesCount++;
+                        }
+                    }
+                } catch (err) {
+                    console.error(`Erro ao processar ${file.name}:`, err);
+                }
+            }
+            
+            if (productionData.length === 0 && potentialData.length === 0 && metaData.length === 0) {
+                throw new Error("Nenhum arquivo válido encontrado. Verifique se os arquivos são de Produção, Potencial ou Metas.");
+            }
+
+            this.data = productionData;
+            this.potentialData = potentialData; 
+            this.metaData = metaData; 
+            
+            if(fileInfoElement) {
+                let msg = '';
+                if (productionFilesCount > 0) msg += `${productionFilesCount} Produção`;
+                if (potentialFilesCount > 0) {
+                    if (msg) msg += ' + ';
+                    msg += `${potentialFilesCount} Potencial`;
+                }
+                if (metaFilesCount > 0) {
+                    if (msg) msg += ' + ';
+                    msg += `${metaFilesCount} Metas`;
+                }
+                fileInfoElement.textContent = `Arquivos carregados: ${msg}` || 'Arquivos carregados';
+                fileInfoElement.style.color = 'var(--success)';
+            }
+
+            await this.processDataAsync(this.data, this.potentialData, this.metaData);
+
+            event.target.value = ''; 
+            
+        } catch (error) {
+            console.error("Erro no processamento:", error); 
+            this.clearResults(); 
+            this.showError(`Aviso: ${error.message}`);
+            document.getElementById('fileInfo').textContent = "Falha no carregamento.";
+            this.showAnalyticsSection(false); 
+        } finally {
+            this.hideLoadingAnimation(); 
+        }
+    }
+    
+    // NOVO: Função que orquestra o carregamento (Busca Online OU Upload Manual)
     async startLoadingProcess(event) {
         this.showLoadingAnimation();
         
@@ -559,75 +643,22 @@ class AgriculturalDashboard {
         this.clearResults();
         this.stopCarousel();
         
-        let files = [];
         let productionData = [];
         let potentialData = [];
         let metaData = [];
         let cloudMissingFiles = [];
         const fileInfoElement = document.getElementById('fileInfo');
         
-        // 1. Prioridade 1: Tenta carregar os arquivos via Drag/Drop ou Input (Arquivos Locais)
-        if (event && event.target && event.target.files) {
-            files = Array.from(event.target.files);
-        }
+        // 1. Tenta a BUSCA ONLINE (CLOUDFLARE WORKER)
+        const cloudResult = await this.fetchFilesFromCloud();
         
-        let isManualUpload = files.length > 0;
+        cloudResult.results.forEach(res => {
+             if (res.type === 'PRODUCTION') productionData = productionData.concat(res.data);
+             else if (res.type === 'POTENTIAL') potentialData = potentialData.concat(res.data);
+             else if (res.type === 'META') metaData = metaData.concat(res.data);
+        });
+        cloudMissingFiles = cloudResult.missingFiles;
 
-        if (isManualUpload) {
-             // Processa arquivos enviados LOCALMENTE (Drag/Drop)
-             let productionFilesCount = 0;
-             let potentialFilesCount = 0;
-             let metaFilesCount = 0;
-             
-             for (const file of files) {
-                if (file.name.startsWith('.')) continue;
-                if (!file.name.toLowerCase().match(/\.(xlsx|xls|csv)$/)) continue;
-                 try {
-                     const result = await this.processor.processFile(file);
-                     if (result && Array.isArray(result.data) && result.data.length > 0) {
-                         if (result.type === 'PRODUCTION') {
-                            productionData = productionData.concat(result.data);
-                            productionFilesCount++;
-                         }
-                         else if (result.type === 'POTENTIAL') {
-                             potentialData = potentialData.concat(result.data);
-                             potentialFilesCount++;
-                         }
-                         else if (result.type === 'META') {
-                             metaData = metaData.concat(result.data);
-                             metaFilesCount++;
-                         }
-                     }
-                 } catch (err) {
-                     console.error(`Erro ao processar ${file.name}:`, err);
-                 }
-             }
-             
-             // Define a contagem para o feedback
-             isManualUpload = { productionFilesCount, potentialFilesCount, metaFilesCount };
-
-        } else {
-            // 2. Prioridade 2: Tenta a BUSCA ONLINE (GOOGLE SHEETS)
-            const cloudResult = await this.fetchFilesFromCloud();
-            
-            // Corrige a estrutura do resultado para o formato esperado pelo app
-            cloudResult.results.forEach(res => {
-                 if (res.type === 'PRODUCTION') productionData = productionData.concat(res.data);
-                 else if (res.type === 'POTENTIAL') potentialData = potentialData.concat(res.data);
-                 else if (res.type === 'META') metaData = metaData.concat(res.data);
-            });
-            cloudMissingFiles = cloudResult.missingFiles;
-
-            
-            // Define a contagem para o feedback
-            isManualUpload = { 
-                productionFilesCount: productionData.length > 0 ? 1 : 0, 
-                potentialFilesCount: potentialData.length > 0 ? 1 : 0, 
-                metaFilesCount: metaData.length > 0 ? 1 : 0 
-            };
-        }
-
-        // 3. Validação de dados encontrados
         if (productionData.length === 0 && potentialData.length === 0 && metaData.length === 0) {
             this.hideLoadingAnimation();
             this.showAnalyticsSection(false);
@@ -638,48 +669,39 @@ class AgriculturalDashboard {
         this.potentialData = potentialData;
         this.metaData = metaData;
 
-        // 4. Feedback e Visualização
+        // 2. Feedback e Visualização
         if(fileInfoElement) {
             
-            const { productionFilesCount, potentialFilesCount, metaFilesCount } = isManualUpload;
-            
             let msg = [];
-            let missingFilesList = [];
+            let missingFilesList = cloudMissingFiles;
             
             const essentialFiles = {
-                'Produção': productionFilesCount > 0,
-                'Potencial': potentialFilesCount > 0,
-                'Metas': metaFilesCount > 0
+                'Produção': productionData.length > 0,
+                'Potencial': potentialData.length > 0,
+                'Metas': metaData.length > 0
             };
             
-            if (essentialFiles.Produção) msg.push(`${productionFilesCount} Produção`);
-            else missingFilesList.push('Produção.xlsx');
-            
-            if (essentialFiles.Potencial) msg.push(`${potentialFilesCount} Potencial`);
-            else missingFilesList.push('Potencial.xlsx');
-            
-            if (essentialFiles.Metas) msg.push(`${metaFilesCount} Metas`);
-            else missingFilesList.push('Metas.xlsx');
-
-            // Se a busca online falhou em achar algo, usa a lista de faltantes da nuvem
-            if (!isManualUpload && cloudMissingFiles.length > 0) {
-                 missingFilesList = cloudMissingFiles;
-            }
+            if (essentialFiles.Produção) msg.push(`Produção`);
+            if (essentialFiles.Potencial) msg.push(`Potencial`);
+            if (essentialFiles.Metas) msg.push(`Metas`);
 
             // Lógica de Mensagem Final
             let finalMessage = `Arquivos carregados: ${msg.join(' + ')}.`;
+            let statusColor = 'var(--success)';
             if (missingFilesList.length > 0 && missingFilesList.length < 3) {
                 finalMessage += ` Aviso: Falta(m) o(s) arquivo(s) essenciais: ${missingFilesList.join(', ')}.`;
-                fileInfoElement.style.color = 'var(--warning)';
-            } else {
-                finalMessage = `Arquivos carregados: ${msg.join(' + ')}. (Via Google Sheets)`;
-                fileInfoElement.style.color = 'var(--success)';
+                statusColor = 'var(--warning)';
+            } else if (missingFilesList.length === 3) {
+                 finalMessage = `Aviso: Nenhum arquivo essencial foi carregado.`;
+                 statusColor = 'var(--danger)';
             }
+            
+            finalMessage += ` (Via Cloudflare Worker)`;
 
             fileInfoElement.textContent = finalMessage;
+            fileInfoElement.style.color = statusColor;
         }
 
-        // Processa os dados
         await this.processDataAsync(this.data, this.potentialData, this.metaData); 
 
         if (event && event.target) event.target.value = '';
@@ -687,9 +709,10 @@ class AgriculturalDashboard {
         this.hideLoadingAnimation();
     }
     
+    
     clearResults() {
         this.currentSlideIndex = 0;
-        this.stopCarousel();
+        this.stopCarousel(); 
         
         // CORRIGIDO: Zera todos os KPIs no header (chamando o visualizer com dados zerados)
         if (this.visualizer && this.visualizer.kpisRenderer) {
@@ -765,7 +788,6 @@ class AgriculturalDashboard {
                 <div class="alert-card active">
                     <i class="fas fa-check-circle" style="color: var(--success);"></i>
                     <div>
-                 
                         <div class="alert-title">Dados Validados!</div>
                         <div class="alert-message">Nenhuma anomalia crítica encontrada.</div>
                     </div>
@@ -781,7 +803,6 @@ class AgriculturalDashboard {
             if (alert.severity === 'critical') iconClass = 'fa-times-circle';
             else if (alert.severity === 'info') iconClass = 'fa-info-circle';
 
-          
             alertDiv.className = `alert-card ${alert.severity}`;
             
             let detailHtml = '';
@@ -790,17 +811,14 @@ class AgriculturalDashboard {
             }
 
             alertDiv.innerHTML = `
-         
                 <div class="alert-content">
                     <div>
                         <i class="fas ${iconClass}"></i>
                         <div>
-                      
                             <div class="alert-title">${alert.title}</div>
                             <div class="alert-message">${alert.message}</div>
                         </div>
                     </div>
-                    
                     ${detailHtml}
                 </div>
             `;
@@ -825,7 +843,7 @@ class AgriculturalDashboard {
         console.error(message);
         const fileInfoElement = document.getElementById('fileInfo');
         if (fileInfoElement) {
-            fileInfoElement.textContent = message.split(':')[0];
+            fileInfoElement.textContent = message.split(':')[0]; 
             fileInfoElement.style.color = 'var(--danger)';
             setTimeout(() => {
                  fileInfoElement.style.color = 'var(--text-secondary)';
@@ -838,5 +856,5 @@ class AgriculturalDashboard {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    window.agriculturalDashboard = new AgriculturalDashboard();
+    window.agriculturalDashboard = new AgriculturalDashboard(); 
 });
