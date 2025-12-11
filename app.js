@@ -508,8 +508,6 @@ class AgriculturalDashboard {
 
             // Planilha Metas (OK)
             'Metas.xlsx': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQz5vqO72FOtBXS-7qEb9KY06hn9gdK_Vle4hh6gWwdB7JHrISo9cBbO82vWQEMtXs8jjAv5hKKKmp5/pub?gid=1745202496&single=true&output=csv',
-            
-            // (Metas_2 removido, pois o link era o de Produção)
         };
 
         let results = [];
@@ -537,11 +535,11 @@ class AgriculturalDashboard {
                 if (result && Array.isArray(result.data) && result.data.length > 0) {
                     
                     // Lógica de atribuição para os arrays corretos no app.js
-                    if (name === 'Producao.xlsx') {
+                    if (result.type === 'PRODUCTION') {
                         this.data = this.data.concat(result.data); // Produção
-                    } else if (name === 'Potencial.xlsx') {
+                    } else if (result.type === 'POTENTIAL') {
                         this.potentialData = this.potentialData.concat(result.data); // Potencial
-                    } else if (name === 'Metas.xlsx') {
+                    } else if (result.type === 'META') {
                         this.metaData = this.metaData.concat(result.data); // Metas
                     }
                     
@@ -665,7 +663,7 @@ class AgriculturalDashboard {
         // Tenta a BUSCA ONLINE (GOOGLE SHEETS)
         const cloudResult = await this.fetchFilesFromCloud();
         
-        // Atribuição de dados preenchida diretamente no fetchFilesFromCloud (para o array correto)
+        // Atribuição de dados preenchida diretamente no fetchFilesFromCloud 
         cloudMissingFiles = cloudResult.missingFiles;
 
         if (this.data.length === 0 && this.potentialData.length === 0 && this.metaData.length === 0) {

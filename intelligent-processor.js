@@ -1,4 +1,4 @@
-// intelligent-processor.js - VERSÃO FINAL CORRIGIDA PARA FALTA DE generateViagemId
+// intelligent-processor.js - VERSÃO FINAL CORRIGIDA PARA ATRIBUIÇÃO CORRETA DA VIAGEM E ALERTA
 class IntelligentProcessor {
     constructor() {
         this.columnMappings = {
@@ -70,7 +70,7 @@ class IntelligentProcessor {
                 'ton_hora': ['TON HORA', 'TON/HORA', 'TONELADA HORA'],
                 'potencial_campo': ['POTENCIAL CAMPO'],
                 'cm_hora': ['CM HORA', 'CM (HORA)', 'CAMINHAO HORA'],
-                'tempo_carre_min': ['TEMPO CARRE MIN', 'TEMPO.CARRE (MIN)', 'TEMPO CARRE', 'TEMPO CARREGAMENTO'],
+                'tempo_carre_min': ['TEMPO CARRE MIN', 'TEMPO.CARRE (MIN)', 'TEMPO CARREGAMENTO'],
                 'cam': ['CAM', 'CAMINHOES', 'CAMINHAO'],
                 'ciclo': ['CICLO'],
                 'viagens': ['VIAGENS'],
@@ -80,7 +80,6 @@ class IntelligentProcessor {
         };
     }
     
-    // MÉTODO ADICIONADO (DA CORREÇÃO ANTERIOR)
     _addToList(list, value) {
         if (value !== null && value !== undefined && value !== '' && String(value).toUpperCase() !== 'TOTAL' && String(value) !== '0') {
             const trimmedValue = String(value).trim();
@@ -90,14 +89,18 @@ class IntelligentProcessor {
         }
     }
 
-    // MÉTODO ADICIONADO PARA RESOLVER O ERRO (CORREÇÃO DE AGORA)
     generateViagemId(item) {
-        // Cria um ID de viagem exclusivo usando a data/hora e a frota.
-        const dataStr = item.data ? item.data.replace(/\//g, '') : 'NODATE';
-        const horaStr = item.hora ? item.hora.replace(/:/g, '') : 'NOTIME';
-        const frotaStr = item.frota ? String(item.frota).replace(/[^a-zA-Z0-9]/g, '') : 'NOFROTA';
+        // Fallback robusto para evitar 'NODATE' ou 'NOFROTA'
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
         
-        // Formato: [DATA][HORA][FROTA]
+        const dataStr = item.data ? item.data.replace(/\//g, '') : `${day}${month}${year}`;
+        const horaStr = item.hora ? item.hora.replace(/:/g, '') : '0000';
+        const frotaStr = item.frota ? String(item.frota).replace(/[^a-zA-Z0-9]/g, '') : 'AUTO';
+        
+        // Retorna o ID gerado (Ex: 01072025003631825)
         return `${dataStr}${horaStr}${frotaStr}`.toUpperCase();
     }
 
@@ -115,7 +118,6 @@ class IntelligentProcessor {
     // --- FUNÇÃO DE PROCESSAMENTO DE BINÁRIO (Upload Local) ---
     async processFile(dataOrFile, fileName) { 
         if (dataOrFile instanceof ArrayBuffer) {
-            // Modo 1: Recebeu ArrayBuffer do Cloudflare Worker (Leitura Binária)
             const data = dataOrFile; 
             try {
                 const workbook = XLSX.read(data, { type: 'array' });
@@ -143,7 +145,6 @@ class IntelligentProcessor {
             }
             
         } else {
-            // Modo 2: Recebeu objeto File do upload manual (Leitura Local)
             const file = dataOrFile;
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -186,7 +187,6 @@ class IntelligentProcessor {
         if (!csvText) return { type: 'UNKNOWN', fileName, data: [] };
 
         try {
-            // Usa o XLSX.js para analisar o texto CSV
             const workbook = XLSX.read(csvText, { type: 'string', raw: false, cellDates: true });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
@@ -243,13 +243,18 @@ class IntelligentProcessor {
             let diaBalancaStr, dataSaidaStr, horaSaidaStr, isAggregationRow = false;
             const normalizedRow = this.normalizeRowKeys(row);
             
+            // 1. Loop inicial para Viagem, Frota e Frente (CRÍTICO)
             Object.keys(normalizedRow).forEach(key => {
                  const value = normalizedRow[key];
                  if (value === null || value === undefined || value === '') return;
                  const cleanKey = key.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, ' ').trim().replace(/\s+/g, ' ');
+                 
+                 // CORREÇÃO CRÍTICA NA VIAGEM: Garante que atribui a viagem se for a coluna correta
                  if (this.matchesPattern(cleanKey, this.columnMappings.production.viagem)) {
                      if (!cleanKey.includes('QTD') && !cleanKey.includes('DIST') && !String(value).toUpperCase().includes('TOTAL')) {
-                         item.viagem = String(value).trim();
+                         if (item.viagem === undefined || item.viagem === null || item.viagem === '') {
+                             item.viagem = String(value).trim();
+                         }
                      }
                  } else if (this.matchesPattern(cleanKey, this.columnMappings.production.frota)) {
                      item.frota = String(value).trim();
@@ -258,10 +263,14 @@ class IntelligentProcessor {
                  }
             });
 
+            // 2. Loop para o restante dos dados
             Object.keys(normalizedRow).forEach(key => {
                 const value = normalizedRow[key];
                 if (value === null || value === undefined || value === '') return;
+                
+                // Lógica de Detecção de Agregação
                 if (String(value).toUpperCase().includes('TOTAL') && isNaN(value)) isAggregationRow = true;
+                
                 const cleanKey = key.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
 
                 if (this.matchesPattern(cleanKey, this.columnMappings.production.equipamento)) this._addToList(item.equipamentos, value);
@@ -308,6 +317,7 @@ class IntelligentProcessor {
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.status_frota)) item.statusFrota = String(value).trim().toUpperCase();
             });
             
+            // 3. Finaliza Timestamps
             if (!item.timestamp && (dataSaidaStr || diaBalancaStr) && horaSaidaStr) {
                 const dt = this.parseDateTime(`${dataSaidaStr || diaBalancaStr} ${horaSaidaStr}`);
                 if (dt.fullDate) {
@@ -323,6 +333,7 @@ class IntelligentProcessor {
                  item.hora = horaSaidaStr;
             }
 
+            // 4. Finaliza Listas
             [1, 2, 3].forEach(idx => {
                 if (opData[idx].c) {
                     let fullOp = String(opData[idx].c).trim();
@@ -335,13 +346,36 @@ class IntelligentProcessor {
             if (item.operadores.length) item.operador = item.operadores[0];
             if (item.transbordos.length) item.transbordo = item.transbordos[0];
             
+            // 5. Filtros e Geração de ID CRÍTICO
             const isFechamentoViagem = item.qtdViagem && Math.abs(item.qtdViagem - 1) < 0.05;
+            
+            // FILTRO CRÍTICO REVISADO: A linha de TOTAL (isAggregationRow) só é mantida se fechar a viagem (Qtd Viagem = 1)
             if (isAggregationRow && !isFechamentoViagem) return;
+            
+            // Se não for fechamento, precisa ter frota
             if (!isFechamentoViagem && !item.frota) return;
             if (item.peso <= 0) return;
 
-            item.idViagem = item.viagem || this.generateViagemId(item);
-            if (item.viagem) row.viagem = item.viagem; 
+            // GERAÇÃO DE ID: Usa o ID real (item.viagem) ou gera o AUTO_ID
+            let finalViagemId = item.viagem;
+            
+            // 6. Lógica de Fallback de ID (Onde o erro estava)
+            
+            // Se o ID for o texto 'Total' (que está na coluna Viagem na linha de fechamento) E for um fechamento real
+            if (String(finalViagemId).toUpperCase() === 'TOTAL' && isFechamentoViagem) {
+                 // Tente usar o número da Frota como ID
+                 finalViagemId = String(item.frota); 
+                 
+            } else if (!finalViagemId || String(finalViagemId).length < 3) {
+                // Se a coluna Viagem estiver vazia ou for muito curta, gere um ID robusto
+                finalViagemId = this.generateViagemId(item);
+            }
+            
+            // Filtro final contra lixo (e garantindo que não use o texto 'TOTAL')
+            if (!finalViagemId || String(finalViagemId).toUpperCase().includes('TOTAL')) return;
+
+            item.idViagem = finalViagemId;
+            
             processedData.push(item);
         });
 
@@ -499,7 +533,7 @@ class IntelligentProcessor {
             'rotacaoMoenda': 'ROTAÇÃO DA MOENDA',
             'potencial': 'POTENCIAL',
             'caminhoesIda': 'Caminhões  Ida',
-            'caminhoesCampo': 'Caminhões  Campo',
+            'caminhõesCampo': 'Caminhões  Campo',
             'caminhoesVolta': 'Caminhões  Volta',
             'caminhoesDescarga': 'Caminhões  Descarga',
             'caminhoesParados': 'Caminhões  PARADO',
