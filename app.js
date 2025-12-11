@@ -501,13 +501,13 @@ class AgriculturalDashboard {
         // URL DO SEU WORKER ATIVO
         const WORKER_URL = 'https://agroanalytics.jtsdowload.workers.dev/?url='; 
 
-        // LINKS DE COMPARTILHAMENTO DO ONEDRIVE/SHAREPOINT (SEUS LINKS REAIS)
+        // LINKS RAW CORRIGIDOS PARA DOWNLOAD DIRETO (USANDO DOWNLOAD.ASPX)
         const oneDriveUrls = {
-            'Producao.xlsx': 'https://pitaa-my.sharepoint.com/:x:/g/personal/julianotimoteo_usinapitangueiras_com_br/IQAu-XZTf4dTRo4MTEsfTdPIAYD-5OHLTgUF68gW-_nRbI4?e=iuayIE&download=1',
-            'Potencial.xlsx': 'https://pitaa-my.sharepoint.com/:x:/g/personal/julianotimoteo_usinapitangueiras_com_br/IQBsDulvntQ8RZ_EoXDpQ-VnAVobVEHoi6wL2iE-4I5r6kY?e=l8Kml4&download=1',
-            'Metas.xlsx': 'https://pitaa-my.sharepoint.com/:x:/g/personal/julianotimoteo_usinapitangueiras_com_br/IQDPsvHp5stzS5_S9YNmawxeATWu1T8c6-7ZfPe5EaMLtuI?e=uGSaa1&download=1'
+            'Producao.xlsx': 'https://pitaa-my.sharepoint.com/personal/julianotimoteo_usinapitangueiras_com_br/_layouts/15/download.aspx?share=IQAu-XZTf4dTRo4MTEsfTdPIAYD-5OHLTgUF68gW-_nRbI4',
+            'Potencial.xlsx': 'https://pitaa-my.sharepoint.com/personal/julianotimoteo_usinapitangueiras_com_br/_layouts/15/download.aspx?share=IQBsDulvntQ8RZ_EoXDpQ-VnAVobVEHoi6wL2iE-4I5r6kY',
+            'Metas.xlsx': 'https://pitaa-my.sharepoint.com/personal/julianotimoteo_usinapitangueiras_com_br/_layouts/15/download.aspx?share=IQDPsvHp5stzS5_S9YNmawxeATWu1T8c6-7ZfPe5EaMLtuI'
         };
-
+        
         let results = [];
         let successCount = 0;
         let missingFiles = [];

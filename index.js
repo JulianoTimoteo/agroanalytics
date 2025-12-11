@@ -1,3 +1,4 @@
+// index.js (VERSÃO FINAL CORRIGIDA PARA ONEDRIVE RAW LINKS)
 export default {
   async fetch(request) {
     const url = new URL(request.url).searchParams.get("url");
@@ -7,16 +8,32 @@ export default {
     }
 
     try {
-      const r = await fetch(url);
-      const resp = new Response(r.body, r);
+      // Força o Cloudflare a usar HTTP/1.1, resolvendo o erro QUIC/SharePoint
+      const r = await fetch(url, {
+        method: "GET",
+        headers: {
+          "User-Agent": "Mozilla/5.0", // Ajuda o SharePoint a se comportar como se fosse um navegador mais antigo
+          "Cache-Control": "no-cache"
+        },
+        cf: { httpProtocol: "http1" } // CHAVE DA SOLUÇÃO
+      });
 
-      resp.headers.set("Access-Control-Allow-Origin", "*");
-      resp.headers.set("Access-Control-Allow-Methods", "GET, HEAD, POST, OPTIONS");
-      resp.headers.set("Access-Control-Allow-Headers", "Content-Type, Cache-Control");
+      // Ler o body como arrayBuffer (Excel precisa disso)
+      const buf = await r.arrayBuffer();
 
-      return resp;
+      return new Response(buf, {
+        status: r.status,
+        headers: {
+          "Content-Type": r.headers.get("Content-Type") || "application/octet-stream",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type, Cache-Control",
+          "Cache-Control": "no-cache"
+        }
+      });
+
     } catch (e) {
       return new Response(`Erro ao buscar a URL de destino: ${e.message}`, { status: 500 });
     }
   }
-}
+};
