@@ -1,4 +1,4 @@
-// app.js - Orquestrador Principal (Inteligente e Robusto)
+// app.js - Orquestrador Principal (VERSÃO FINAL: CSV PUBLICADO NA WEB)
 class AgriculturalDashboard {
     constructor() {
         // Inicializa os módulos
@@ -31,7 +31,7 @@ class AgriculturalDashboard {
         this.showTab('tab-gerenciar'); 
         this.clearResults(); 
         
-        // CORREÇÃO CRÍTICA: Inicia a busca online
+        // Inicia a busca online (Google Sheets CSV Publicado)
         this.startLoadingProcess(); 
     }
     
@@ -492,46 +492,59 @@ class AgriculturalDashboard {
         this.animationFrameId = requestAnimationFrame(animate); 
     }
 
-    // --- FUNÇÃO CRÍTICA DE BUSCA ONLINE (CLOUDFLARE WORKER) ---
+    // --- FUNÇÃO CRÍTICA DE BUSCA ONLINE (CSV PUBLICADO) ---
     async fetchFilesFromCloud() {
         // --------------------------------------------------------
-        // MODO: CLOUDFLARE WORKER (Proxy CORS)
+        // MODO: GOOGLE SHEETS (CSV Publicado - Estável e CORS OK)
         // --------------------------------------------------------
         
-        // URL DO SEU WORKER ATIVO
-        const WORKER_URL = 'https://agroanalytics.jtsdowload.workers.dev/?url='; 
+        // URLs de exportação direta para CSV (Publicar na web)
+        const googleSheetsUrls = {
+            // Produção (CORRIGIDO)
+            'Producao.xlsx': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTv-de3iNLrOzXNSRa1-HBioVWoetmjQIhnEt--rJo3s5tiQYkvAUgjnFqWozBeyrJmJyFjml4rUFSv/pub?gid=1084612649&single=true&output=csv',
+            
+            // Planilha Potencial (OK)
+            'Potencial.xlsx': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTg_8z8D4UpoicRkZLtcHWlmx62uJTVtzen-JoV_Ggr16bdWA5DYNyVvTzxGJd3-4KYiJsW9gtVDhrW/pub?gid=588620735&single=true&output=csv',
 
-        // LINKS RAW CORRIGIDOS PARA DOWNLOAD DIRETO (USANDO DOWNLOAD.ASPX)
-        const oneDriveUrls = {
-            'Producao.xlsx': 'https://pitaa-my.sharepoint.com/personal/julianotimoteo_usinapitangueiras_com_br/_layouts/15/download.aspx?share=IQAu-XZTf4dTRo4MTEsfTdPIAYD-5OHLTgUF68gW-_nRbI4',
-            'Potencial.xlsx': 'https://pitaa-my.sharepoint.com/personal/julianotimoteo_usinapitangueiras_com_br/_layouts/15/download.aspx?share=IQBsDulvntQ8RZ_EoXDpQ-VnAVobVEHoi6wL2iE-4I5r6kY',
-            'Metas.xlsx': 'https://pitaa-my.sharepoint.com/personal/julianotimoteo_usinapitangueiras_com_br/_layouts/15/download.aspx?share=IQDPsvHp5stzS5_S9YNmawxeATWu1T8c6-7ZfPe5EaMLtuI'
+            // Planilha Metas (OK)
+            'Metas.xlsx': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQz5vqO72FOtBXS-7qEb9KY06hn9gdK_Vle4hh6gWwdB7JHrISo9cBbO82vWQEMtXs8jjAv5hKKKmp5/pub?gid=1745202496&single=true&output=csv',
+            
+            // (Metas_2 removido, pois o link era o de Produção)
         };
-        
+
         let results = [];
         let successCount = 0;
         let missingFiles = [];
 
-        for (const [name, oneDriveUrl] of Object.entries(oneDriveUrls)) {
+        for (const [name, url] of Object.entries(googleSheetsUrls)) {
             try {
                 this.showLoadingAnimation();
                 
-                // CONSTRUÇÃO DA URL: Worker URL + Link do OneDrive (codificado)
-                const proxyUrl = WORKER_URL + encodeURIComponent(oneDriveUrl);
-                
-                const response = await fetch(proxyUrl);
+                // Fetch de TEXTO (CSV)
+                const response = await fetch(url);
                 
                 if (!response.ok) {
-                    throw new Error(`Status HTTP ${response.status} ao acessar o Worker.`);
+                    throw new Error(`Status HTTP ${response.status} ao acessar ${name}.`);
                 }
                 
-                // Leitura do conteúdo binário (Excel)
-                const data = await response.arrayBuffer(); 
+                // Leitura do conteúdo como texto
+                const csvText = await response.text(); 
 
-                // Processamento do IntelligentProcessor (que aceita ArrayBuffer)
-                const result = await this.processor.processFile(data, name);
+                // Processamento do IntelligentProcessor (que usa processCSV)
+                const result = await this.processor.processCSV(csvText, name);
                 
+                // Se o processamento for bem-sucedido e houver dados:
                 if (result && Array.isArray(result.data) && result.data.length > 0) {
+                    
+                    // Lógica de atribuição para os arrays corretos no app.js
+                    if (name === 'Producao.xlsx') {
+                        this.data = this.data.concat(result.data); // Produção
+                    } else if (name === 'Potencial.xlsx') {
+                        this.potentialData = this.potentialData.concat(result.data); // Potencial
+                    } else if (name === 'Metas.xlsx') {
+                        this.metaData = this.metaData.concat(result.data); // Metas
+                    }
+                    
                     results.push(result);
                     successCount++;
                 } else {
@@ -573,7 +586,7 @@ class AgriculturalDashboard {
                 if (!file.name.toLowerCase().match(/\.(xlsx|xls|csv)$/)) continue;
                 
                 try {
-                    // NOTE: This processFile call is for local file upload (FileReader), not the Worker.
+                    // Este método usa FileReader (upload local)
                     const result = await this.processor.processFile(file);
                     
                     if (result && Array.isArray(result.data) && result.data.length > 0) {
@@ -649,25 +662,22 @@ class AgriculturalDashboard {
         let cloudMissingFiles = [];
         const fileInfoElement = document.getElementById('fileInfo');
         
-        // 1. Tenta a BUSCA ONLINE (CLOUDFLARE WORKER)
+        // Tenta a BUSCA ONLINE (GOOGLE SHEETS)
         const cloudResult = await this.fetchFilesFromCloud();
         
-        cloudResult.results.forEach(res => {
-             if (res.type === 'PRODUCTION') productionData = productionData.concat(res.data);
-             else if (res.type === 'POTENTIAL') potentialData = potentialData.concat(res.data);
-             else if (res.type === 'META') metaData = metaData.concat(res.data);
-        });
+        // Atribuição de dados preenchida diretamente no fetchFilesFromCloud (para o array correto)
         cloudMissingFiles = cloudResult.missingFiles;
 
-        if (productionData.length === 0 && potentialData.length === 0 && metaData.length === 0) {
+        if (this.data.length === 0 && this.potentialData.length === 0 && this.metaData.length === 0) {
             this.hideLoadingAnimation();
             this.showAnalyticsSection(false);
-            throw new Error("Nenhum arquivo válido encontrado. Verifique se os arquivos são de Produção, Potencial ou Metas.");
+            
+            let missingFilesString = cloudMissingFiles.join(', ');
+            let errorMessage = `Falha na automação. Arquivos ausentes: ${missingFilesString}. Por favor, use a aba 'Gerenciar' para o upload manual.`;
+            
+            this.showError(errorMessage); 
+            return;
         }
-
-        this.data = productionData;
-        this.potentialData = potentialData;
-        this.metaData = metaData;
 
         // 2. Feedback e Visualização
         if(fileInfoElement) {
@@ -676,9 +686,9 @@ class AgriculturalDashboard {
             let missingFilesList = cloudMissingFiles;
             
             const essentialFiles = {
-                'Produção': productionData.length > 0,
-                'Potencial': potentialData.length > 0,
-                'Metas': metaData.length > 0
+                'Produção': this.data.length > 0,
+                'Potencial': this.potentialData.length > 0,
+                'Metas': this.metaData.length > 0
             };
             
             if (essentialFiles.Produção) msg.push(`Produção`);
@@ -688,15 +698,11 @@ class AgriculturalDashboard {
             // Lógica de Mensagem Final
             let finalMessage = `Arquivos carregados: ${msg.join(' + ')}.`;
             let statusColor = 'var(--success)';
-            if (missingFilesList.length > 0 && missingFilesList.length < 3) {
-                finalMessage += ` Aviso: Falta(m) o(s) arquivo(s) essenciais: ${missingFilesList.join(', ')}.`;
-                statusColor = 'var(--warning)';
-            } else if (missingFilesList.length === 3) {
-                 finalMessage = `Aviso: Nenhum arquivo essencial foi carregado.`;
-                 statusColor = 'var(--danger)';
+            if (missingFilesList.length > 0) {
+                finalMessage = `Carregados: ${msg.join(' + ')}.`;
             }
             
-            finalMessage += ` (Via Cloudflare Worker)`;
+            finalMessage += ` (Via Google Sheets)`;
 
             fileInfoElement.textContent = finalMessage;
             fileInfoElement.style.color = statusColor;

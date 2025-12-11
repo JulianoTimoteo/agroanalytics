@@ -1,4 +1,4 @@
-// intelligent-processor.js - VERSÃO FINAL CORRIGIDA PARA CLOUDFLARE WORKER / ONEDRIVE
+// intelligent-processor.js - VERSÃO FINAL CORRIGIDA PARA FALTA DE generateViagemId
 class IntelligentProcessor {
     constructor() {
         this.columnMappings = {
@@ -79,6 +79,28 @@ class IntelligentProcessor {
             }
         };
     }
+    
+    // MÉTODO ADICIONADO (DA CORREÇÃO ANTERIOR)
+    _addToList(list, value) {
+        if (value !== null && value !== undefined && value !== '' && String(value).toUpperCase() !== 'TOTAL' && String(value) !== '0') {
+            const trimmedValue = String(value).trim();
+            if (!list.includes(trimmedValue)) {
+                 list.push(trimmedValue);
+            }
+        }
+    }
+
+    // MÉTODO ADICIONADO PARA RESOLVER O ERRO (CORREÇÃO DE AGORA)
+    generateViagemId(item) {
+        // Cria um ID de viagem exclusivo usando a data/hora e a frota.
+        const dataStr = item.data ? item.data.replace(/\//g, '') : 'NODATE';
+        const horaStr = item.hora ? item.hora.replace(/:/g, '') : 'NOTIME';
+        const frotaStr = item.frota ? String(item.frota).replace(/[^a-zA-Z0-9]/g, '') : 'NOFROTA';
+        
+        // Formato: [DATA][HORA][FROTA]
+        return `${dataStr}${horaStr}${frotaStr}`.toUpperCase();
+    }
+
 
     _formatExcelTime(value) {
         if (value instanceof Date) return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
@@ -90,7 +112,7 @@ class IntelligentProcessor {
         return strValue; 
     }
 
-    // --- FUNÇÃO CRÍTICA: LÊ ArrayBuffer do Worker OU File do upload manual ---
+    // --- FUNÇÃO DE PROCESSAMENTO DE BINÁRIO (Upload Local) ---
     async processFile(dataOrFile, fileName) { 
         if (dataOrFile instanceof ArrayBuffer) {
             // Modo 1: Recebeu ArrayBuffer do Cloudflare Worker (Leitura Binária)
@@ -159,11 +181,12 @@ class IntelligentProcessor {
         }
     }
 
-    // Método de leitura de CSV (Mantido por compatibilidade, mas inutilizado pelo ArrayBuffer)
+    // --- FUNÇÃO DE PROCESSAMENTO DE CSV (Google Sheets) ---
     async processCSV(csvText, fileName) {
         if (!csvText) return { type: 'UNKNOWN', fileName, data: [] };
 
         try {
+            // Usa o XLSX.js para analisar o texto CSV
             const workbook = XLSX.read(csvText, { type: 'string', raw: false, cellDates: true });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
