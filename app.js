@@ -503,9 +503,9 @@ class AgriculturalDashboard {
 
         // LINKS DE COMPARTILHAMENTO DO ONEDRIVE/SHAREPOINT (SEUS LINKS REAIS)
         const oneDriveUrls = {
-            'Producao.xlsx': 'https://pitaa-my.sharepoint.com/:x:/g/personal/julianotimoteo_usinapitangueiras_com_br/IQAu-XZTf4dTRo4MTEsfTdPIAYD-5OHLTgUF68gW-_nRbI4?e=iuayIE',
-            'Potencial.xlsx': 'https://pitaa-my.sharepoint.com/:x:/g/personal/julianotimoteo_usinapitangueiras_com_br/IQBsDulvntQ8RZ_EoXDpQ-VnAVobVEHoi6wL2iE-4I5r6kY?e=l8Kml4',
-            'Metas.xlsx': 'https://pitaa-my.sharepoint.com/:x:/g/personal/julianotimoteo_usinapitangueiras_com_br/IQDPsvHp5stzS5_S9YNmawxeATWu1T8c6-7ZfPe5EaMLtuI?e=uGSaa1'
+            'Producao.xlsx': 'https://pitaa-my.sharepoint.com/:x:/g/personal/julianotimoteo_usinapitangueiras_com_br/IQAu-XZTf4dTRo4MTEsfTdPIAYD-5OHLTgUF68gW-_nRbI4?e=iuayIE&download=1',
+            'Potencial.xlsx': 'https://pitaa-my.sharepoint.com/:x:/g/personal/julianotimoteo_usinapitangueiras_com_br/IQBsDulvntQ8RZ_EoXDpQ-VnAVobVEHoi6wL2iE-4I5r6kY?e=l8Kml4&download=1',
+            'Metas.xlsx': 'https://pitaa-my.sharepoint.com/:x:/g/personal/julianotimoteo_usinapitangueiras_com_br/IQDPsvHp5stzS5_S9YNmawxeATWu1T8c6-7ZfPe5EaMLtuI?e=uGSaa1&download=1'
         };
 
         let results = [];
