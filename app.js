@@ -1,4 +1,4 @@
-// app.js - Orquestrador Principal (VERSÃO FINAL: CSV PUBLICADO NA WEB)
+// app.js - Orquestrador Principal (VERSÃO FINAL: Lendo 3 Planilhas Separadas)
 class AgriculturalDashboard {
     constructor() {
         // Inicializa os módulos
@@ -179,7 +179,7 @@ class AgriculturalDashboard {
             let cssClass = '';
             
             const startA = 7 * 60 + 45; 
-            const startB = 16 * 60;      
+            const startB = 16 * 60;      
             const startC = 23 * 60 + 40; 
 
             if (currentMinutes >= startA && currentMinutes < startB) {
@@ -251,8 +251,57 @@ class AgriculturalDashboard {
         return new Promise(resolve => setTimeout(resolve, 0));
     }
 
+    // MÉTODO DE DEBUG PARA TIMESTAMPS
+    debugTimestampInfo(data) {
+        if (!data || data.length === 0) {
+            console.log("=== DEBUG TIMESTAMPS: Dados vazios ===");
+            return;
+        }
+        
+        console.log("=== DEBUG TIMESTAMPS ===");
+        console.log(`Total de registros: ${data.length}`);
+        
+        const timestamps = data
+            .filter(row => row.timestamp)
+            .map(row => ({
+                timestamp: row.timestamp,
+                formatted: row.timestamp instanceof Date ? 
+                    row.timestamp.toLocaleString('pt-BR') : 
+                    String(row.timestamp),
+                type: typeof row.timestamp,
+                isDate: row.timestamp instanceof Date,
+                isValid: row.timestamp instanceof Date && !isNaN(row.timestamp.getTime())
+            }));
+        
+        console.log(`Registros com timestamp: ${timestamps.length}`);
+        
+        if (timestamps.length > 0) {
+            console.log("Primeiros 5 timestamps:");
+            timestamps.slice(0, 5).forEach((ts, i) => {
+                console.log(`${i+1}. ${ts.formatted} (Tipo: ${ts.type}, Date: ${ts.isDate}, Válido: ${ts.isValid})`);
+            });
+            
+            const sorted = [...timestamps].sort((a, b) => {
+                const timeA = a.timestamp instanceof Date ? a.timestamp.getTime() : 0;
+                const timeB = b.timestamp instanceof Date ? b.timestamp.getTime() : 0;
+                return timeB - timeA;
+            });
+            
+            if (sorted[0]) {
+                console.log("Timestamp mais recente:", sorted[0].formatted);
+                console.log("Valor raw:", sorted[0].timestamp);
+            }
+        } else {
+            console.log("Nenhum timestamp encontrado nos dados");
+        }
+        console.log("======================");
+    }
+
     // MODIFICADO: Adiciona metaData
     async processDataAsync(productionData, potentialData, metaData) {
+        // DEBUG: Verifica os timestamps
+        this.debugTimestampInfo(productionData);
+        
         // 1. Validação
         await this._yieldControl(); 
         this.validationResult = this.validator.validateAll(productionData);
@@ -281,7 +330,7 @@ class AgriculturalDashboard {
             pane.classList.remove('active');
         });
         // Remove 'active' de todos os botões de sub-abas
-        document.querySelectorAll('#tab-frentes .tabs-nav button').forEach(button => {
+        document.querySelectorAll('.tabs-nav .tab-button').forEach(button => {
             button.classList.remove('active');
         });
 
@@ -495,19 +544,24 @@ class AgriculturalDashboard {
     // --- FUNÇÃO CRÍTICA DE BUSCA ONLINE (CSV PUBLICADO) ---
     async fetchFilesFromCloud() {
         // --------------------------------------------------------
-        // MODO: GOOGLE SHEETS (CSV Publicado - Estável e CORS OK)
+        // IDs das planilhas fornecidas pelo Apps Script
         // --------------------------------------------------------
         
-        // URLs de exportação direta para CSV (Publicar na web)
-        const googleSheetsUrls = {
-            // Produção (CORRIGIDO)
-            'Producao.xlsx': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTv-de3iNLrOzXNSRa1-HBioVWoetmjQIhnEt--rJo3s5tiQYkvAUgjnFqWozBeyrJmJyFjml4rUFSv/pub?gid=1084612649&single=true&output=csv',
-            
-            // Planilha Potencial (OK)
-            'Potencial.xlsx': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTg_8z8D4UpoicRkZLtcHWlmx62uJTVtzen-JoV_Ggr16bdWA5DYNyVvTzxGJd3-4KYiJsW9gtVDhrW/pub?gid=588620735&single=true&output=csv',
+        const SHEET_ID_PRODUCAO = "1jefysQxtcwSg5fGM-F1BSfAPljyatKwz9OBCRIOg_bo";
+        const SHEET_ID_METAS = "1RWjssOEZmmLQwxzFNCrQpLlPvw1bZqT1kEAVcXp6g90";
+        const SHEET_ID_POTENCIAL = "1qxhVvQAfVtE8P4EDdwBb-m3ShlWLfFq_YoToJkFKZh4";
+        
+        const cacheBuster = Date.now(); // Cache-Busting para garantir o dado mais fresco
 
-            // Planilha Metas (OK)
-            'Metas.xlsx': 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQz5vqO72FOtBXS-7qEb9KY06hn9gdK_Vle4hh6gWwdB7JHrISo9cBbO82vWQEMtXs8jjAv5hKKKmp5/pub?gid=1745202496&single=true&output=csv',
+        const googleSheetsUrls = {
+            // Produção: ID Dedicado
+            'Producao.xlsx': `https://docs.google.com/spreadsheets/d/${SHEET_ID_PRODUCAO}/export?format=csv&gid=0&t=${cacheBuster}`,
+            
+            // Metas: ID Dedicado
+            'Metas.xlsx': `https://docs.google.com/spreadsheets/d/${SHEET_ID_METAS}/export?format=csv&gid=0&t=${cacheBuster}`,
+
+            // Potencial: ID Dedicado
+            'Potencial.xlsx': `https://docs.google.com/spreadsheets/d/${SHEET_ID_POTENCIAL}/export?format=csv&gid=0&t=${cacheBuster}`,
         };
 
         let results = [];
@@ -522,11 +576,17 @@ class AgriculturalDashboard {
                 const response = await fetch(url);
                 
                 if (!response.ok) {
-                    throw new Error(`Status HTTP ${response.status} ao acessar ${name}.`);
+                    // Se falhar a primeira tentativa, tenta com o endpoint Gviz, mais tolerante.
+                    const gvizUrl = url.replace('/export?format=csv&gid=0', '/gviz/tq?tqx=out:csv&gid=0');
+                    const gvizResponse = await fetch(gvizUrl);
+                    
+                    if (!gvizResponse.ok) {
+                        throw new Error(`Falha no download - Status HTTP: ${response.status} ou ${gvizResponse.status}`);
+                    }
+                    var csvText = await gvizResponse.text();
+                } else {
+                    var csvText = await response.text(); 
                 }
-                
-                // Leitura do conteúdo como texto
-                const csvText = await response.text(); 
 
                 // Processamento do IntelligentProcessor (que usa processCSV)
                 const result = await this.processor.processCSV(csvText, name);
@@ -556,7 +616,6 @@ class AgriculturalDashboard {
 
         return { successCount, results, missingFiles };
     }
-
 
     async handleFileUpload(event) {
         this.showLoadingAnimation(); 
@@ -713,7 +772,6 @@ class AgriculturalDashboard {
         this.hideLoadingAnimation();
     }
     
-    
     clearResults() {
         this.currentSlideIndex = 0;
         this.stopCarousel(); 
@@ -754,7 +812,6 @@ class AgriculturalDashboard {
             moagemStatusEl.className = 'forecast-badge';
         }
 
-
         ['topFrotasProprias', 'topFrotasTerceiros', 'topEquipamentosProprios', 'topEquipamentosTerceiros', 'topTransbordos', 'topOperadoresColheitaPropria'].forEach(id => {
             const el = document.getElementById(id);
             if(el) el.innerHTML = `<div class="top-list-item" style="justify-content: center;">Sem dados.</div>`;
@@ -780,7 +837,6 @@ class AgriculturalDashboard {
         
         const fleetGrid = document.getElementById('fleetStatusCardsGrid');
         if (fleetGrid) fleetGrid.innerHTML = `<p class="text-secondary" style="text-align: center;">Aguardando dados de Potencial.</p>`;
-
 
         if (this.visualizer && this.visualizer.destroyAllCharts) {
             this.visualizer.destroyAllCharts();

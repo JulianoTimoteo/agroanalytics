@@ -63,8 +63,8 @@ class DataVisualizer {
         
         const theme = this.getThemeConfig();
         
-        // NOVO: Atualiza o display da última pesagem
-        this._updateLastWeighingDisplay(analysis.lastExitTimestamp);
+        // Atualiza o display da última pesagem
+        this._updateLastWeighingDisplay(analysis.lastExitTimestamp, analysis.data);
         
         // --- DELEGAÇÃO ---
         this.kpisRenderer.updateHeaderStats(analysis);
@@ -74,7 +74,7 @@ class DataVisualizer {
             this.gridRenderer.updateFrontsGrid(analysis.frentes);
         }
         
-        // NOVO: Atualiza a grid de Metas se houver dados
+        // Atualiza a grid de Metas se houver dados
         if (analysis.metaData) {
             this.metasRenderer.updateMetasGrid(analysis.metaData);
         }
@@ -92,20 +92,64 @@ class DataVisualizer {
     
     /**
      * @description Atualiza o display discreto da última pesagem de saída.
+     * CORRIGIDO: Adicionado fallback para buscar timestamp dos dados
      */
-    _updateLastWeighingDisplay(timestamp) {
+    _updateLastWeighingDisplay(timestamp, data = null) {
         const displayEl = document.getElementById('lastWeighingText');
         if (!displayEl) return;
         
+        // Tenta primeiro com o timestamp direto da análise
         if (timestamp instanceof Date && !isNaN(timestamp.getTime())) {
             const dateStr = timestamp.toLocaleDateString('pt-BR');
             const timeStr = timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             displayEl.textContent = `Última pesagem: ${dateStr} às ${timeStr}`;
-        } else {
-            displayEl.textContent = 'Última pesagem: N/A';
+            return;
         }
+        
+        // Fallback 1: Busca nos dados fornecidos
+        if (data && Array.isArray(data) && data.length > 0) {
+            let latest = null;
+            
+            for (const row of data) {
+                if (row.timestamp && row.timestamp instanceof Date && !isNaN(row.timestamp.getTime())) {
+                    if (!latest || row.timestamp > latest) {
+                        latest = row.timestamp;
+                    }
+                }
+            }
+            
+            if (latest) {
+                const dateStr = latest.toLocaleDateString('pt-BR');
+                const timeStr = latest.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                displayEl.textContent = `Última pesagem: ${dateStr} às ${timeStr}`;
+                return;
+            }
+        }
+        
+        // Fallback 2: Busca nos dados globais do dashboard
+        if (window.agriculturalDashboard && window.agriculturalDashboard.data && window.agriculturalDashboard.data.length > 0) {
+            let latest = null;
+            const dashboardData = window.agriculturalDashboard.data;
+            
+            for (const row of dashboardData) {
+                if (row.timestamp && row.timestamp instanceof Date && !isNaN(row.timestamp.getTime())) {
+                    if (!latest || row.timestamp > latest) {
+                        latest = row.timestamp;
+                    }
+                }
+            }
+            
+            if (latest) {
+                const dateStr = latest.toLocaleDateString('pt-BR');
+                const timeStr = latest.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                displayEl.textContent = `Última pesagem: ${dateStr} às ${timeStr}`;
+                return;
+            }
+        }
+        
+        // Fallback final
+        displayEl.textContent = 'Última pesagem: N/A';
     }
-
 
     // O método de Moagem é complexo e usa vários submódulos, mantido aqui para orquestração
     updateMoagemTab(analysis, config) {
@@ -118,8 +162,8 @@ class DataVisualizer {
         document.getElementById('moagemProgressBar').style.width = percent + "%";
         document.getElementById('moagemPerc').textContent = percent + "%";
         
-        // --- NOVO: BARRA DE DISTRIBUIÇÃO DO PROPRIETÁRIO ---
-        this.kpisRenderer.updateOwnerDistributionBar(analysis); // <--- CHAMADA ADICIONADA
+        // --- BARRA DE DISTRIBUIÇÃO DO PROPRIETÁRIO ---
+        this.kpisRenderer.updateOwnerDistributionBar(analysis);
         
         // --- PROJEÇÃO ---
         const projection = analysis.projecaoMoagem || { 
@@ -150,12 +194,12 @@ class DataVisualizer {
              diffContainer.style.color = colorDiff;
         }
 
-        // 2. RITMO ATUAL (Média Horária) - AGORA EXIBE A MÉTRICA FIXA 3/3 E OS INPUTS DIAGNÓSTICOS
+        // 2. RITMO ATUAL (Média Horária)
         const fixedRhythm = analysis.projecaoMoagem.fixedRhythm || 0;
         const fixedSum = analysis.projecaoMoagem.fixedSum || 0;
-        const weightsList = analysis.projecaoMoagem.weightsUsed || []; // Lista de [W1, W2, W3]
+        const weightsList = analysis.projecaoMoagem.weightsUsed || [];
         
-        // Formata a lista de pesos para exibição (ex: 773,00 t, 786,00 t)
+        // Formata a lista de pesos para exibição
         const weightsDisplay = weightsList.map(w => Utils.formatNumber(w) + ' t').join(' + ');
 
         const ritmoAtualFormulaContainer = document.getElementById('ritmoAtualFormulaContainer');
@@ -180,11 +224,9 @@ class DataVisualizer {
                     </div>
                 `;
             } else {
-                // REMOVIDO: Conteúdo específico para que fique vazio ("---") no CSS.
                 ritmoAtualFormulaContainer.innerHTML = ''; 
             }
         }
-
 
         // 3. TENDÊNCIA (STATUS) 
         let statusClass = 'status-badge warning';
@@ -202,7 +244,6 @@ class DataVisualizer {
              moagemStatusEl.className = statusClass;
              moagemStatusEl.classList.add('forecast-badge'); 
         }
-
 
         // --- CRIAÇÃO DOS TRÊS GRÁFICOS DO CARROSSEL ---
         

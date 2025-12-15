@@ -1,4 +1,4 @@
-// intelligent-processor.js - VERSÃO FINAL CORRIGIDA PARA ATRIBUIÇÃO CORRETA DA VIAGEM E ALERTA
+// intelligent-processor.js - VERSÃO FINAL ESTÁVEL E CORRIGIDA (COMPENSAÇÃO DE FUSO HORÁRIO)
 class IntelligentProcessor {
     constructor() {
         this.columnMappings = {
@@ -22,7 +22,7 @@ class IntelligentProcessor {
                 'pesoBruto': ['PESO BRUTO'],
                 'pesoTara': ['PESO TARA'],
                 'dia_balanca': ['DIA BALANCA', 'DATA ENTRADA', 'DATA/HORA ENTRADA'], 
-                'data_saida': ['DATA/HORA SAÍDA', 'DATA/HORA SAIDA', 'DATA SAIDA'],
+                'data_saida': ['DATA/HORA SAÍDA', 'DATA/HORA SAIDA', 'DATA SAIDA', 'DATA/HORA SAÍDA\n'],
                 'hora_saida': ['HORA SAÍDA', 'HORA SAIDA', 'HORA'],
                 'frente': ['COD FRENTE', 'FRENTE'], 
                 'cod_fazenda': ['COD FAZENDA', 'COD.FAZENDA', 'FAZENDA'], 
@@ -90,18 +90,11 @@ class IntelligentProcessor {
     }
 
     generateViagemId(item) {
-        // Fallback robusto para evitar 'NODATE' ou 'NOFROTA'
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        
-        const dataStr = item.data ? item.data.replace(/\//g, '') : `${day}${month}${year}`;
-        const horaStr = item.hora ? item.hora.replace(/:/g, '') : '0000';
-        const frotaStr = item.frota ? String(item.frota).replace(/[^a-zA-Z0-9]/g, '') : 'AUTO';
-        
-        // Retorna o ID gerado (Ex: 01072025003631825)
-        return `${dataStr}${horaStr}${frotaStr}`.toUpperCase();
+        if (!item || !item.frota) return null;
+        if (!item.data || !item.hora) return null;
+        const data = item.data.replace(/\D/g, '');
+        const hora = item.hora.replace(/\D/g, '').padEnd(4, '0');
+        return `${data}${hora}${String(item.frota).replace(/\W/g, '')}`.toUpperCase();
     }
 
 
@@ -115,7 +108,6 @@ class IntelligentProcessor {
         return strValue; 
     }
 
-    // --- FUNÇÃO DE PROCESSAMENTO DE BINÁRIO (Upload Local) ---
     async processFile(dataOrFile, fileName) { 
         if (dataOrFile instanceof ArrayBuffer) {
             const data = dataOrFile; 
@@ -131,7 +123,22 @@ class IntelligentProcessor {
                 const fileType = this.identifyFileTypeIntelligently(rawMatrix, fileName);
                 
                 if (fileType.type === 'PRODUCTION') {
-                    return { type: 'PRODUCTION', fileName, data: this.processProductionData(worksheet, fileType.headerRow) };
+                    
+                    // Lógica para extrair a última pesagem para o KPI
+                    const ultimaSaida = this.getUltimaDataHoraSaida(
+                        worksheet,
+                        fileType.headerRow
+                    );
+
+                    return {
+                        type: 'PRODUCTION',
+                        fileName,
+                        data: this.processProductionData(worksheet, fileType.headerRow),
+                        ultimaPesagem: ultimaSaida
+                            ? `${ultimaSaida.dateStr} às ${ultimaSaida.timeStr}`
+                            : null
+                    };
+
                 } else if (fileType.type === 'POTENTIAL') {
                     return { type: 'POTENTIAL', fileName, data: this.processPotentialData(worksheet, fileType.headerRow) };
                 } else if (fileType.type === 'META') {
@@ -163,7 +170,21 @@ class IntelligentProcessor {
                         const fileType = this.identifyFileTypeIntelligently(rawMatrix, file.name);
                         
                         if (fileType.type === 'PRODUCTION') {
-                            resolve({ type: 'PRODUCTION', fileName: file.name, data: this.processProductionData(worksheet, fileType.headerRow) });
+                            
+                             const ultimaSaida = this.getUltimaDataHoraSaida(
+                                worksheet,
+                                fileType.headerRow
+                            );
+                            
+                            resolve({ 
+                                type: 'PRODUCTION', 
+                                fileName: file.name, 
+                                data: this.processProductionData(worksheet, fileType.headerRow),
+                                ultimaPesagem: ultimaSaida
+                                    ? `${ultimaSaida.dateStr} às ${ultimaSaida.timeStr}`
+                                    : null
+                            });
+
                         } else if (fileType.type === 'POTENTIAL') {
                             resolve({ type: 'POTENTIAL', fileName: file.name, data: this.processPotentialData(worksheet, fileType.headerRow) });
                         } else if (fileType.type === 'META') {
@@ -182,7 +203,6 @@ class IntelligentProcessor {
         }
     }
 
-    // --- FUNÇÃO DE PROCESSAMENTO DE CSV (Google Sheets) ---
     async processCSV(csvText, fileName) {
         if (!csvText) return { type: 'UNKNOWN', fileName, data: [] };
 
@@ -195,8 +215,21 @@ class IntelligentProcessor {
             const fileType = this.identifyFileTypeIntelligently(rawMatrix, fileName);
 
             if (fileType.type === 'PRODUCTION') {
-                const processedData = this.processProductionData(worksheet, fileType.headerRow);
-                return { type: 'PRODUCTION', fileName, data: processedData };
+                
+                const ultimaSaida = this.getUltimaDataHoraSaida(
+                    worksheet,
+                    fileType.headerRow
+                );
+                
+                return { 
+                    type: 'PRODUCTION', 
+                    fileName, 
+                    data: this.processProductionData(worksheet, fileType.headerRow),
+                    ultimaPesagem: ultimaSaida
+                        ? `${ultimaSaida.dateStr} às ${ultimaSaida.timeStr}`
+                        : null
+                };
+
             } else if (fileType.type === 'POTENTIAL') {
                 const processedData = this.processPotentialData(worksheet, fileType.headerRow);
                 return { type: 'POTENTIAL', fileName, data: processedData };
@@ -232,6 +265,42 @@ class IntelligentProcessor {
         if (fileNameUpper.includes('PRODU') || fileNameUpper.includes('BALANCA')) return { type: 'PRODUCTION', headerRow: 0 };
         return { type: 'UNKNOWN', headerRow: 0 };
     }
+    
+    /**
+     * FUNÇÃO PARA PEGAR A ÚLTIMA DATA/HORA SAÍDA (KPI DE EXIBIÇÃO)
+     */
+    getUltimaDataHoraSaida(worksheet, headerRow) {
+        const rows = XLSX.utils.sheet_to_json(worksheet, {
+            range: headerRow,
+            defval: null,
+            raw: false
+        });
+
+        let ultimaData = null;
+
+        for (const row of rows) {
+            for (const key of Object.keys(row)) {
+                const cleanKey = key
+                    .toUpperCase()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .replace(/[^A-Z0-9]/g, " ")
+                    .replace(/\s+/g, " ")
+                    .trim();
+
+                // Procura por colunas que mapeiam para 'data_saida'
+                if (cleanKey.includes("DATA HORA SAIDA")) { 
+                    const parsed = this.parseDateTime(row[key]);
+                    if (parsed.fullDate) {
+                        ultimaData = parsed; 
+                    }
+                }
+            }
+        }
+
+        return ultimaData;
+    }
+
 
     processProductionData(worksheet, headerRow) {
         const structuredData = XLSX.utils.sheet_to_json(worksheet, { range: headerRow, defval: null, raw: false });
@@ -240,7 +309,8 @@ class IntelligentProcessor {
         structuredData.forEach(row => {
             const item = { equipamentos: [], operadores: [], transbordos: [] }; 
             const opData = { 1: { c: null, d: null }, 2: { c: null, d: null }, 3: { c: null, d: null } };
-            let diaBalancaStr, dataSaidaStr, horaSaidaStr, isAggregationRow = false;
+            let diaBalancaData = null, dataSaidaData = null, horaSaidaStr = null, isAggregationRow = false; 
+            
             const normalizedRow = this.normalizeRowKeys(row);
             
             // 1. Loop inicial para Viagem, Frota e Frente (CRÍTICO)
@@ -249,7 +319,6 @@ class IntelligentProcessor {
                  if (value === null || value === undefined || value === '') return;
                  const cleanKey = key.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, ' ').trim().replace(/\s+/g, ' ');
                  
-                 // CORREÇÃO CRÍTICA NA VIAGEM: Garante que atribui a viagem se for a coluna correta
                  if (this.matchesPattern(cleanKey, this.columnMappings.production.viagem)) {
                      if (!cleanKey.includes('QTD') && !cleanKey.includes('DIST') && !String(value).toUpperCase().includes('TOTAL')) {
                          if (item.viagem === undefined || item.viagem === null || item.viagem === '') {
@@ -263,12 +332,11 @@ class IntelligentProcessor {
                  }
             });
 
-            // 2. Loop para o restante dos dados
+            // 2. Loop para o restante dos dados e captura de Data/Hora
             Object.keys(normalizedRow).forEach(key => {
                 const value = normalizedRow[key];
                 if (value === null || value === undefined || value === '') return;
                 
-                // Lógica de Detecção de Agregação
                 if (String(value).toUpperCase().includes('TOTAL') && isNaN(value)) isAggregationRow = true;
                 
                 const cleanKey = key.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
@@ -286,27 +354,6 @@ class IntelligentProcessor {
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.transbordo)) this._addToList(item.transbordos, value);
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.transbordo2)) this._addToList(item.transbordos, value);
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.transbordo3)) this._addToList(item.transbordos, value);
-                else if (this.matchesPattern(cleanKey, this.columnMappings.production.dia_balanca)) {
-                    const dt = this.parseDateTime(value);
-                    if (dt.dateStr) diaBalancaStr = dt.dateStr;
-                    if (dt.fullDate) item.timestampEntrada = dt.fullDate;
-                }
-                else if (this.matchesPattern(cleanKey, this.columnMappings.production.data_saida)) {
-                    const dt = this.parseDateTime(value);
-                    if (dt.fullDate) {
-                        item.timestamp = dt.fullDate;
-                        item.data = dt.dateStr;
-                        item.hora = dt.timeStr;
-                        dataSaidaStr = dt.dateStr;
-                        horaSaidaStr = dt.timeStr;
-                    } else if (dt.dateStr) dataSaidaStr = dt.dateStr;
-                }
-                else if (this.matchesPattern(cleanKey, this.columnMappings.production.hora_saida)) {
-                    const dt = this.parseDateTime(value);
-                    if (dt.timeStr && !item.timestamp) horaSaidaStr = dt.timeStr;
-                }
-                else if (this.matchesPattern(cleanKey, this.columnMappings.production.qtdViagem)) item.qtdViagem = this.parseNumber(value);
-                else if (this.matchesPattern(cleanKey, this.columnMappings.production.distancia)) item.distancia = this.parseNumber(value);
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.peso)) item.peso = this.parseNumber(String(value).replace(/,/g, '.'));
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.tipoProprietarioFa)) item.tipoProprietarioFa = String(value).trim();
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.liberacao)) item.liberacao = String(value).trim();
@@ -315,21 +362,55 @@ class IntelligentProcessor {
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.cod_fazenda)) item.codFazenda = String(value).trim();
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.desc_fazenda)) item.descFazenda = String(value).trim();
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.status_frota)) item.statusFrota = String(value).trim().toUpperCase();
+                else if (this.matchesPattern(cleanKey, this.columnMappings.production.qtdViagem)) item.qtdViagem = this.parseNumber(value);
+                else if (this.matchesPattern(cleanKey, this.columnMappings.production.distancia)) item.distancia = this.parseNumber(value);
+
+                // --- CAPTURA DE DATA DE SAÍDA PARA USO NA ANÁLISE (Internamente) ---
+                else if (this.matchesPattern(cleanKey, this.columnMappings.production.data_saida)) {
+                    const dt = this.parseDateTime(value);
+                    if (dt.fullDate) {
+                        dataSaidaData = dt;
+                    } else {
+                        if (dt.timeStr) horaSaidaStr = dt.timeStr;
+                        if (dt.dateStr) dataSaidaData = dt;
+                    }
+                }
+                else if (this.matchesPattern(cleanKey, this.columnMappings.production.hora_saida)) {
+                    const dt = this.parseDateTime(value);
+                    if (dt.timeStr) horaSaidaStr = dt.timeStr;
+                }
+                else if (this.matchesPattern(cleanKey, this.columnMappings.production.dia_balanca)) {
+                    const dt = this.parseDateTime(value);
+                    if (dt.fullDate) {
+                        diaBalancaData = dt;
+                    }
+                }
+                // --- FIM DA CAPTURA ---
+
             });
             
-            // 3. Finaliza Timestamps
-            if (!item.timestamp && (dataSaidaStr || diaBalancaStr) && horaSaidaStr) {
-                const dt = this.parseDateTime(`${dataSaidaStr || diaBalancaStr} ${horaSaidaStr}`);
+            // 3. LÓGICA DE TIMESTAMPS (Para uso INTERNO no DataAnalyzer)
+            if (dataSaidaData && dataSaidaData.fullDate) {
+                item.timestamp = dataSaidaData.fullDate;
+                item.data = dataSaidaData.dateStr;
+                item.hora = dataSaidaData.timeStr;
+            } else if (dataSaidaData && dataSaidaData.dateStr && horaSaidaStr) {
+                const dt = this.parseDateTime(`${dataSaidaData.dateStr} ${horaSaidaStr}`);
                 if (dt.fullDate) {
                     item.timestamp = dt.fullDate;
                     item.data = dt.dateStr;
                     item.hora = dt.timeStr;
                 }
-            } else if (!item.timestamp && horaSaidaStr) {
-                 const today = new Date();
-                 const [h, m] = horaSaidaStr.split(':').map(Number);
-                 item.timestamp = new Date(today.getFullYear(), today.getMonth(), today.getDate(), h, m);
-                 item.data = item.timestamp.toLocaleDateString('pt-BR');
+            } else if (diaBalancaData && diaBalancaData.dateStr && horaSaidaStr) {
+                const dt = this.parseDateTime(`${diaBalancaData.dateStr} ${horaSaidaStr}`);
+                if (dt.fullDate) {
+                    item.timestamp = dt.fullDate;
+                    item.data = dt.dateStr;
+                    item.hora = dt.timeStr;
+                }
+            } else if (horaSaidaStr) {
+                 item.timestamp = null; 
+                 item.data = null; 
                  item.hora = horaSaidaStr;
             }
 
@@ -346,32 +427,19 @@ class IntelligentProcessor {
             if (item.operadores.length) item.operador = item.operadores[0];
             if (item.transbordos.length) item.transbordo = item.transbordos[0];
             
-            // 5. Filtros e Geração de ID CRÍTICO
+            // 5. GERAÇÃO DE ID E FILTROS CRÍTICOS
             const isFechamentoViagem = item.qtdViagem && Math.abs(item.qtdViagem - 1) < 0.05;
             
-            // FILTRO CRÍTICO REVISADO: A linha de TOTAL (isAggregationRow) só é mantida se fechar a viagem (Qtd Viagem = 1)
             if (isAggregationRow && !isFechamentoViagem) return;
-            
-            // Se não for fechamento, precisa ter frota
-            if (!isFechamentoViagem && !item.frota) return;
             if (item.peso <= 0) return;
 
-            // GERAÇÃO DE ID: Usa o ID real (item.viagem) ou gera o AUTO_ID
             let finalViagemId = item.viagem;
-            
-            // 6. Lógica de Fallback de ID (Onde o erro estava)
-            
-            // Se o ID for o texto 'Total' (que está na coluna Viagem na linha de fechamento) E for um fechamento real
-            if (String(finalViagemId).toUpperCase() === 'TOTAL' && isFechamentoViagem) {
-                 // Tente usar o número da Frota como ID
+            if (String(finalViagemId || '').toUpperCase() === 'TOTAL' && isFechamentoViagem) {
                  finalViagemId = String(item.frota); 
-                 
-            } else if (!finalViagemId || String(finalViagemId).length < 3) {
-                // Se a coluna Viagem estiver vazia ou for muito curta, gere um ID robusto
+            } else if (!finalViagemId || (typeof finalViagemId === 'string' && finalViagemId.length < 3)) {
                 finalViagemId = this.generateViagemId(item);
             }
             
-            // Filtro final contra lixo (e garantindo que não use o texto 'TOTAL')
             if (!finalViagemId || String(finalViagemId).toUpperCase().includes('TOTAL')) return;
 
             item.idViagem = finalViagemId;
@@ -379,37 +447,46 @@ class IntelligentProcessor {
             processedData.push(item);
         });
 
-        console.log(`[PROCESSOR] ${processedData.length} linhas de produção`);
         return processedData;
     }
     
+    // NOVO: Função para mapear colunas do cabeçalho de Produção
+    mapProductionColumns(headerRowData) {
+        const columnMap = {};
+        headerRowData.forEach(originalKey => {
+            if (!originalKey) return;
+            const cleanKey = originalKey.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+            
+            for (const standardKey in this.columnMappings.production) {
+                if (this.columnMappings.production[standardKey].some(pattern => cleanKey.includes(pattern.toUpperCase()))) {
+                    columnMap[originalKey] = standardKey; 
+                    break;
+                }
+            }
+        });
+        return columnMap;
+    }
+
     processMetaData(worksheet, headerRow) {
         const structuredData = XLSX.utils.sheet_to_json(worksheet, { range: headerRow, defval: null, raw: false }); 
         const processedData = [];
-        
-        console.log('[PROCESSOR] Processando dados de metas...');
         
         structuredData.forEach((row, index) => {
             const item = {}, normalizedRow = this.normalizeRowKeys(row);
             let isMetaRow = false;
             
-            // Primeiro: identificar colunas específicas pela chave exata
             Object.keys(normalizedRow).forEach(key => {
                 const value = normalizedRow[key];
                 if (value === null || value === undefined || value === '') return;
                 
                 const cleanKey = key.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
                 
-                // TRATAMENTO ESPECÍFICO PARA F.A vs Desc. Fazenda
-                
-                // 1. Coluna F.A (código numérico da fazenda)
                 if (cleanKey === 'F A' || cleanKey === 'FA' || cleanKey === 'F.A') {
                     item['cod_fazenda'] = String(value).trim();
                     isMetaRow = true;
                     return;
                 }
                 
-                // 2. Coluna Descrição Fazenda (nome da fazenda)
                 if (cleanKey.includes('DESCRICAO FAZENDA') || 
                     cleanKey.includes('DESC FAZENDA') || 
                     (cleanKey.includes('FAZENDA') && cleanKey.includes('DESC'))) {
@@ -418,9 +495,7 @@ class IntelligentProcessor {
                     return;
                 }
                 
-                // 3. Se a chave é apenas "FAZENDA", precisamos verificar o contexto
                 if (cleanKey === 'FAZENDA') {
-                    // Verifica se o valor é numérico (então é F.A) ou textual (então é descrição)
                     if (String(value).match(/^\d+$/)) {
                         item['cod_fazenda'] = String(value).trim();
                     } else {
@@ -431,14 +506,12 @@ class IntelligentProcessor {
                 }
             });
 
-            // Segundo: mapeamento padrão para outras colunas
             Object.keys(normalizedRow).forEach(key => {
                 const value = normalizedRow[key];
                 if (value === null || value === undefined || value === '') return;
                 
                 const cleanKey = key.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
                 
-                // Pular se já mapeamos como F.A ou Desc. Fazenda
                 if (cleanKey === 'F A' || cleanKey === 'FA' || cleanKey === 'F.A' || 
                     cleanKey.includes('DESCRICAO FAZENDA') || cleanKey.includes('DESC FAZENDA') ||
                     cleanKey === 'FAZENDA') {
@@ -450,7 +523,6 @@ class IntelligentProcessor {
                         isMetaRow = true;
                         const numericFields = ['raio', 'tmd', 'cd', 'potencial', 'meta', 'atr', 'vel', 'tc', 'tch', 'ton_hora', 'cm_hora', 'tempo_carre_min', 'cam', 'ciclo', 'viagens', 'tempo'];
                         
-                        // Não sobrescrever cod_fazenda ou desc_fazenda se já definidos
                         if ((standardKey === 'cod_fazenda' && item['cod_fazenda']) ||
                             (standardKey === 'desc_fazenda' && item['desc_fazenda'])) {
                             return;
@@ -461,9 +533,7 @@ class IntelligentProcessor {
                 });
             });
             
-            // Garantir que temos ambos os campos
             if (!item['cod_fazenda'] && item['desc_fazenda']) {
-                // Se temos descrição mas não código, tenta extrair código da descrição
                 const descValue = item['desc_fazenda'];
                 const codMatch = descValue.match(/\d+/);
                 if (codMatch) {
@@ -472,14 +542,12 @@ class IntelligentProcessor {
             }
             
             if (!item['desc_fazenda'] && item['cod_fazenda']) {
-                // Se temos código mas não descrição, usa o código como placeholder
                 item['desc_fazenda'] = `FAZENDA ${item['cod_fazenda']}`;
             }
             
             if (item.frente && isMetaRow) processedData.push(item);
         });
         
-        console.log(`[PROCESSOR] ${processedData.length} linhas de metas processadas`);
         return processedData;
     }
     
@@ -487,6 +555,7 @@ class IntelligentProcessor {
         const structuredData = XLSX.utils.sheet_to_json(worksheet, { range: headerRow, defval: null, raw: false, cellDates: true });
         return structuredData.map(row => {
             const item = {};
+            let isPotentialRow = false;
             Object.keys(row).forEach(key => {
                 const value = row[key];
                 if (value == null || value === '') return;
@@ -496,11 +565,13 @@ class IntelligentProcessor {
                     const horaString = this._formatExcelTime(value);
                     item['HORA'] = horaString;
                     item[mappedKey] = horaString; 
+                    isPotentialRow = true;
                 } else if (mappedKey) {
                     const numValue = this.parseNumber(value);
                     item[mappedKey] = numValue;
                     const csvKey = this.findCSVKeyForPotential(mappedKey);
                     if (csvKey) item[csvKey] = numValue;
+                    isPotentialRow = true;
                 }
             });
             
@@ -532,11 +603,11 @@ class IntelligentProcessor {
             'dispCaminhoes': 'DISP CAMINHÕES',
             'rotacaoMoenda': 'ROTAÇÃO DA MOENDA',
             'potencial': 'POTENCIAL',
-            'caminhoesIda': 'Caminhões  Ida',
+            'caminhõesIda': 'Caminhões  Ida',
             'caminhõesCampo': 'Caminhões  Campo',
-            'caminhoesVolta': 'Caminhões  Volta',
+            'caminhõesVolta': 'Caminhões  Volta',
             'caminhõesDescarga': 'Caminhões  Descarga',
-            'caminhoesParados': 'Caminhões  PARADO',
+            'caminhõesParados': 'Caminhões  PARADO',
             'filaExterna': 'Caminhões Fila externa',
             'carretasCarregadas': 'CARRETAS CARREGADAS'
         };
@@ -565,29 +636,98 @@ class IntelligentProcessor {
     parseDateTime(val) {
         let dateObj = null, dateStr = '', timeStr = '';
         
-        if (typeof val === 'number') {
-            dateObj = new Date(Math.round((val - 25569) * 86400 * 1000));
-        } else if (typeof val === 'string') {
+        // --- 1. CASO: Valor Numérico do Excel (CORREÇÃO DE FUSO HORÁRIO) ---
+        if (typeof val === 'number' && val > 1) { 
+            // 25569 = Dias entre 1900-01-01 e 1970-01-01
+            const excelEpochMs = (val - 25569) * 86400 * 1000;
+            
+            // Compensa o fuso horário (3 horas para o Brasil)
+            const compensationMs = 3 * 3600 * 1000; 
+            
+            // Aplica a compensação ao valor bruto do Excel
+            dateObj = new Date(excelEpochMs + compensationMs); 
+
+            if (!isNaN(dateObj.getTime())) {
+                const d = dateObj.getDate();
+                const m = dateObj.getMonth() + 1;
+                const y = dateObj.getFullYear();
+                const h = dateObj.getHours();
+                const min = dateObj.getMinutes();
+                
+                dateStr = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+                timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+            }
+        } 
+        
+        // --- 2. CASO: String (CSV/Planilha) ---
+        if (!dateObj && typeof val === 'string') {
             const trimmedVal = val.trim();
-            if (trimmedVal.match(/^\d{1,2}:\d{1,2}$/)) {
-                return { fullDate: null, dateStr: '', timeStr: trimmedVal.match(/(\d{1,2}:\d{1,2})/)[1] };
+            
+            // Caso 2a: Apenas Hora (Ex: "05:58" ou "23:59")
+            const timeOnlyMatch = trimmedVal.match(/^(\d{1,2}:\d{1,2})(?::\d{1,2})?$/);
+            if (timeOnlyMatch) {
+                timeStr = timeOnlyMatch[1];
+                return { fullDate: null, dateStr: '', timeStr: timeStr };
             }
 
-            const dateTimeMatch = trimmedVal.match(/(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})\s+(\d{1,2}:\d{1,2})/);
+            // Caso 2b: Data e Hora completa (DD/MM/YYYY HH:MM ou DD/MM/YY HH:MM)
+            const dateTimeMatch = trimmedVal.match(/(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})\s+(\d{1,2}:\d{1,2})(?::\d{1,2})?/);
             if (dateTimeMatch) {
-                let dateParts = dateTimeMatch[1].split(/[\/-]/).map(Number);
-                if (dateParts[0] > 31) dateParts.reverse();
-                const [d, m, y] = dateParts;
+                let dateParts = dateTimeMatch[1].split(/[-\/-]/).map(Number);
+                if (dateParts[0] > 31) dateParts.reverse(); 
+                
+                let y = dateParts[2];
+                if (y < 100) y += 2000;
+                
+                const [d, m] = dateParts;
                 const [h, min] = dateTimeMatch[2].split(':').map(Number);
+                
                 dateObj = new Date(y, m - 1, d, h, min);
+                
                 if (!isNaN(dateObj.getTime())) {
                     dateStr = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
                     timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
                 }
             }
+            
+            // Caso 2c: Data e Hora completa no formato CSV/SQL (YYYY-MM-DD HH:MM:SS) - CRÍTICO
+            else {
+                const csvDateTimeMatch = trimmedVal.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+(\d{1,2}):(\d{1,2}):(\d{1,2})/);
+                if (csvDateTimeMatch) {
+                    const parts = csvDateTimeMatch.slice(1).map(Number);
+                    if (parts.length === 6) {
+                        const [y, m, d, h, min, s] = parts;
+                        dateObj = new Date(y, m - 1, d, h, min, s); 
+                        if (!isNaN(dateObj.getTime())) {
+                            dateStr = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+                            timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+                        }
+                    }
+                }
+            }
+            
+            // Caso 2d: Apenas data (DD/MM/YYYY ou DD/MM/YY)
+            if (!dateObj) {
+                const dateOnlyMatch = trimmedVal.match(/^(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})$/);
+                if (dateOnlyMatch) {
+                    let dateParts = dateOnlyMatch[1].split(/[-\/-]/).map(Number);
+                    if (dateParts[0] > 31) dateParts.reverse();
+                    
+                    let y = dateParts[2];
+                    if (y < 100) y += 2000;
+                    
+                    const [d, m] = dateParts;
+                    dateObj = new Date(y, m - 1, d, 0, 0, 0);
+                    
+                    if (!isNaN(dateObj.getTime())) {
+                        dateStr = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+                        timeStr = '00:00';
+                    }
+                }
+            }
         }
         
-        return dateObj && !isNaN(dateObj.getTime()) ? { fullDate: dateObj, dateStr, timeStr } : { fullDate: null, dateStr: '', timeStr: '' };
+        return dateObj && !isNaN(dateObj.getTime()) ? { fullDate: dateObj, dateStr, timeStr } : { fullDate: null, dateStr: dateStr || '', timeStr: timeStr || '' };
     }
 }
 
