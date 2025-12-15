@@ -1,4 +1,4 @@
-// dataanalyzer.js - VERSÃO CORE COM DELEGAÇÃO - BLOQUEIO DEFINITIVO DE FUTURO
+// dataanalyzer.js - VERSÃO CORE COM DELEGAÇÃO - CORREÇÃO DE ÚLTIMA PESAGEM
 
 // Encapsulamento para evitar o erro "Identifier 'DataAnalyzer' has already been declared"
 if (typeof DataAnalyzer === 'undefined') {
@@ -330,56 +330,53 @@ if (typeof DataAnalyzer === 'undefined') {
                 potentialRawData: potentialData,
                 requiredHourlyRates: [],
                 metaData: null,
-                lastExitTimestamp: null 
+                lastExitTimestamp: null,
+                lastExitTimestampFormatted: 'Aguardando dados.'
             };
         }
 
         /**
          * Encontra o timestamp de saída mais recente (o último registro).
-         * @description Bloqueio definitivo: Rejeita qualquer data que esteja além do ano atual.
+         * @description CORREÇÃO: Busca a data/hora mais recente SEM filtros restritivos de ano
          */
         _findLastExitTimestamp(data) {
             let lastTimestamp = null;
-            const agora = new Date();
-            const anoAtual = agora.getFullYear();
+            let lastRow = null;
             
-            // Define o limite superior como o primeiro milissegundo do próximo ano (para bloquear 2027)
-            const dataLimiteSuperior = new Date(anoAtual + 1, 0, 1, 0, 0, 0, 0).getTime(); 
+            console.log(`[ANALYZER] Buscando última pesagem em ${data.length} registros...`);
             
-            // Define o limite inferior como o primeiro milissegundo do ano anterior
-            const dataLimiteInferior = new Date(anoAtual - 1, 0, 1, 0, 0, 0, 0).getTime();
-
             data.forEach(row => {
-                if (this.isAggregationRow(row) || !row.timestamp) return;
+                // Ignora linhas de agregação
+                if (this.isAggregationRow(row)) return;
+                
+                // Deve ter timestamp válido
+                if (!row.timestamp || !(row.timestamp instanceof Date)) return;
                 
                 const ts = row.timestamp;
                 const tsTime = ts.getTime();
                 
                 // Valida se é um objeto Date válido
-                if (!(ts instanceof Date) || isNaN(tsTime)) return;
+                if (isNaN(tsTime)) return;
                 
-                // FILTRO CRÍTICO 1: Ignora timestamps que foram criados artificialmente 
-                // (ausência de row.data indica que foi gerado pelo fallback de hora)
+                // FILTRO: Ignora timestamps sem data original (gerados por fallback)
                 if (!row.data || row.data === '') {
                     return;
                 }
                 
-                // FILTRO CRÍTICO 2: Bloqueia qualquer data que esteja fora do intervalo aceitável (passado/futuro)
-                // Se o ano não for 2025 (o ano atual), ou se for 2025 mas estiver além do limite superior (Janeiro de 2026), bloqueia.
-                if (tsTime >= dataLimiteSuperior || tsTime < dataLimiteInferior) {
-                    return;
-                }
-                
-                // Aceita a data se for mais recente
+                // Aceita a data se for mais recente (sem filtros de ano)
                 if (!lastTimestamp || tsTime > lastTimestamp.getTime()) {
                     lastTimestamp = ts;
+                    lastRow = row;
                 }
             });
             
-            if (lastTimestamp) {
-                console.log(`[ANALYZER] Último timestamp CORRETO encontrado: ${lastTimestamp.toLocaleDateString('pt-BR')} às ${lastTimestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`);
+            if (lastTimestamp && lastRow) {
+                const dateStr = lastTimestamp.toLocaleDateString('pt-BR');
+                const timeStr = lastTimestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                console.log(`[ANALYZER] ✅ Última pesagem encontrada: ${dateStr} às ${timeStr}`);
+                console.log(`[ANALYZER] Detalhes: Viagem=${lastRow.viagem || lastRow.idViagem}, Frota=${lastRow.frota}, Peso=${lastRow.peso}t`);
             } else {
-                console.warn('[ANALYZER] Nenhum timestamp válido encontrado nos dados. Data de Outubro não detectada.');
+                console.warn('[ANALYZER] ⚠️ Nenhum timestamp válido encontrado nos dados.');
             }
 
             return lastTimestamp;
@@ -400,8 +397,16 @@ if (typeof DataAnalyzer === 'undefined') {
 
             console.log(`[ANALYZER] Iniciando análise com ${data.length} registros`);
 
-            // Busca o último timestamp (com validação de sanidade)
-            const lastExitTimestamp = this._findLastExitTimestamp(data); 
+            // Busca o último timestamp (CORRIGIDO - sem filtros de ano)
+            const lastExitTimestamp = this._findLastExitTimestamp(data);
+            
+            // Formata a data para exibição
+            let lastExitTimestampFormatted = 'Aguardando dados.';
+            if (lastExitTimestamp) {
+                const dateStr = lastExitTimestamp.toLocaleDateString('pt-BR');
+                const timeStr = lastExitTimestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                lastExitTimestampFormatted = `${dateStr} às ${timeStr}`;
+            }
 
             // --- DELEGAÇÃO PARA o MÓDULO DE KPIS ---
             const contagemViagens = this.kpisModule.countUniqueTrips(data);
@@ -480,6 +485,7 @@ if (typeof DataAnalyzer === 'undefined') {
                 requiredHourlyRates,
                 
                 lastExitTimestamp: lastExitTimestamp,
+                lastExitTimestampFormatted: lastExitTimestampFormatted,
 
                 analyzeFrontHourly: (d) => this.timeModule.analyzeFrontHourlyComplete(d),
                 data: filteredData,

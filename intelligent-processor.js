@@ -1,4 +1,4 @@
-// intelligent-processor.js - VERSÃO FINAL ESTÁVEL E CORRIGIDA (COMPENSAÇÃO DE FUSO HORÁRIO)
+// intelligent-processor.js - VERSÃO FINAL ESTÁVEL E CORRIGIDA (COMPENSAÇÃO DE FUSO HORÁRIO DEFINITIVA E ORDEM CRONOLÓGICA)
 class IntelligentProcessor {
     constructor() {
         this.columnMappings = {
@@ -124,7 +124,6 @@ class IntelligentProcessor {
                 
                 if (fileType.type === 'PRODUCTION') {
                     
-                    // Lógica para extrair a última pesagem para o KPI
                     const ultimaSaida = this.getUltimaDataHoraSaida(
                         worksheet,
                         fileType.headerRow
@@ -267,7 +266,7 @@ class IntelligentProcessor {
     }
     
     /**
-     * FUNÇÃO PARA PEGAR A ÚLTIMA DATA/HORA SAÍDA (KPI DE EXIBIÇÃO)
+     * FUNÇÃO PARA PEGAR A ÚLTIMA DATA/HORA SAÍDA (CRONOLÓGICA)
      */
     getUltimaDataHoraSaida(worksheet, headerRow) {
         const rows = XLSX.utils.sheet_to_json(worksheet, {
@@ -276,7 +275,7 @@ class IntelligentProcessor {
             raw: false
         });
 
-        let ultimaData = null;
+        let ultimaData = null; // Armazena o objeto { fullDate, dateStr, timeStr } mais recente
 
         for (const row of rows) {
             for (const key of Object.keys(row)) {
@@ -288,11 +287,14 @@ class IntelligentProcessor {
                     .replace(/\s+/g, " ")
                     .trim();
 
-                // Procura por colunas que mapeiam para 'data_saida'
+                // Procura por colunas que mapeiam para 'data_saída'
                 if (cleanKey.includes("DATA HORA SAIDA")) { 
                     const parsed = this.parseDateTime(row[key]);
                     if (parsed.fullDate) {
-                        ultimaData = parsed; 
+                        // CRÍTICO: Atualiza a data se for cronologicamente mais recente que a anterior
+                        if (!ultimaData || parsed.fullDate.getTime() > ultimaData.fullDate.getTime()) {
+                            ultimaData = parsed; 
+                        }
                     }
                 }
             }
@@ -300,7 +302,6 @@ class IntelligentProcessor {
 
         return ultimaData;
     }
-
 
     processProductionData(worksheet, headerRow) {
         const structuredData = XLSX.utils.sheet_to_json(worksheet, { range: headerRow, defval: null, raw: false });
@@ -372,7 +373,7 @@ class IntelligentProcessor {
                         dataSaidaData = dt;
                     } else {
                         if (dt.timeStr) horaSaidaStr = dt.timeStr;
-                        if (dt.dateStr) dataSaidaData = dt;
+                        if (dt.dateStr) diaBalancaData = dt; // Usado como fallback de data base
                     }
                 }
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.hora_saida)) {
@@ -388,27 +389,35 @@ class IntelligentProcessor {
                 // --- FIM DA CAPTURA ---
 
             });
+
+            // 3. LÓGICA DE TIMESTAMPS (Prioridade de Saída)
             
-            // 3. LÓGICA DE TIMESTAMPS (Para uso INTERNO no DataAnalyzer)
+            // PRIORIDADE 1: Data/Hora de SAÍDA completa (ou combinada)
             if (dataSaidaData && dataSaidaData.fullDate) {
                 item.timestamp = dataSaidaData.fullDate;
                 item.data = dataSaidaData.dateStr;
                 item.hora = dataSaidaData.timeStr;
             } else if (dataSaidaData && dataSaidaData.dateStr && horaSaidaStr) {
+                // Tenta combinar a data de Saída (string) com a Hora de Saída (string)
                 const dt = this.parseDateTime(`${dataSaidaData.dateStr} ${horaSaidaStr}`);
                 if (dt.fullDate) {
                     item.timestamp = dt.fullDate;
                     item.data = dt.dateStr;
                     item.hora = dt.timeStr;
                 }
-            } else if (diaBalancaData && diaBalancaData.dateStr && horaSaidaStr) {
+            } 
+            // PRIORIDADE 2: Data de Entrada + Hora de Saída (Fallback seguro)
+            else if (diaBalancaData && diaBalancaData.dateStr && horaSaidaStr) {
+                 // Tenta combinar a data de Entrada (string) com a Hora de Saída (string)
                 const dt = this.parseDateTime(`${diaBalancaData.dateStr} ${horaSaidaStr}`);
                 if (dt.fullDate) {
                     item.timestamp = dt.fullDate;
                     item.data = dt.dateStr;
                     item.hora = dt.timeStr;
                 }
-            } else if (horaSaidaStr) {
+            }
+            // FALLBACK FINAL: Apenas hora (NÃO CRIA DATA, deixa item.timestamp null)
+            else if (horaSaidaStr) {
                  item.timestamp = null; 
                  item.data = null; 
                  item.hora = horaSaidaStr;

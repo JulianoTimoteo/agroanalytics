@@ -1,13 +1,21 @@
 /* Reset e Variáveis */
 :root {
-    --primary: #00D4FF; --secondary: #7B61FF; --accent: #FF2E63;
-    --success: #40800c; --warning: #FFB800; --danger: #FF2E63;
-    --proprio-color: #40800c; --terceiro-color: #FF8C00;
+    --primary: #00D4FF;
+    --secondary: #7B61FF;
+    --accent: #FF2E63;
+    --success: #40800c;
+    --warning: #FFB800;
+    --danger: #FF2E63;
+    --proprio-color: #40800c;
+    --terceiro-color: #FF8C00;
     --whatsapp-color: #25D366; 
     --bg-main: linear-gradient(135deg, #050A14 0%, #0A0E17 100%);
-    --bg-header: #0A0E17; --glass: rgba(255, 255, 255, 0.1);
-    --glass-border: rgba(255, 255, 255, 0.2); --text: #E0E0E0;
-    --text-secondary: #A0A0A0; --bg-dark-container: #0A0E17;
+    --bg-header: #0A0E17;
+    --glass: rgba(255, 255, 255, 0.1);
+    --glass-border: rgba(255, 255, 255, 0.2);
+    --text: #E0E0E0;
+    --text-secondary: #A0A0A0;
+    --bg-dark-container: #0A0E17;
     --chart-grid-color: rgba(255, 255, 255, 0.1);
     
     /* NOVAS CORES PARA A LEGENDA DO GRÁFICO CONSOLIDADO */
@@ -22,20 +30,48 @@
     
     /* NOVO: VARIÁVEIS PARA META DISCRETA */
     --meta-label-color: #666;
+
+    /* Novas variáveis para tema light/dark */
+    --card-bg: var(--glass);
+    --border-color: var(--glass-border);
+    --input-bg: rgba(255, 255, 255, 0.05);
+    --text-color: var(--text);
+
+    /* NOVO: Off-Canvas Menu */
+    --menu-width: 250px;
+    --menu-bg: var(--bg-header);
+    --menu-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 /* Tema Claro (Pérola Suave) */
 [data-theme="light"] {
     --bg-main: linear-gradient(135deg, #Fdfbf7 0%, #F5F5F5 100%);
-    --bg-header: #FFFFFF; --glass: rgba(255, 255, 255, 0.6);
-    --glass-border: rgba(0, 0, 0, 0.08); --text: #333333;
-    --text-secondary: #555555; --bg-dark-container: #E0E0E0; 
-    --chart-grid-color: rgba(0, 0, 0, 0.1); --primary: #0088CC; --secondary: #5C43FF;
+    --bg-header: #FFFFFF;
+    --glass: rgba(255, 255, 255, 0.6);
+    --glass-border: rgba(0, 0, 0, 0.08);
+    --text: #333333;
+    --text-secondary: #555555;
+    --bg-dark-container: #E0E0E0;
+    --chart-grid-color: rgba(0, 0, 0, 0.1);
+    --primary: #0088CC;
+    --secondary: #5C43FF;
+    
     /* NOVO: COR DA ZONA DE DRAG & DROP CLARO */
     --dropzone-bg: rgba(0, 136, 204, 0.05);
     --dropzone-border: var(--primary);
+    
     /* NOVO: VARIÁVEIS PARA META DISCRETA CLARO */
     --meta-label-color: #AAAAAA;
+
+    /* Novas variáveis para tema light/dark */
+    --card-bg: rgba(255, 255, 255, 0.8);
+    --border-color: rgba(0, 0, 0, 0.15);
+    --input-bg: #FFFFFF;
+    --text-color: #333333;
+
+    /* NOVO: Off-Canvas Menu Claro */
+    --menu-bg: #F5F5F5;
+    --menu-shadow: 0 0 15px rgba(0, 0, 0, 0.15);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -45,17 +81,203 @@ body {
     color: var(--text); 
     min-height: 100vh; 
     transition: background-color 0.3s, color 0.3s;
-    /* CORREÇÃO CRÍTICA PARA REMOVER SCROLLBAR DUPLA: */
     height: 100%;
     width: 100%;
-    overflow-y: hidden; /* A rolagem da janela principal é desativada */
+    overflow-y: hidden; 
     overflow-x: hidden;
 }
 #particles-js { position: fixed; width: 100%; height: 100%; top: 0; left: 0; z-index: -1; display: block; }
 
+/* 🟥 ESTRUTURA DE LOGIN */
+.full-screen-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-main);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.login-container {
+    background: var(--bg-header);
+    padding: 30px 40px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    width: 100%;
+    max-width: 380px;
+    text-align: center;
+    position: relative;
+}
+
+.login-container h1 {
+    color: var(--primary);
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+}
+
+.login-container p {
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+}
+
+.login-container form input {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid var(--glass-border);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text);
+    font-size: 1rem;
+}
+
+/* NOVO: Campo de "Usuário/Email" para ser mais amigável */
+.login-container form #login-user {
+    background: rgba(255, 255, 255, 0.05) url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23A0A0A0"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>') no-repeat 95% center;
+    background-size: 20px;
+    padding-right: 40px;
+}
+
+.login-container form button.btn-primary {
+    width: 100%;
+    padding: 12px;
+    background: var(--primary);
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-bottom: 15px;
+}
+
+.login-container form button.btn-primary:hover {
+    background: #00bfff;
+}
+
+.login-container a {
+    color: var(--secondary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+/* NOVO: Layout para botões de ação na tela de login */
+.login-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.login-actions button {
+    flex: 1;
+    padding: 10px;
+    font-size: 0.9rem;
+}
+
+.btn-forgot {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.8rem;
+    margin-top: -10px; 
+    margin-bottom: 15px;
+    text-align: right;
+    width: 100%;
+}
+
+.alert-danger, .alert-success-login {
+    color: var(--danger);
+    background: rgba(255, 46, 99, 0.1);
+    border: 1px solid var(--danger);
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+    text-align: left;
+}
+
+.alert-success-login {
+    color: var(--success);
+    background: rgba(64, 128, 12, 0.1);
+    border: 1px solid var(--success);
+}
+/* FIM 🟥 ESTRUTURA DE LOGIN */
+
+
+/* --- NOVO: ESTRUTURA DE MODAL --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+.modal-overlay.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-content {
+    background: var(--bg-header);
+    padding: 25px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    transform: translateY(-50px);
+    transition: transform 0.3s ease-out;
+    position: relative;
+}
+
+.modal-overlay.visible .modal-content {
+    transform: translateY(0);
+}
+
+.modal-content h3 {
+    color: var(--primary);
+    margin-bottom: 15px;
+}
+
+.modal-content .close-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+/* --- FIM NOVO: MODAL --- */
+
+
 /* Header */
 .dashboard-header { background: var(--bg-header); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); position: sticky; top: 0; z-index: 50; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3); }
-.header-content { display: flex; justify-content: space-between; width: 100%; max-width: 1400px; margin: 0 auto; }
+.header-content { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    width: 100%; 
+    max-width: 1400px; 
+    margin: 0 auto; 
+    min-height: 50px; 
+}
 .logo { display: flex; align-items: center; color: var(--primary); gap: 10px; }
 .header-controls { display: flex; align-items: center; gap: 15px; }
 
@@ -67,7 +289,7 @@ body {
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--glass-border);
     border-radius: 20px;
-    overflow: hidden; /* Garante que a barra não vaze */
+    overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -80,25 +302,25 @@ body {
     top: 0;
     left: 0;
     height: 100%;
-    width: 0%; /* Começa vazio, JS atualiza */
+    width: 0%; 
     transition: width 1s linear, background-color 0.5s ease;
     z-index: 0;
-    opacity: 0.6; /* Transparência para ver o fundo */
+    opacity: 0.6; 
 }
 
 /* Cores específicas para cada Turno */
 .shift-progress-fill.turno-a {
-    background: linear-gradient(90deg, #4ade80 0%, #22c55e 100%); /* Verde Manhã */
+    background: linear-gradient(90deg, #4ade80 0%, #22c55e 100%); 
     box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
 }
 
 .shift-progress-fill.turno-b {
-    background: linear-gradient(90deg, #facc15 0%, #eab308 100%); /* Amarelo Tarde */
+    background: linear-gradient(90deg, #facc15 0%, #eab308 100%); 
     box-shadow: 0 0 10px rgba(234, 179, 8, 0.4);
 }
 
 .shift-progress-fill.turno-c {
-    background: linear-gradient(90deg, #a78bfa 0%, #7c3aed 100%); /* Roxo Noite */
+    background: linear-gradient(90deg, #a78bfa 0%, #7c3aed 100%); 
     box-shadow: 0 0 10px rgba(124, 58, 237, 0.4);
 }
 
@@ -112,7 +334,7 @@ body {
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--text);
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5); /* Sombra para leitura */
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5); 
 }
 
 .shift-timer {
@@ -123,6 +345,22 @@ body {
 
 .theme-toggle { background: var(--glass); color: var(--text); border: 1px solid var(--glass-border); border-radius: 50%; width: 35px; height: 35px; cursor: pointer; transition: background 0.3s; }
 .theme-toggle:hover { background: var(--secondary); }
+.btn-icon { background: var(--glass); color: var(--text); border: 1px solid var(--glass-border); border-radius: 50%; width: 35px; height: 35px; cursor: pointer; transition: background 0.3s; }
+.btn-icon:hover { background: rgba(255, 255, 255, 0.2); }
+
+/* --- NOVO: Botão de Menu (Apenas visível no mobile) --- */
+.menu-toggle-btn {
+    display: none; /* Oculto por padrão */
+    background: var(--primary);
+    color: #000;
+    border: none;
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    order: -1; /* Posiciona à esquerda no mobile */
+}
+
 
 /* Helpers de Cor para HTML */
 .primary-color { color: var(--primary); }
@@ -137,21 +375,12 @@ body {
     height: auto; 
 }
 
-/* NOVO BLOCO: ESTILO PARA O DISPLAY DE ÚLTIMA PESAGEM */
+/* NOVO BLOCO: ESTILO PARA O DISPLAY DE PRÓXIMA ATUALIZAÇÃO */
 .last-weighing-container {
-    max-width: 1400px; 
-    margin: 0 auto; 
-    padding: 0.5rem 2rem;
+    padding: 0.5rem 1rem;
     text-align: right;
-    width: 100%;
-    /* Estilo discreto e pequeno */
     font-size: 0.8rem;
     color: var(--text-secondary);
-    background: var(--bg-header); /* Cor do cabeçalho para se misturar */
-    border-bottom: 1px solid var(--glass-border);
-    position: sticky;
-    top: 80px; /* Ajustado para ficar logo abaixo do header */
-    z-index: 49; /* Abaixo do header, mas acima do conteúdo */
 }
 
 .last-weighing-container span {
@@ -167,7 +396,7 @@ body {
 
 /* --- NOVO ESTILO: DRAG & DROP ZONE --- */
 .dropzone-card {
-    border: 2px dashed var(--primary); /* Mudei para dashed para o efeito Dropzone */
+    border: 2px dashed var(--primary); 
     padding: 2rem;
     text-align: center;
     cursor: pointer;
@@ -227,7 +456,7 @@ body {
     margin-top: 1rem;
     font-size: 0.9rem; 
     color: var(--text-secondary); 
-    white-space: normal; /* Permite quebrar a linha se necessário */
+    white-space: normal; 
     max-width: 100%;
     overflow: hidden; 
     text-overflow: ellipsis;
@@ -292,9 +521,8 @@ main {
     max-width: 1400px; 
     margin: 0rem auto; 
     padding: 0 2rem 4rem;
-    /* AJUSTE CRÍTICO: Altura total da viewport menos o cabeçalho (~80px) */
     height: calc(100vh - 80px); 
-    overflow-y: auto; /* Permite rolagem APENAS no conteúdo principal */
+    overflow-y: auto; 
     overflow-x: hidden;
 }
 .glass-card { background: var(--glass); border: 1px solid var(--glass-border); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-radius: 1rem; padding: 1.5rem; transition: transform 0.3s ease, box-shadow 0.3s ease; }
@@ -325,6 +553,84 @@ main {
     justify-content: flex-end;
     margin-bottom: 1.5rem;
 }
+
+
+/* --- MENU PRINCIPAL (COMPORTAMENTO PADRÃO: DESKTOP HORIZONTAL) --- */
+
+/* Container geral da navegação - Deve ser estático no desktop */
+.tabs-nav-container {
+    position: static;
+    width: 100%; 
+    height: auto;
+    padding: 0 2rem; /* Alinha com o MAIN */
+    margin: 0 auto 2rem auto;
+    max-width: 1400px;
+    background: transparent;
+    transform: translateX(0);
+    z-index: 10;
+}
+
+.tabs-nav { 
+    display: flex; 
+    flex-direction: row; /* PADRÃO DESKTOP: HORIZONTAL */
+    justify-content: space-around; 
+    align-items: center; 
+    background: var(--bg-dark-container); 
+    border-radius: 0.75rem; 
+    padding: 0.5rem; 
+    margin-bottom: 0; 
+    width: 100%;
+}
+
+.tabs-nav .tab-button { 
+    flex: 1; 
+    width: auto;
+    text-align: center;
+    background: transparent; 
+    color: var(--text-secondary); 
+    border: none; 
+    padding: 0.75rem 1rem; 
+    cursor: pointer; 
+    font-size: 1rem; 
+    font-weight: 500; 
+    border-radius: 0.5rem;
+    border-bottom: 2px solid transparent; /* Para a linha de foco */
+    transition: all 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px; /* Menor gap para caber mais itens na linha */
+}
+
+.tabs-nav .tab-button.active { 
+    background: var(--glass); 
+    color: var(--primary); 
+    font-weight: 600; 
+    border-bottom-color: var(--primary); /* Linha azul de ativação */
+}
+
+.tabs-nav .tab-button.admin-tab { 
+    margin-top: 0;
+    border-top: none;
+    padding-top: 0.75rem;
+    margin-left: 1rem; 
+    flex: none;
+}
+
+.tabs-nav .tab-button i {
+    display: inline-block; /* Ícone visível no desktop */
+}
+
+.tabs-content {
+    width: 100%;
+}
+
+/* Overlay do menu mobile (Invisível no desktop) */
+#menu-backdrop {
+    display: none;
+}
+/* FIM MENU PRINCIPAL (DESKTOP) */
+
 
 /* --- KPIS NO TOPO DA ABA MOAGEM --- */
 .kpi-fixed-top-moagem {
@@ -380,30 +686,29 @@ main {
 .tooltip-container:hover .tooltip-text { visibility: visible; opacity: 1; }
 
 /* Tabs */
-.tabs-nav { display: flex; justify-content: space-around; align-items: center; background: var(--bg-dark-container); border-radius: 0.75rem; padding: 0.5rem; margin-bottom: 2rem; }
-.tab-button { flex: 1; background: transparent; color: var(--text-secondary); border: none; padding: 0.75rem 1rem; cursor: pointer; font-size: 1rem; font-weight: 500; border-radius: 0.5rem; }
-.tab-button.active { background: var(--glass); color: var(--primary); font-weight: 600; }
 .tab-pane { display: none; animation: fadeIn 0.5s; } 
 #tab-gerenciar.tab-pane.active,
 #analyticalContent .tab-pane.active { display: block; }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-/* --- NOVO: ESTILOS PARA SUB-ABAS (Metas) --- */
+/* --- NOVO: ESTILOS PARA SUB-ABAS (Gerenciamento de Usuários) --- */
 .sub-tabs-nav {
     display: flex;
     justify-content: flex-start;
     padding: 0.3rem;
     background: var(--bg-dark-container);
     border-radius: 0.75rem;
-    margin-bottom: 2rem;
-    /* Ajusta para não ocupar 100% da largura, mantendo a esquerda */
-    max-width: fit-content; 
+    margin-bottom: 1.5rem;
+    max-width: 100%;
 }
 .sub-tabs-nav .tab-button {
     flex: none; /* Não expande */
     font-size: 0.9rem;
     padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 .tab-pane-sub {
     display: none;
@@ -412,6 +717,90 @@ main {
 .tab-pane-sub.active {
     display: block;
 }
+
+/* --- NOVO: ESTILOS PARA TABELA DE GERENCIAMENTO DE USUÁRIOS --- */
+.user-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.user-table th {
+    background: rgba(0, 212, 255, 0.15);
+    padding: 10px 15px;
+    text-align: left;
+    font-size: 0.9rem;
+    color: var(--primary);
+}
+
+.user-table td {
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--glass-border);
+    font-size: 0.9rem;
+    color: var(--text);
+}
+
+.user-table tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.user-table select {
+    padding: 5px 8px;
+    border-radius: 4px;
+    background: var(--input-bg); /* Usando variável do tema */
+    color: var(--text-color);
+    border: 1px solid var(--glass-border);
+    cursor: pointer;
+}
+
+.user-table select:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.user-table .btn-danger {
+    background: var(--danger);
+    color: #fff;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.user-table .btn-danger:hover:not(:disabled) {
+    background: #ff577f;
+}
+
+/* --- BADGES DE ROLE --- */
+.badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.badge-admin {
+    background: var(--danger);
+    color: white;
+}
+.badge-editor {
+    background: var(--secondary);
+    color: white;
+}
+.badge-viewer {
+    background: var(--success);
+    color: white;
+}
+.badge-primary {
+    background: var(--primary);
+    color: #000;
+}
+/* --- FIM ESTILOS DE GERENCIAMENTO --- */
+
 
 /* --- NOVO: ESTILOS PARA TABELA DE METAS HORIZONTAL --- */
 .meta-table-wrapper {
@@ -676,9 +1065,9 @@ main {
 }
 
 .loader-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
     gap: 10px;
 }
 
@@ -1078,6 +1467,7 @@ main {
     padding: 10px 12px;
     margin-bottom: 8px;
     background: rgba(255, 255, 255, 0.05);
+    border-left: 4px solid var(--secondary);
     border-radius: 4px;
     transition: background 0.2s;
 }
@@ -1104,4 +1494,173 @@ main {
     width: 100%;
     border-collapse: collapse;
     min-width: 1800px; /* Valor seguro para colunas completas */
+}
+
+
+/* ========================================================================= */
+/* 🟥 INÍCIO: MEDIA QUERIES (OTIMIZAÇÃO MOBILE/TABLET) */
+/* ========================================================================= */
+
+@media (min-width: 769px) {
+    /* Desktop/Tablet Horizontal: REVERTER PARA BARRA DE ABAS HORIZONTAL (JÁ CORRIGIDO ACIMA) */
+    
+    .menu-toggle-btn {
+        display: none !important;
+    }
+    
+    .tabs-nav-container {
+        /* Garante que o container use o novo estilo estático */
+        position: static; 
+        display: block; 
+    }
+    
+    .tabs-nav .tab-button i {
+        display: inline-block;
+    }
+}
+
+
+@media (max-width: 768px) {
+    /* SMARTPHONES E TABLETS VERTICAIS (OFF-CANVAS ATIVADO) */
+
+    /* OCULTAR ELEMENTOS NÃO ESSENCIAIS PARA GANHAR ESPAÇO NO HEADER */
+    .turno-display-container, .last-weighing-container {
+        display: none;
+    }
+    
+    .dashboard-header {
+        padding: 0.75rem 1rem;
+        height: auto; 
+    }
+    .header-content {
+        flex-direction: row; 
+        align-items: center;
+        gap: 10px;
+    }
+    .header-controls {
+        width: auto; 
+        justify-content: flex-end;
+    }
+    .menu-toggle-btn {
+        display: block; /* MOSTRA O BOTÃO DE MENU */
+    }
+
+    /* LAYOUT DO MENU LATERAL (OFF-CANVAS) */
+    .tabs-nav-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: var(--menu-width);
+        height: 100vh;
+        background: var(--menu-bg);
+        box-shadow: var(--menu-shadow);
+        z-index: 500;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-in-out;
+        padding-top: 60px;
+        overflow-y: auto;
+        display: block; /* Deve ser 'block' para o toggleMenu funcionar */
+    }
+
+    .tabs-nav-container.open {
+        transform: translateX(0);
+    }
+
+    .tabs-nav { 
+        flex-direction: column; /* FORÇA O MENU VERTICAL */
+        align-items: flex-start;
+        padding: 0;
+        margin-bottom: 0; 
+        background: transparent;
+        border-radius: 0;
+    }
+
+    .tabs-nav .tab-button { 
+        flex: none; 
+        width: 100%;
+        text-align: left;
+        padding: 1rem 1.5rem;
+        border-bottom: none;
+        border-left: 4px solid transparent; /* Indicador lateral */
+        justify-content: flex-start;
+    }
+
+    .tabs-nav .tab-button.active { 
+        border-left-color: var(--primary);
+    }
+    
+    .tabs-nav .tab-button.admin-tab { 
+        margin-top: 1rem;
+        border-top: 1px solid var(--glass-border);
+        padding-top: 1rem;
+        margin-left: 0;
+    }
+    /* FIM LAYOUT DO MENU LATERAL */
+
+    /* Redimensionamento de Grids e Cards */
+    .dashboard-main {
+        padding: 1rem 1rem 4rem;
+        height: auto;
+    }
+    .analytics-row {
+        flex-direction: column; 
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .half-width, .full-width {
+        width: 100%;
+        flex: none;
+    }
+    /* KPIs de Moagem */
+    .kpi-fixed-top-moagem {
+        flex-wrap: nowrap; 
+        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        overflow-x: auto; 
+        padding-bottom: 5px;
+        justify-content: flex-start;
+    }
+    .kpi-fixed-top-moagem .stat-card-mini {
+        min-width: 130px; 
+        padding: 0.5rem;
+    }
+    /* ... (outras regras mobile mantidas) ... */
+}
+/* Estilos para gerenciamento de usuários (mantidos para garantir cores) */
+.user-table {
+    margin: 1rem 0;
+}
+.user-table th {
+    background: rgba(0, 212, 255, 0.15); 
+    color: var(--primary);
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+}
+
+/* Classes para corrigir estilos inline (Adicionadas para cumprir a correção de estilo) */
+.margin-bottom-10 {
+    margin-bottom: 10px;
+}
+.margin-left-0-5 {
+    margin-left: 0.5rem;
+}
+.padding-5-10 {
+    padding: 5px 10px;
+}
+.text-align-right {
+    text-align: right;
+}
+.min-height-400 {
+    min-height: 400px;
+}
+.justify-content-center {
+    justify-content: center;
+}
+.margin-bottom-15 {
+    margin-bottom: 15px;
+}
+.modal-footer-text {
+    font-size: 0.8rem;
+    text-align: center;
 }

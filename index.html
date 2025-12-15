@@ -5,138 +5,288 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AgroAnalytics - Dashboard Operacional</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@3.3.0/build/global/luxon.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyADUuqh_THzGInTSytxzUFEwHV5LmwdvYc",
+            authDomain: "agroanalytics-api.firebaseapp.com",
+            projectId: "agroanalytics-api",
+            storageBucket: "agroanalytics-api.firebasestorage.app",
+            messagingSenderId: "739888244342",
+            appId: "1:739888244342:web:558d620583469ec515e157",
+            measurementId: "G-6TYZDXMJZ5"
+        };
+
+        // Inicializa o Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+    </script>
+    
     <link rel="stylesheet" href="style.css"> 
 </head>
 <body>
-    <div id="loading-overlay" class="hidden">
-        <div class="loading-content">
-            <div class="loader-wrapper">
-                <div class="loader"></div>
-                <p>Carregando...</p>
-            </div>
+    <div id="user-settings-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-btn" onclick="window.agriculturalDashboard.closeModal('user-settings-modal')" aria-label="Fechar"><i class="fas fa-times"></i></button>
+            <h3 id="modal-title">Configurações de Conta</h3>
+            
+            <div id="modal-alert-message" class="alert-success-login hidden margin-bottom-10"></div>
+            
+            <form id="update-password-form">
+                <p class="text-secondary margin-bottom-15">Atualize sua senha. O email de redefinição será enviado para a sua conta atual.</p>
+                <input type="password" id="current-password" placeholder="Senha Atual (Obrigatório para Confirmação)" required>
+                <input type="password" id="new-password" placeholder="Nova Senha (Mín. 6 caracteres)" required>
+                <input type="password" id="confirm-new-password" placeholder="Confirme a Nova Senha" required>
+                <button type="submit" class="btn-primary margin-bottom-10">
+                    <i class="fas fa-key"></i> Salvar Nova Senha
+                </button>
+                <p class="text-secondary modal-footer-text">
+                    Para alterar o e-mail, entre em contato com o administrador.
+                </p>
+            </form>
         </div>
     </div>
-    
-    <canvas id="particles-js"></canvas> 
-    
-    <header class="dashboard-header">
-        <div class="header-content">
-            <div class="logo">
-                <i class="fas fa-seedling"></i>
-                <h1>AgroAnalytics</h1>
-                <span class="beta-tag">MOAGEM</span>
-            </div>
-            
-            <div class="header-controls">
-                <div class="turno-display-container" id="shiftDisplay">
-                    <div class="shift-progress-fill" id="shiftProgressFill"></div>
-                    <div class="shift-info-content">
-                        <i class="fas fa-clock selector-icon"></i>
-                        <span id="shiftName">Calculando...</span>
-                        <span id="shiftTimeRemaining" class="shift-timer">0%</span>
-                    </div>
-                </div>
+    <div id="login-screen" class="full-screen-overlay">
+        <div class="login-container">
+            <h1>AgroAnalytics</h1>
+            <p>Acesse o painel com suas credenciais</p>
+            <div id="auth-error" class="alert-danger hidden"></div>
+            <div id="auth-success" class="alert-success-login hidden"></div>
 
-                <button class="theme-toggle" onclick="window.agriculturalDashboard.toggleTheme()" aria-label="Alternar tema">
-                    <i class="fas fa-sun" id="theme-icon"></i>
-                </button>
-            </div>
-        </div>
-    </header>
-
-    <section class="upload-fixed-top" id="uploadSection">
-        <div id="lastWeighingDisplayContainer" class="last-weighing-container">
-            <span id="lastWeighingText">Última pesagem: Aguardando dados.</span>
-        </div>
-    </section>
-
-    <main class="dashboard-main">
-        <div class="main-content-layout"> 
-            
-            <section class="analytics-container"> 
+            <form id="login-form">
+                <input type="text" id="login-user" placeholder="Usuário ou E-mail" required>
+                <input type="password" id="login-password" placeholder="Senha" required>
                 
-                <nav class="tabs-nav">
-                    <button class="tab-button active" onclick="window.agriculturalDashboard.showTab('tab-gerenciar')">
-                        <i class="fas fa-cogs"></i> Gerenciar
-                    </button>
-                    <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-moagem')">
-                        <i class="fas fa-industry"></i> Moagem
-                    </button>
-                    <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-alertas')">
-                        <i class="fas fa-exclamation-triangle"></i> Alertas
-                    </button>
-                    <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-caminhao')">
-                        <i class="fas fa-truck"></i> Caminhões
-                    </button>
-                    <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-equipamento')">
-                        <i class="fas fa-tractor"></i> Colheita
-                    </button>
-                    <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-frentes')">
-                        <i class="fas fa-map-marked-alt"></i> Frentes
-                    </button>
-                     <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-metas')">
-                        <i class="fas fa-bullseye"></i> Metas
-                    </button>
-                    <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-horaria')">
-                        <i class="fas fa-clock"></i> Entrega HxH
-                    </button>
-                </nav>
+                <div class="login-actions">
+                    <button type="submit" class="btn-primary">Entrar</button>
+                </div>
+                
+                <a href="#" id="forgot-password-link" class="btn-forgot">Esqueceu a senha? Redefinir</a>
+                
+                <p>Não tem conta? <a href="#" id="show-signup">Solicitar Cadastro</a></p>
+            </form>
 
-                <div class="tabs-content">
+            <form id="signup-form" class="hidden">
+                <p>Preencha os dados abaixo para solicitar seu acesso. Responderemos em até 24h.</p>
+                <input type="text" id="signup-name" placeholder="Nome Completo" required>
+                <input type="email" id="signup-email" placeholder="E-mail" required>
+                <input type="tel" id="signup-phone" placeholder="Telefone/WhatsApp" required>
+                <button type="submit" class="btn-primary">Solicitar Cadastro</button>
+                <p>Já tem conta? <a href="#" id="show-login">Fazer Login</a></p>
+            </form>
+        </div>
+    </div>
+
+    <div id="main-dashboard" class="dashboard-layout hidden">
+        <div id="loading-overlay" class="hidden">
+            <div class="loading-content">
+                <div class="loader-wrapper">
+                    <div class="loader"></div>
+                    <p>Carregando...</p>
+                </div>
+            </div>
+        </div>
+        
+        <canvas id="particles-js"></canvas> 
+        
+        <header class="dashboard-header">
+            <div class="header-content">
+                <button class="menu-toggle-btn" id="menu-toggle-btn" aria-label="Abrir Menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+
+                <div class="logo">
+                    <i class="fas fa-seedling"></i>
+                    <h1>AgroAnalytics</h1>
+                    <span class="beta-tag">MOAGEM</span>
+                </div>
+                
+                <div class="header-controls">
+                    <div class="turno-display-container" id="shiftDisplay">
+                        <div class="shift-progress-fill" id="shiftProgressFill"></div>
+                        <div class="shift-info-content">
+                            <i class="fas fa-clock selector-icon"></i>
+                            <span id="shiftName">Calculando...</span>
+                            <span id="shiftTimeRemaining" class="shift-timer">0%</span>
+                        </div>
+                    </div>
+
+                    <div id="lastWeighingDisplayContainer" class="last-weighing-container">
+                         <span id="lastWeighingText">Última pesagem: Aguardando dados.</span>
+                    </div>
+
+                    <button id="open-user-settings-btn" class="btn-icon" title="Configurações de Usuário" aria-label="Configurações de Usuário" onclick="window.agriculturalDashboard.openModal('user-settings-modal')">
+                        <i class="fas fa-user-cog"></i>
+                    </button>
+
+                    <button id="logout-btn" class="btn-icon" title="Sair" aria-label="Sair"><i class="fas fa-sign-out-alt"></i></button>
+                    <button class="theme-toggle" onclick="window.agriculturalDashboard.toggleTheme()" aria-label="Alternar tema">
+                        <i class="fas fa-sun" id="theme-icon"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <section class="upload-fixed-top" id="uploadSection">
+            <div id="lastWeighingDisplayContainer2" class="last-weighing-container">
+            </div>
+        </section>
+
+        <div id="menu-backdrop"></div>
+
+        <div id="tabs-nav-container" class="tabs-nav-container">
+            <nav class="tabs-nav">
+                <button class="tab-button active" onclick="window.agriculturalDashboard.showTab('tab-gerenciar')">
+                    <i class="fas fa-cogs"></i> Gerenciar
+                </button>
+                <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-moagem')">
+                    <i class="fas fa-industry"></i> Moagem
+                </button>
+                <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-alertas')">
+                    <i class="fas fa-exclamation-triangle"></i> Alertas
+                </button>
+                <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-caminhao')">
+                    <i class="fas fa-truck"></i> Caminhões
+                </button>
+                <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-equipamento')">
+                    <i class="fas fa-tractor"></i> Colheita
+                </button>
+                <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-frentes')">
+                    <i class="fas fa-map-marked-alt"></i> Frentes
+                </button>
+                <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-metas')">
+                    <i class="fas fa-bullseye"></i> Metas
+                </button>
+                <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-horaria')">
+                    <i class="fas fa-clock"></i> Entrega HxH
+                </button>
+                <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-usuarios')">
+                    <i class="fas fa-user-lock"></i> Usuários
+                </button>
+            </nav>
+        </div>
+        <main class="dashboard-main">
+            <div class="main-content-layout"> 
+            
+                <section class="analytics-container"> 
                     
-                    <div id="tab-gerenciar" class="tab-pane active">
-                        <div class="analytics-row">
-                            <div class="analytics-card glass-card half-width hover-zoom-card">
-                                <div class="card-header">
-                                    <h3><i class="fas fa-upload"></i> Carregamento de Dados</h3>
+                    <div class="tabs-content">
+                        
+                        <div id="tab-gerenciar" class="tab-pane active">
+                            <div class="analytics-row">
+                                <div class="analytics-card glass-card half-width hover-zoom-card">
+                                    <div class="card-header">
+                                        <h3><i class="fas fa-upload"></i> Carregamento de Dados</h3>
+                                    </div>
+                                    
+                                    <div class="dropzone-card glass-card upload-highlight" id="dropzoneCard"> 
+                                        <label for="fileInput" class="sr-only">Upload de Arquivo</label>
+                                        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" 
+                                            multiple webkitdirectory directory hidden>
+                                        
+                                        <div class="dropzone-content">
+                                            <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                                            <p class="drop-text">Arraste e Solte seus arquivos ou pastas aqui</p>
+                                            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                                                <i class="fas fa-file-import"></i> 
+                                                Selecionar Arquivo
+                                            </button>
+                                        </div>
+                                        <div class="file-info-compact" id="fileInfo">Aguardando arquivo...</div>
+                                    </div>
+    
+                                    <div class="info-section upload-info-section"> 
+                                        <h4>Instruções:</h4>
+                                        <p>Arraste e solte <strong>múltiplos arquivos</strong> ou uma <strong>pasta inteira</strong>
+                                            na área acima, ou utilize o botão 'Selecionar Arquivo'.</p>
+                                        <p>Formatos aceitos: Excel (.xlsx, .xls) e CSV</p>
+                                        <p class="upload-warning-text">
+                                            Aguarde a mensagem de "Arquivos carregados" ou "Falha no carregamento"
+                                            antes de interagir com as outras abas.
+                                        </p>
+                                    </div>
                                 </div>
                                 
-                                <div class="dropzone-card glass-card upload-highlight" id="dropzoneCard"> 
-                                    <label for="fileInput" class="sr-only">Upload de Arquivo</label>
-                                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" 
-                                        multiple webkitdirectory directory hidden>
-                                    
-                                    <div class="dropzone-content">
-                                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                                        <p class="drop-text">Arraste e Solte seus arquivos ou pastas aqui</p>
-                                        <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
-                                            <i class="fas fa-file-import"></i> 
-                                            Selecionar Arquivo
-                                        </button>
+                                <div class="analytics-card glass-card half-width hover-zoom-card">
+                                    <div class="card-header">
+                                        <h3><i class="fas fa-clipboard-list"></i> Relatórios de Configuração</h3>
                                     </div>
-                                    <div class="file-info-compact" id="fileInfo">Aguardando arquivo...</div>
-                                </div>
-
-                                <div class="info-section upload-info-section"> 
-                                    <h4>Instruções:</h4>
-                                    <p>Arraste e solte <strong>múltiplos arquivos</strong> ou uma <strong>pasta inteira</strong>
-                                        na área acima, ou utilize o botão 'Selecionar Arquivo'.</p>
-                                    <p>Formatos aceitos: Excel (.xlsx, .xls) e CSV</p>
-                                    <p class="upload-warning-text">
-                                        Aguarde a mensagem de "Arquivos carregados" ou "Falha no carregamento"
-                                        antes de interagir com as outras abas.
-                                    </p>
-                                </div>
-
-                            </div>
-                            <div class="analytics-card glass-card half-width hover-zoom-card">
-                                <div class="card-header">
-                                    <h3><i class="fas fa-clipboard-list"></i> Relatórios de Configuração</h3>
-                                </div>
-                                <div class="mini-list">
-                                    <p>Status de Conexão: <span class="success-color-bold">ATIVO</span></p>
-                                    <p>Última Configuração: <span class="primary-color">v1.2.3 - 2025-11-30</span></p>
-                                    <p><button class="btn-action" onclick="alert('Baixando Log de Eventos.')">Baixar Log</button></p>
+                                    <div class="mini-list">
+                                        <p>Status de Conexão: <span class="success-color-bold">ATIVO</span></p>
+                                        <p>Usuário: <span id="current-user-email" class="primary-color">-</span></p>
+                                        <p>Última Configuração: <span class="primary-color">v1.2.3 - 2025-11-30</span></p>
+                                        <p><button class="btn-action" onclick="alert('Baixando Log de Eventos.')">Baixar Log</button></p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div id="analyticalContent"> 
+                        
+                        <div id="tab-usuarios" class="tab-pane">
+                            <div class="sub-tabs-nav">
+                                <button class="tab-button active" onclick="window.agriculturalDashboard.showSubTab('subtab-gerenciar-acesso', this)">
+                                    <i class="fas fa-users-cog"></i> Gerenciar Acesso
+                                </button>
+                                <button class="tab-button" onclick="window.agriculturalDashboard.showSubTab('subtab-solicitacoes', this)">
+                                    <i class="fas fa-bell"></i> Solicitações (<span id="requests-count">0</span>)
+                                </button>
+                                <button class="tab-button" onclick="window.agriculturalDashboard.showSubTab('subtab-permissoes-abas', this)">
+                                    <i class="fas fa-eye"></i> Permissões de Abas
+                                </button>
+                            </div>
+                            
+                            <div class="tabs-content-sub">
+                                <div id="subtab-gerenciar-acesso" class="tab-pane-sub active">
+                                    <div class="analytics-row">
+                                        <div class="analytics-card glass-card full-width hover-zoom-card">
+                                            <div class="card-header">
+                                                <h3><i class="fas fa-user-lock"></i> Gestão de Usuários Ativos (Firebase)</h3>
+                                            </div>
+                                            <div id="user-management-container" class="meta-table-wrapper">
+                                                <p>Carregando dados de usuários...</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
 
+                                <div id="subtab-solicitacoes" class="tab-pane-sub">
+                                    <div class="analytics-row">
+                                        <div class="analytics-card glass-card full-width hover-zoom-card">
+                                            <div class="card-header">
+                                                <h3><i class="fas fa-user-plus"></i> Solicitações Pendentes de Cadastro</h3>
+                                            </div>
+                                            <div id="registration-requests-container" class="meta-table-wrapper">
+                                                <p>Nenhuma solicitação pendente.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div id="subtab-permissoes-abas" class="tab-pane-sub">
+                                     <div class="analytics-row">
+                                        <div class="analytics-card glass-card full-width hover-zoom-card">
+                                            <div class="card-header">
+                                                <h3><i class="fas fa-eye-slash"></i> Configuração de Visualização por Papel</h3>
+                                            </div>
+                                            <div id="tab-permissions-container" class="meta-table-wrapper">
+                                                <p>Carregando permissões...</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <div id="tab-moagem" class="tab-pane">
                             <div class="kpi-fixed-top-moagem">
                                 <div class="glass-card stat-card-mini" id="cardPeso">
@@ -186,8 +336,7 @@
                                     <div class="card-header">
                                         <h3><i class="fas fa-truck-moving"></i> Status da Frota</h3>
                                     </div>
-                                    <div class="fleet-status-grid" id="fleetStatusCardsGrid">
-                                    </div>
+                                    <div class="fleet-status-grid" id="fleetStatusCardsGrid"></div>
                                 </div>
                             </div>
                             
@@ -203,7 +352,6 @@
                                         </div>
                                     </div>
                                     <div class="moagem-control-panel">
-                                        
                                         <div class="acumulado-display">
                                             <div class="acumulado-header">
                                                 <span class="acumulado-label">Acumulado do Dia</span>
@@ -216,7 +364,6 @@
                                                 <span id="moagemPerc">0%</span> da Meta (<span id="moagemTargetDisplay">25000 t</span>)
                                             </div>
                                         </div>
-
                                         <div class="meta-setting-rodape-moagem">
                                             <div class="meta-item-rodape">
                                                 <label for="metaMoagemInput">Meta Moagem (t/h):</label>
@@ -243,20 +390,14 @@
                                     <div class="forecast-panel">
                                         <div class="forecast-main">
                                             <span class="forecast-label">Previsão 24h</span>
-                                            
                                             <div class="forecast-value-group">
                                                 <span class="forecast-value-big" id="moagemForecast">0 t</span>
                                                 <span class="forecast-diff" id="forecastDifferenceContainer"></span> 
                                             </div>
                                             <span class="forecast-badge" id="moagemStatus">Calculando...</span>
-                                            
-                                            <div class="owner-distribution-container" id="ownerDistributionBarContainer">
-                                            </div>
-                                            
-                                            <div class="ritmo-medio-info" id="ritmoAtualFormulaContainer">
-                                                </div>
+                                            <div class="owner-distribution-container" id="ownerDistributionBarContainer"></div>
+                                            <div class="ritmo-medio-info" id="ritmoAtualFormulaContainer"></div>
                                         </div>
-                                        
                                     </div>
                                 </div>
                             </div>
@@ -276,21 +417,15 @@
                                     <div class="carousel-container wide" id="hourlyCarouselContainer">
                                         <div class="carousel-slide active">
                                             <div class="chart-container-title primary-color">Moagem(t/h)</div>
-                                            <div class="chart-container wide">
-                                                <canvas id="realHourlyChart"></canvas>
-                                            </div>
+                                            <div class="chart-container wide"><canvas id="realHourlyChart"></canvas></div>
                                         </div>
                                         <div class="carousel-slide">
                                             <div class="chart-container-title potencial-color">Potencial(t/h)</div>
-                                            <div class="chart-container wide">
-                                                <canvas id="potencialHourlyChart"></canvas>
-                                            </div>
+                                            <div class="chart-container wide"><canvas id="potencialHourlyChart"></canvas></div>
                                         </div>
                                         <div class="carousel-slide">
                                             <div class="chart-container-title rotacao-color">Rotação(RPM)</div>
-                                            <div class="chart-container wide">
-                                                <canvas id="rotacaoHourlyChart"></canvas>
-                                            </div>
+                                            <div class="chart-container wide"><canvas id="rotacaoHourlyChart"></canvas></div>
                                         </div>
                                         
                                         <button class="carousel-nav prev-btn" onclick="window.agriculturalDashboard.navigateCarousel(-1)" aria-label="Gráfico Anterior"><i class="fas fa-chevron-left"></i></button>
@@ -324,7 +459,6 @@
                         </div>
 
                         <div id="tab-caminhao" class="tab-pane">
-                            
                             <div class="analytics-row">
                                 <div class="analytics-card glass-card full-width hover-zoom-card">
                                     <div class="card-header">
@@ -332,19 +466,15 @@
                                             <h3><i class="fas fa-chart-bar"></i> Entrega Horária (Própria vs Terceiros)</h3>
                                             <div class="tooltip-container">
                                                 <i class="fas fa-info-circle icon"></i>
-                                                <div class="tooltip-text">Distribuição horária de peso entre frota própria e terceiros (Ciclo 06:00 - 05:59).
-                                                Passe o mouse sobre as barras para ver os percentuais.</div>
+                                                <div class="tooltip-text">Distribuição horária de peso entre frota própria e terceiros (Ciclo 06:00 - 05:59). Passe o mouse sobre as barras para ver os percentuais.</div>
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="chart-container wide">
-                                        <canvas id="fleetHourlyChartInCaminhoes"></canvas>
-                                    </div>
+                                    <div class="chart-container wide"><canvas id="fleetHourlyChartInCaminhoes"></canvas></div>
                                 </div>
                             </div>
-
                             <div class="analytics-row">
-                                <div class="analytics-card glass-card half-width hover-zoom-card" style="min-height: 400px;">
+                                <div class="analytics-card glass-card half-width hover-zoom-card min-height-400">
                                     <div class="card-header">
                                         <div class="header-title-with-tooltip">
                                             <h3><i class="fas fa-trophy"></i> Top 5 Caminhões</h3>
@@ -365,7 +495,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="analytics-card glass-card half-width hover-zoom-card" style="min-height: 400px;">
+                                <div class="analytics-card glass-card half-width hover-zoom-card min-height-400">
                                     <div class="card-header">
                                         <div class="header-title-with-tooltip">
                                             <h3><i class="fas fa-chart-pie"></i> Distribuição de Peso</h3>
@@ -375,15 +505,12 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="chart-container">
-                                        <canvas id="fleetChart"></canvas>
-                                    </div>
+                                    <div class="chart-container"><canvas id="fleetChart"></canvas></div>
                                 </div>
                             </div>
                         </div>
 
                         <div id="tab-equipamento" class="tab-pane">
-                            
                             <div class="analytics-row">
                                 <div class="analytics-card glass-card half-width hover-zoom-card">
                                     <div class="card-header">
@@ -416,9 +543,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="chart-container">
-                                        <canvas id="harvestChart"></canvas>
-                                    </div>
+                                    <div class="chart-container"><canvas id="harvestChart"></canvas></div>
                                 </div>
                             </div>
                             <div class="analytics-row">
@@ -484,9 +609,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="chart-container wide">
-                                        <canvas id="timeChart"></canvas>
-                                    </div>
+                                    <div class="chart-container wide"><canvas id="timeChart"></canvas></div>
                                 </div>
                             </div>
                             <div class="analytics-row">
@@ -500,39 +623,27 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="chart-container wide">
-                                        <canvas id="frontHourlyChart"></canvas>
-                                    </div>
+                                    <div class="chart-container wide"><canvas id="frontHourlyChart"></canvas></div>
                                 </div>
                             </div>
                         </div>
-
                     </div>
-                    </div>
-            </section>
-            
-            </div> 
-    </main>
-    
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-content">
-            <div class="loader"></div>
-            <p>Carregando...</p>
-        </div>
+                </section>
+            </div>
+        </main>
+        
+        <footer class="dashboard-footer"></footer>
     </div>
     
-    <footer class="dashboard-footer"></footer>
-
-
-    <script src="intelligent-processor.js"></script>
     <script src="utils.js"></script>
+    <script src="intelligent-processor.js"></script>
     
-    <script src="dataanalyzer.js"></script> 
     <script src="data-analyzer-kpis.js"></script>
     <script src="data-analyzer-rankings.js"></script>
     <script src="data-analyzer-time.js"></script>
     <script src="data-analyzer-metas.js"></script> 
-    
+    <script src="dataanalyzer.js"></script> 
+
     <script src="datavalidator.js"></script>
 
     <script src="visualizer-kpis.js"></script>
@@ -543,5 +654,110 @@
     <script src="datavisualizer.js"></script>
 
     <script src="app.js"></script>
+    
+    <script>
+        // Sistema de autenticação
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginScreen = document.getElementById('login-screen');
+            const mainDashboard = document.getElementById('main-dashboard');
+            const loginForm = document.getElementById('login-form');
+            const signupForm = document.getElementById('signup-form');
+            const showSignupLink = document.getElementById('show-signup');
+            const showLoginLink = document.getElementById('show-login');
+            const authError = document.getElementById('auth-error');
+            const logoutBtn = document.getElementById('logout-btn');
+            const currentUserEmail = document.getElementById('current-user-email');
+            
+            // --- INICIALIZAÇÃO DO APP COM OS NOVOS LISTENERS ---
+            if (typeof window.agriculturalDashboard !== 'undefined') {
+                window.agriculturalDashboard.initializeEventListeners();
+            }
+
+            // Verifica se o usuário já está logado (mantido para fallback)
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    loginScreen.classList.add('hidden');
+                    mainDashboard.classList.remove('hidden');
+                    currentUserEmail.textContent = user.email;
+                    
+                } else {
+                    mainDashboard.classList.add('hidden');
+                    loginScreen.classList.remove('hidden');
+                }
+            });
+
+            // Login (REDIRECIONADO PARA APP.JS)
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const userIdentifier = document.getElementById('login-user').value;
+                const password = document.getElementById('login-password').value;
+                
+                if (typeof window.agriculturalDashboard !== 'undefined' && window.agriculturalDashboard.handleLogin) {
+                    window.agriculturalDashboard.handleLogin(e); 
+                    return;
+                }
+
+                // Fallback (apenas para email)
+                auth.signInWithEmailAndPassword(userIdentifier, password)
+                    .then((userCredential) => {
+                        authError.classList.add('hidden');
+                        loginForm.reset();
+                    })
+                    .catch((error) => {
+                        authError.textContent = error.message;
+                        authError.classList.remove('hidden');
+                    });
+            });
+
+            // Cadastro (REDIRECIONADO PARA APP.JS)
+            signupForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (typeof window.agriculturalDashboard !== 'undefined' && window.agriculturalDashboard.handleSignup) {
+                    window.agriculturalDashboard.handleSignup(e);
+                } else {
+                    authError.textContent = "Erro: O sistema de cadastro não está pronto. Tente novamente mais tarde.";
+                    authError.classList.remove('hidden');
+                }
+            });
+
+
+            // Alternar entre login e cadastro
+            showSignupLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                authError.classList.add('hidden'); // Oculta erro ao trocar
+                document.getElementById('auth-success').classList.add('hidden');
+                loginForm.classList.add('hidden');
+                signupForm.classList.remove('hidden');
+            });
+
+            showLoginLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                authError.classList.add('hidden'); // Oculta erro ao trocar
+                document.getElementById('auth-success').classList.add('hidden');
+                signupForm.classList.add('hidden');
+                loginForm.classList.remove('hidden');
+            });
+
+            // Redefinir Senha (Esqueceu a senha) - REDIRECIONADO PARA APP.JS
+            const forgotPasswordLink = document.getElementById('forgot-password-link');
+            if (forgotPasswordLink) {
+                 forgotPasswordLink.addEventListener('click', (e) => {
+                     e.preventDefault();
+                     if (typeof window.agriculturalDashboard !== 'undefined' && window.agriculturalDashboard.handleForgotPassword) {
+                         window.agriculturalDashboard.handleForgotPassword(e);
+                     }
+                 });
+            }
+
+
+            // Logout (mantido o fallback para compatibilidade inicial do HTML)
+            logoutBtn.addEventListener('click', () => {
+                auth.signOut().catch((error) => {
+                    console.error('Erro ao fazer logout:', error);
+                });
+            });
+
+        });
+    </script>
 </body>
 </html>
