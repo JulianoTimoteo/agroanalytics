@@ -238,6 +238,33 @@
                                         <p>Última Configuração: <span class="primary-color">v1.2.3 - 2025-11-30</span></p>
                                         <p><button class="btn-action" onclick="alert('Baixando Log de Eventos.')">Baixar Log</button></p>
                                     </div>
+                                    
+                                    <hr class="divider-dashed">
+                                    <div class="automation-controls">
+                                        <h4>Apresentação em TV (Slideshow)</h4>
+                                        <div class="control-item-flex automation-header-space">
+                                            <p>Iniciar Apresentação de Dashboards (20s)</p>
+                                            <button id="slideshow-toggle-btn" class="btn-primary" onclick="window.agriculturalDashboard.toggleSlideshow()">
+                                                <i class="fas fa-play"></i> Iniciar
+                                            </button>
+                                        </div>
+
+                                        <hr class="divider-dashed">
+
+                                        <h4>Distribuição de Relatórios (WhatsApp)</h4>
+                                        <p class="text-secondary automation-text-info">
+                                            Compartilha telas no modo **Claro** a cada 1 hora.
+                                        </p>
+                                        <div class="control-item-flex">
+                                            <p>Status: <strong id="whatsapp-status">Desativado</strong></p>
+                                            <button id="whatsapp-toggle-btn" class="btn-primary" onclick="window.agriculturalDashboard.toggleWhatsappAutomation()">
+                                                <i class="fas fa-toggle-off"></i> Ativar
+                                            </button>
+                                        </div>
+                                        <p class="text-secondary modal-footer-text automation-footer-info">
+                                            *Requer configuração de Webhook e API externa.
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -438,8 +465,8 @@
                                             <div class="chart-container wide"><canvas id="rotacaoHourlyChart"></canvas></div>
                                         </div>
                                         
-                                        <button class="carousel-nav prev-btn" onclick="window.agriculturalDashboard.navigateCarousel(-1)" aria-label="Gráfico Anterior"><i class="fas fa-chevron-left"></i></button>
-                                        <button class="carousel-nav next-btn" onclick="window.agriculturalDashboard.navigateCarousel(1)" aria-label="Próximo Gráfico"><i class="fas fa-chevron-right"></i></button>
+                                        <button class="carousel-nav prev-btn" aria-label="Gráfico Anterior"><i class="fas fa-chevron-left"></i></button>
+                                        <button class="carousel-nav next-btn" aria-label="Próximo Gráfico"><i class="fas fa-chevron-right"></i></button>
                                         
                                         <div class="carousel-indicators" id="carouselIndicators">
                                             <span class="indicator active" onclick="window.agriculturalDashboard.showSlide(0)" aria-label="Ir para Gráfico 1"></span>

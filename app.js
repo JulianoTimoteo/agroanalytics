@@ -52,6 +52,12 @@ class AgriculturalDashboard {
         this.showTab('tab-gerenciar'); // Inicia na aba de gerenciamento/upload
         this.clearResults(); 
         
+        // Estado para as novas funcionalidades
+        this.slideshowInterval = null;
+        this.slideshowTabs = ['tab-moagem', 'tab-caminhao', 'tab-equipamento', 'tab-frentes', 'tab-metas', 'tab-horaria'];
+        this.currentSlideshowIndex = 0;
+        this.whatsappAutomationActive = false;
+        
         // 🟥 PROTEÇÃO DE ROTA: Monitora o estado de autenticação
         if (this.auth) {
             this.auth.onAuthStateChanged(this.handleAuthStateChange.bind(this));
@@ -111,14 +117,11 @@ class AgriculturalDashboard {
         try {
             let email = userIdentifier.trim().toLowerCase();
 
-            // 1. Tenta identificar o usuário como e-mail
             if (!email.includes('@')) {
-                // NOTA: Firebase Auth nativamente SÓ permite login por e-mail.
+                // Mantemos o login direto por EMAIL para a segurança do Firebase Auth.
                 
-                // 3. Login via Firebase Auth (sempre exige e-mail)
                 const userCredential = await this.auth.signInWithEmailAndPassword(email, password);
                 
-                // Limpa campos após login bem-sucedido
                 document.getElementById('login-user').value = '';
                 document.getElementById('login-password').value = '';
                 errorEl.textContent = '';
@@ -201,16 +204,13 @@ class AgriculturalDashboard {
         }
 
         try {
-            // 1. Reautenticar o usuário com a senha atual (obrigatório pelo Firebase)
             const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
             await user.reauthenticateWithCredential(credential);
 
-            // 2. Atualizar a senha
             await user.updatePassword(newPassword);
 
             this.showModalAlert("Senha atualizada com sucesso!", 'success');
             
-            // Limpa o formulário
             document.getElementById('update-password-form').reset();
             
         } catch (error) {
@@ -237,7 +237,6 @@ class AgriculturalDashboard {
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.classList.add('visible');
-            // Limpa o estado do formulário e alertas ao abrir
             document.getElementById('update-password-form')?.reset();
             document.getElementById('modal-alert-message')?.classList.add('hidden');
         }
@@ -250,9 +249,145 @@ class AgriculturalDashboard {
         }
     }
     
-    // ... restante da classe AgriculturalDashboard (funções que não sofreram mudanças significativas)
+    // =================== 🚀 NOVAS FUNÇÕES DE AUTOMAÇÃO 🚀 ===================
 
+    // Alterna entre Iniciar/Parar a Apresentação na TV
+    toggleSlideshow() {
+        if (this.slideshowInterval) {
+            // Parar Slideshow
+            clearInterval(this.slideshowInterval);
+            this.slideshowInterval = null;
+            document.getElementById('slideshow-toggle-btn').innerHTML = '<i class="fas fa-play"></i> Iniciar';
+            document.body.classList.remove('slideshow-mode');
+            
+            // Volta para a aba de gerenciamento ou a última ativa
+            this.showTab('tab-gerenciar'); 
+
+            console.log("Slideshow Parado.");
+        } else {
+            // Iniciar Slideshow
+            if (!this.data || this.data.length === 0) {
+                 this.showError("Carregue os dados primeiro para iniciar a apresentação.");
+                 return;
+            }
+            
+            document.getElementById('slideshow-toggle-btn').innerHTML = '<i class="fas fa-pause"></i> Parar';
+            document.body.classList.add('slideshow-mode');
+
+            // Inicia o ciclo na primeira aba
+            this.startSlideshowCycle();
+
+            console.log("Slideshow Iniciado.");
+        }
+    }
+
+    startSlideshowCycle() {
+        const intervalTime = 20000; // 20 segundos
+        
+        // Função para avançar a aba
+        const nextSlide = () => {
+            const tabs = this.slideshowTabs.filter(tabId => this.canAccessTab(tabId));
+            if (tabs.length === 0) return;
+
+            this.currentSlideshowIndex = (this.currentSlideshowIndex + 1) % tabs.length;
+            const nextTabId = tabs[this.currentSlideshowIndex];
+            
+            this.showTab(nextTabId);
+            
+            // Força o resize do gráfico na aba atual (se for moagem)
+            if (nextTabId === 'tab-moagem' && this.visualizer && this.visualizer.charts) {
+                 setTimeout(() => {
+                    this.showSlide(this.currentSlideIndex);
+                 }, 500);
+            }
+        };
+
+        // Garante que o ciclo comece imediatamente na primeira aba
+        nextSlide(); 
+
+        // Configura o intervalo
+        if (this.slideshowInterval) clearInterval(this.slideshowInterval);
+        this.slideshowInterval = setInterval(nextSlide, intervalTime);
+    }
     
+    // Alterna entre Ativar/Desativar o envio de WhatsApp
+    toggleWhatsappAutomation() {
+        this.whatsappAutomationActive = !this.whatsappAutomationActive;
+        const statusEl = document.getElementById('whatsapp-status');
+        const btnEl = document.getElementById('whatsapp-toggle-btn');
+        
+        if (this.whatsappAutomationActive) {
+            statusEl.innerHTML = 'Ativado';
+            btnEl.innerHTML = '<i class="fas fa-toggle-on"></i> Desativar';
+            btnEl.classList.remove('btn-primary');
+            btnEl.classList.add('btn-danger');
+            
+            this.startWhatsappScheduler();
+
+            this.showModalAlert("Agendamento de WhatsApp ATIVADO. O servidor externo tentará enviar relatórios a cada hora no modo Claro.", 'success');
+        } else {
+            statusEl.innerHTML = 'Desativado';
+            btnEl.innerHTML = '<i class="fas fa-toggle-off"></i> Ativar';
+            btnEl.classList.add('btn-primary');
+            btnEl.classList.remove('btn-danger');
+
+            if (this.whatsappInterval) clearInterval(this.whatsappInterval);
+            
+            this.showModalAlert("Agendamento de WhatsApp DESATIVADO.", 'warning');
+        }
+    }
+
+    // SIMULAÇÃO: Lógica de agendamento (A CADA 1 HORA)
+    startWhatsappScheduler() {
+        const oneHour = 60 * 60 * 1000;
+        
+        // Tenta enviar o primeiro relatório após 5 segundos (para teste)
+        // Em produção, isso seria gerenciado por um CRON JOB em um servidor
+        setTimeout(() => this.sendWhatsappReport(), 5000); 
+
+        // Agenda o envio a cada 1 hora
+        this.whatsappInterval = setInterval(() => {
+            this.sendWhatsappReport();
+        }, oneHour);
+    }
+
+    // SIMULAÇÃO: Envio de relatório via Webhook
+    sendWhatsappReport() {
+        const webhookUrl = 'SUA_URL_DO_WEBHOOK_AQUI'; // <--- VOCÊ DEVE CONFIGURAR ISSO!
+        const reportData = {
+            group_id: 'ID_DO_GRUPO_WHATSAPP',
+            mode: 'light', 
+            report_pages: this.slideshowTabs, 
+            timestamp: new Date().toISOString()
+        };
+
+        if (webhookUrl === 'SUA_URL_DO_WEBHOOK_AQUI') {
+             console.warn("Webhook URL não configurada. Simulação de envio concluída.");
+             this.showModalAlert("Simulação de envio WhatsApp: Servidor externo notificado.", 'info');
+             return;
+        }
+
+        fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(reportData)
+        })
+        .then(response => {
+            if (response.ok) {
+                console.log("Relatório WhatsApp enviado via Webhook.");
+            } else {
+                console.error("Falha ao enviar Webhook:", response.statusText);
+            }
+        })
+        .catch(error => {
+            console.error("Erro na conexão Webhook:", error);
+        });
+    }
+
+    // =================== 🟥 FUNÇÕES DE DADOS E LAYOUT (Mantidas) ===================
+
     async fixUserProfile(user) {
         try {
             const userRef = this.db.collection("users").doc(user.uid);
@@ -291,7 +426,6 @@ class AgriculturalDashboard {
         }
     }
     
-    // 🔥 FUNÇÃO handleSignup REESCRITA: Agora é SOLICITAÇÃO DE CADASTRO
     handleSignup(e) {
         e.preventDefault();
         const name = document.getElementById('signup-name').value;
@@ -302,32 +436,27 @@ class AgriculturalDashboard {
         errorEl.classList.add('hidden');
         successEl.classList.add('hidden');
         
-        // 1. Validação básica
         if (!name || !email || !phone) {
              errorEl.textContent = "Preencha todos os campos para solicitar o cadastro.";
              errorEl.classList.remove('hidden');
              return;
         }
 
-        // 2. Salva a solicitação na coleção 'requests'
         this.db.collection("requests").doc(email).set({
             name: name,
             email: email.trim().toLowerCase(),
             phone: phone,
-            status: 'pending', // Status da solicitação
+            status: 'pending', 
             requestedAt: firebase.firestore.FieldValue.serverTimestamp()
         })
         .then(() => {
-            // Limpa campos
             document.getElementById('signup-name').value = '';
             document.getElementById('signup-email').value = '';
             document.getElementById('signup-phone').value = '';
             
-            // Mostra mensagem de sucesso e instrução
             successEl.innerHTML = "<strong>Solicitação de cadastro enviada!</strong> Você receberá uma mensagem em até 24h com a senha de acesso após a aprovação do administrador.";
             successEl.classList.remove('hidden');
             
-            // Volta para o formulário de login (após 5 segundos)
             setTimeout(() => {
                  document.getElementById('signup-form').classList.add('hidden');
                  document.getElementById('login-form').classList.remove('hidden');
@@ -993,12 +1122,17 @@ class AgriculturalDashboard {
             backdrop.classList.remove('active');
             backdrop.style.display = 'none'; // Força o display do backdrop
             document.body.style.overflowY = 'auto'; 
+            // Garante que o body não fique com a classe no-scroll
+            document.body.classList.remove('no-scroll'); 
+
         } else {
             // Abre o menu
             menuContainer.classList.add('open');
             backdrop.classList.add('active');
             backdrop.style.display = 'block'; // Força o display do backdrop
             document.body.style.overflowY = 'hidden'; // Impede a rolagem do fundo
+            // Adiciona a classe no-scroll no body para evitar scroll duplo
+            document.body.classList.add('no-scroll');
         }
     }
     
@@ -1052,12 +1186,17 @@ class AgriculturalDashboard {
     }
     
     stopCarousel() {
+        if (this.slideshowInterval) {
+            clearInterval(this.slideshowInterval);
+            this.slideshowInterval = null;
+        }
         if (this.carouselInterval) {
             clearInterval(this.carouselInterval);
             this.carouselInterval = null;
         }
     }
     
+    // 🔥 CORREÇÃO: Função de navegação do carrossel para os botões do HTML
     navigateCarousel(direction) {
         const slides = document.querySelectorAll('.carousel-slide');
         if (slides.length === 0) return;
@@ -1071,7 +1210,7 @@ class AgriculturalDashboard {
         }
 
         this.showSlide(newIndex);
-        this.initializeCarousel();
+        this.initializeCarousel(); // Reseta o timer do carrossel
     }
 
     showSlide(index) {
@@ -1295,7 +1434,7 @@ class AgriculturalDashboard {
         this.renderAlerts(this.validationResult.anomalies);
         
         await this._yieldControl(); 
-        this.analysisResult = this.analyzer.analyzeAll(productionData, potentialData, metaData, this.validationResult);
+        this.analysisResult = this.analyzer.analyzeAll(productionData, potentialData, this.metaData, this.validationResult);
         
         await this._yieldControl(); 
         this.visualizer.updateDashboard(this.analysisResult);
@@ -1711,14 +1850,21 @@ class AgriculturalDashboard {
             }
         });
         
-        // 🟥 Botões do carrossel
-        document.querySelectorAll('.carousel-nav').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const direction = btn.classList.contains('prev-btn') ? -1 : 1;
-                this.navigateCarousel(direction);
-            });
-        });
+        // 🟥 Botões do carrossel (CORRIGIDO)
+        const carouselNavBtns = document.querySelectorAll('.carousel-nav');
+        if (carouselNavBtns) {
+             carouselNavBtns.forEach(btn => {
+                 // Remove o listener de evento inline no HTML
+                 btn.removeAttribute('onclick');
+                 
+                 btn.addEventListener('click', (e) => {
+                     e.preventDefault();
+                     e.stopPropagation();
+                     const direction = btn.classList.contains('prev-btn') ? -1 : 1;
+                     this.navigateCarousel(direction);
+                 });
+             });
+        }
     }
     
     showSubTab(subTabId, clickedButton) {
@@ -1897,7 +2043,12 @@ class AgriculturalDashboard {
         
         // 🔥 NOVO: Fechar menu mobile ao selecionar uma aba
         if (window.innerWidth <= 768) {
-            this.toggleMenu(true);
+            // Usa a lógica do mobileOptimizer
+            if (window.mobileOptimizer) {
+                 window.mobileOptimizer.closeMobileMenu();
+            } else {
+                 this.toggleMenu(true);
+            }
         }
 
         document.querySelectorAll('.tab-pane').forEach(pane => {
@@ -1951,6 +2102,7 @@ class AgriculturalDashboard {
         document.documentElement.setAttribute('data-theme', savedTheme);
         const icon = document.getElementById('theme-icon');
         if (icon) {
+             // Garante que o ícone é visível em qualquer tema
             icon.className = savedTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
         }
     }

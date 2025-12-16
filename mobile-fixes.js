@@ -136,7 +136,6 @@ class MobileOptimizer {
 
     fixChartsForMobile() {
         // Encontra todos os gráficos e garante que eles sejam redimensionados.
-        // Se a classe do Chart.js não está disponível, a função falha silenciosamente.
         if (!this.isMobile) return;
         
         setTimeout(() => {
@@ -200,6 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Adicionar a função de toggle do MobileOptimizer ao objeto do dashboard
     if (window.agriculturalDashboard) {
+        // Redefine o toggleMenu do app.js para usar a lógica do MobileOptimizer
         window.agriculturalDashboard.toggleMenu = (forceClose) => window.mobileOptimizer.toggleMobileMenu(forceClose);
     }
 });
