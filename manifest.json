@@ -1,0 +1,31 @@
+{
+  "name": "AgroAnalytics Dashboard",
+  "short_name": "AgroAnalytics",
+  "description": "Dashboard Operacional AgroAnalytics - MOAGEM",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#050A14",
+  "theme_color": "#00D4FF",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://cdn.jsdelivr.net/npm/@mdi/svg@7.2.96/svg/factory.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "https://cdn.jsdelivr.net/npm/@mdi/svg@7.2.96/svg/factory.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "short_name": "Home",
+      "description": "Acessar o dashboard principal",
+      "url": "/#dashboard"
+    }
+  ]
+}
