@@ -83,7 +83,6 @@ body {
     transition: background-color 0.3s, color 0.3s;
     height: 100%;
     width: 100%;
-    /* Removido overflow: hidden globalmente. Permitiremos a rolagem do 'main' */
     overflow-x: hidden; 
 }
 #particles-js { position: fixed; width: 100%; height: 100%; top: 0; left: 0; z-index: -1; display: block; }
@@ -557,7 +556,6 @@ main {
 
 /* --- MENU PRINCIPAL (COMPORTAMENTO PADRÃO: DESKTOP HORIZONTAL) --- */
 
-/* Container geral da navegação - Deve ser estático no desktop */
 .tabs-nav-container {
     position: static;
     width: 100%; 
@@ -568,11 +566,13 @@ main {
     background: transparent;
     transform: translateX(0);
     z-index: 10;
+    /* Adicionado para garantir que o container do menu não desapareça no mobile, mas seja transformado */
+    display: block; 
 }
 
 .tabs-nav { 
     display: flex; 
-    flex-direction: row; /* PADRÃO DESKTOP: HORIZONTAL */
+    flex-direction: row; 
     justify-content: space-around; 
     align-items: center; 
     background: var(--bg-dark-container); 
@@ -594,19 +594,19 @@ main {
     font-size: 1rem; 
     font-weight: 500; 
     border-radius: 0.5rem;
-    border-bottom: 2px solid transparent; /* Para a linha de foco */
+    border-bottom: 2px solid transparent; 
     transition: all 0.2s;
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 8px; /* Menor gap para caber mais itens na linha */
+    gap: 8px; 
 }
 
 .tabs-nav .tab-button.active { 
     background: var(--glass); 
     color: var(--primary); 
     font-weight: 600; 
-    border-bottom-color: var(--primary); /* Linha azul de ativação */
+    border-bottom-color: var(--primary); 
 }
 
 .tabs-nav .tab-button.admin-tab { 
@@ -617,15 +617,11 @@ main {
     flex: none;
 }
 
-.tabs-nav .tab-button i {
-    display: inline-block; /* Ícone visível no desktop */
-}
-
 .tabs-content {
     width: 100%;
 }
 
-/* Overlay do menu mobile (Invisível no desktop) */
+/* Overlay do menu mobile (Invisível por padrão) */
 #menu-backdrop {
     display: none;
 }
@@ -1502,7 +1498,7 @@ main {
 /* ========================================================================= */
 
 @media (min-width: 769px) {
-    /* Desktop/Tablet Horizontal: REVERTER PARA BARRA DE ABAS HORIZONTAL (JÁ CORRIGIDO) */
+    /* Desktop/Tablet Horizontal: REVERTER PARA BARRA DE ABAS HORIZONTAL */
     
     .menu-toggle-btn {
         display: none !important;
@@ -1551,7 +1547,7 @@ main {
         display: block; /* MOSTRA O BOTÃO DE MENU */
     }
 
-    /* LAYOUT DO MENU LATERAL (OFF-CANVAS) */
+    /* LAYOUT DO MENU LATERAL (OFF-CANVAS) - CORRIGIDO */
     .tabs-nav-container {
         position: fixed;
         top: 0;
@@ -1571,6 +1567,13 @@ main {
     .tabs-nav-container.open {
         transform: translateX(0);
     }
+    
+    #menu-backdrop {
+        display: none;
+    }
+    #menu-backdrop.active {
+        display: block;
+    }
 
     .tabs-nav { 
         flex-direction: column; /* FORÇA O MENU VERTICAL */
@@ -1589,6 +1592,10 @@ main {
         border-bottom: none;
         border-left: 4px solid transparent; /* Indicador lateral */
         justify-content: flex-start;
+    }
+
+    .tabs-nav .tab-button i {
+        display: inline-block; /* Ícones visíveis no menu mobile */
     }
 
     .tabs-nav .tab-button.active { 
@@ -1614,19 +1621,26 @@ main {
     .kpi-fixed-top-moagem {
         flex-wrap: nowrap; 
         overflow-x: auto; 
-        -webkit-overflow-scrolling: touch; /* Melhora a rolagem em iOS */
-        padding-bottom: 10px; /* Espaço para a barra de rolagem */
-        margin-left: -1rem; /* Usa o padding lateral da main para visualmente ir de ponta a ponta */
+        -webkit-overflow-scrolling: touch; 
+        padding-bottom: 10px; 
+        margin-left: -1rem; 
         margin-right: -1rem;
         padding-left: 1rem;
         padding-right: 1rem;
+        justify-content: flex-start;
     }
     .kpi-fixed-top-moagem .stat-card-mini {
         min-width: 150px; /* Garante que os KPIs sejam legíveis */
         flex-shrink: 0;
     }
-
-    /* Garante que o conteúdo dentro das colunas não seja cortado */
+    
+    /* Garante que o wrapper de tabelas rola horizontalmente no mobile */
+    .meta-table-wrapper, .table-responsive {
+        overflow-x: auto;
+        padding-bottom: 10px;
+        -webkit-overflow-scrolling: touch;
+    }
+    
     .analytics-row {
         flex-direction: column; 
         gap: 1.5rem;
@@ -1636,7 +1650,6 @@ main {
         width: 100%;
         flex: none;
     }
-    /* ... (outras regras mobile mantidas) ... */
 }
 /* Estilos para gerenciamento de usuários (mantidos para garantir cores) */
 .user-table {
