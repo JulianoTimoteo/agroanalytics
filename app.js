@@ -113,12 +113,7 @@ class AgriculturalDashboard {
 
             // 1. Tenta identificar o usuário como e-mail
             if (!email.includes('@')) {
-                // 2. Se não for e-mail, busca no Firestore pelo campo 'nick' (simulado)
-                // Implementação REAL precisaria de um índice no Firestore, mas para o caso de uso, assumimos que 'userIdentifier' é o EMAIL.
-                // Firebase Auth nativamente SÓ permite login por e-mail, ou você precisaria de funções Cloud para mapear nick -> email.
-                // Mantemos o login direto por EMAIL para a segurança do Firebase Auth.
-                
-                // NOTA: Para funcionar como "Nick", o Nick deve ser igual ao e-mail.
+                // NOTA: Firebase Auth nativamente SÓ permite login por e-mail.
                 
                 // 3. Login via Firebase Auth (sempre exige e-mail)
                 const userCredential = await this.auth.signInWithEmailAndPassword(email, password);
@@ -982,18 +977,28 @@ class AgriculturalDashboard {
         const backdrop = document.getElementById('menu-backdrop');
         const isMobile = window.innerWidth <= 768;
 
-        if (!isMobile) return;
+        if (!menuContainer || !backdrop) return;
+
+        if (!isMobile) {
+            // Em desktop, garante que o menu e o backdrop estão fechados/escondidos
+            menuContainer.classList.remove('open');
+            backdrop.classList.remove('active');
+            document.body.style.overflowY = 'auto'; 
+            return;
+        }
 
         if (forceClose || menuContainer.classList.contains('open')) {
             // Fecha o menu
             menuContainer.classList.remove('open');
-            backdrop.style.display = 'none';
-            document.body.style.overflowY = 'auto';
+            backdrop.classList.remove('active');
+            backdrop.style.display = 'none'; // Força o display do backdrop
+            document.body.style.overflowY = 'auto'; 
         } else {
             // Abre o menu
             menuContainer.classList.add('open');
-            backdrop.style.display = 'block';
-            document.body.style.overflowY = 'hidden';
+            backdrop.classList.add('active');
+            backdrop.style.display = 'block'; // Força o display do backdrop
+            document.body.style.overflowY = 'hidden'; // Impede a rolagem do fundo
         }
     }
     
@@ -1679,6 +1684,13 @@ class AgriculturalDashboard {
              forgotPasswordLink.addEventListener('click', (e) => this.handleForgotPassword(e));
         }
 
+        // 🟥 Listener para fechar modal (mantido)
+        document.getElementById('user-settings-modal').addEventListener('click', (e) => {
+             if (e.target.id === 'user-settings-modal') {
+                 this.closeModal('user-settings-modal');
+             }
+        });
+        
         // 🟥 Navegação de sub-abas (Gerenciamento de Usuários)
         document.querySelectorAll('#tab-usuarios .sub-tabs-nav button').forEach(button => {
              const onclickAttr = button.getAttribute('onclick');
@@ -1690,21 +1702,21 @@ class AgriculturalDashboard {
                  });
              }
          });
-        
-        // 🟥 Botões do carrossel
-        document.querySelectorAll('.carousel-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                const direction = btn.classList.contains('next') ? 1 : -1;
-                this.navigateCarousel(direction);
-            });
+         
+        // 🟥 Listener de redimensionamento da janela (para desligar/ligar o menu mobile)
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                // Desliga o modo mobile ao voltar para desktop
+                this.toggleMenu(true);
+            }
         });
         
-        // 🟥 Indicadores do carrossel
-        document.querySelectorAll('.carousel-indicators .indicator').forEach((indicator, index) => {
-            indicator.addEventListener('click', () => {
-                this.showSlide(index);
-                this.initializeCarousel();
+        // 🟥 Botões do carrossel
+        document.querySelectorAll('.carousel-nav').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const direction = btn.classList.contains('prev-btn') ? -1 : 1;
+                this.navigateCarousel(direction);
             });
         });
     }

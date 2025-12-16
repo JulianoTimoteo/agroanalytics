@@ -566,7 +566,6 @@ main {
     background: transparent;
     transform: translateX(0);
     z-index: 10;
-    /* Adicionado para garantir que o container do menu não desapareça no mobile, mas seja transformado */
     display: block; 
 }
 
@@ -615,6 +614,10 @@ main {
     padding-top: 0.75rem;
     margin-left: 1rem; 
     flex: none;
+}
+
+.tabs-nav .tab-button i {
+    display: inline-block; 
 }
 
 .tabs-content {
@@ -1569,7 +1572,16 @@ main {
     }
     
     #menu-backdrop {
+        /* Garante que o backdrop cubra a tela */
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 499;
         display: none;
+        cursor: pointer;
     }
     #menu-backdrop.active {
         display: block;
