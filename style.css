@@ -266,17 +266,31 @@ body {
 /* --- FIM NOVO: MODAL --- */
 
 
-/* Header */
-.dashboard-header { background: var(--bg-header); padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--glass-border); position: sticky; top: 0; z-index: 50; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3); }
+/* Header - CORRIGIDO PARA CENTRALIZAR E ALINHAR COM O RESTO */
+.dashboard-header { 
+    background: var(--bg-header); 
+    padding: 0; /* Remove padding externo para o container interno controlar a largura */
+    display: flex; 
+    justify-content: center; /* Centraliza o conteúdo interno */
+    align-items: center; 
+    border-bottom: 1px solid var(--glass-border); 
+    position: sticky; 
+    top: 0; 
+    z-index: 50; 
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3); 
+}
+
 .header-content { 
     display: flex; 
     justify-content: space-between; 
     align-items: center; 
     width: 100%; 
-    max-width: 1400px; 
+    max-width: 1400px; /* Alinha com o max-width das abas */
     margin: 0 auto; 
+    padding: 1rem 2rem; /* Adiciona o padding aqui dentro para manter alinhamento */
     min-height: 50px; 
 }
+
 .logo { display: flex; align-items: center; color: var(--primary); gap: 10px; }
 .header-controls { display: flex; align-items: center; gap: 15px; }
 
@@ -715,7 +729,7 @@ main {
     height: auto;
     padding: 0 2rem; /* Alinha com o MAIN */
     margin: 0 auto 2rem auto;
-    max-width: 1400px;
+    max-width: 1400px; /* ALINHAMENTO IGUAL AO HEADER */
     background: transparent;
     transform: translateX(0);
     z-index: 10;
@@ -1728,13 +1742,136 @@ main {
         gap: 10px;
         width: 100%; 
     }
+    
+    /* CORREÇÃO DO LAYOUT DA LOGO EM MOBILE (Grid para alinhar ícone a esquerda e textos empilhados) */
+    .logo {
+        display: grid !important;
+        grid-template-columns: min-content auto;
+        grid-template-rows: auto auto;
+        align-items: center;
+        column-gap: 10px !important;
+        row-gap: 0 !important;
+        flex-grow: 0;
+    }
+    
+    .logo i {
+        grid-row: 1 / span 2; /* Ícone ocupa duas linhas */
+        font-size: 2.2rem !important;
+        color: var(--primary);
+    }
+    
+    .logo h1 {
+        grid-row: 1;
+        grid-column: 2;
+        font-size: 1.1rem !important;
+        margin: 0 !important;
+        line-height: 1.1;
+        align-self: end; /* Alinha na parte inferior da primeira linha */
+    }
+    
+    .beta-tag {
+        grid-row: 2;
+        grid-column: 2;
+        font-size: 0.65rem !important;
+        margin: 0 !important;
+        padding: 1px 6px !important;
+        align-self: start; /* Alinha na parte superior da segunda linha */
+        justify-self: start;
+    }
+
+    /* CORREÇÃO DOS CONTROLES */
     .header-controls {
         width: auto; 
         justify-content: flex-end;
         flex-grow: 1; 
+        gap: 8px !important;
     }
-    .logo {
-        flex-grow: 0;
+
+    /* CORREÇÃO AGRESSIVA DO BOTÃO AÇÕES NO MOBILE (Círculo Compacto + Menu Vertical) */
+    body .dashboard-header .header-controls .btn-cssbuttons {
+        min-width: 44px !important;
+        width: 44px !important;
+        height: 44px !important;
+        padding: 0 !important;
+        border-radius: 50% !important; /* Círculo */
+        background: var(--primary) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        overflow: visible !important; /* Permite o menu sair do botão */
+        margin-right: 15px !important; /* Afasta da borda direita conforme solicitado */
+        position: relative;
+    }
+    
+    /* Remove fundo de slide desktop no mobile */
+    body .dashboard-header .header-controls .btn-cssbuttons::before {
+        display: none !important;
+    }
+    
+    /* Esconde o texto "Ações" e container interno original */
+    body .dashboard-header .header-controls .btn-cssbuttons > span {
+        display: none !important;
+    }
+    
+    /* Adiciona o sinal de "+" via CSS */
+    body .dashboard-header .header-controls .btn-cssbuttons::after {
+        content: "+";
+        color: #000; 
+        font-size: 2rem;
+        font-weight: 300;
+        line-height: 1;
+        display: block;
+        margin-top: -3px;
+    }
+    
+    /* MENU VERTICAL (Dropdown) */
+    body .dashboard-header .header-controls .btn-cssbuttons ul {
+        top: 120% !important; /* Logo abaixo do botão */
+        right: 0 !important; /* Alinhado à direita do botão */
+        left: auto !important;
+        transform: none !important; /* Remove centralização */
+        
+        flex-direction: column !important; /* Vertical */
+        gap: 10px !important;
+        
+        background: var(--bg-dark-container);
+        border: 1px solid var(--glass-border);
+        padding: 10px !important;
+        width: auto !important; 
+        min-width: 50px;
+        height: auto !important;
+        border-radius: 12px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+        
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: all 0.2s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    }
+
+    /* Lógica de exibição do menu ao focar/clicar */
+    /* Ao clicar, o botão ganha foco e o menu aparece. Ao clicar fora, perde o foco e fecha. */
+    body .dashboard-header .header-controls .btn-cssbuttons:focus ul,
+    body .dashboard-header .header-controls .btn-cssbuttons:focus-within ul {
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+        top: 130% !important; /* Efeito de descida */
+    }
+
+    /* Estilo dos ícones dentro do menu vertical */
+    body .dashboard-header .header-controls .btn-cssbuttons ul li a {
+        transform: none !important;
+        width: 40px;
+        height: 40px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary) !important;
+        font-size: 1.1rem !important;
+        padding: 0 !important;
     }
     
     /* Ajusta o main para compensar o header fixo */
@@ -1944,18 +2081,6 @@ html, body {
         z-index: 1001;
     }
     
-    /* Logo compacta */
-    .logo h1 {
-        font-size: 1.2rem;
-        white-space: nowrap;
-    }
-    
-    .beta-tag {
-        font-size: 0.6rem;
-        padding: 0.2rem 0.4rem;
-        margin-left: 5px;
-    }
-    
     /* Esconde elementos não essenciais */
     .turno-display-container,
     .last-weighing-container {
@@ -1963,10 +2088,6 @@ html, body {
     }
     
     /* Controles compactos */
-    .header-controls {
-        gap: 8px;
-    }
-    
     .btn-icon, .theme-toggle {
         width: 36px;
         height: 36px;

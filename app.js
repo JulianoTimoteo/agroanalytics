@@ -73,12 +73,6 @@ class AgriculturalDashboard {
                 padding: 0 25px !important;
             }
             
-            /* Ajuste para telas muito grandes: empurra conteúdo para a esquerda */
-            .header-content {
-                max-width: 98% !important; /* Usa mais largura da tela */
-                margin: 0 20px 0 10px !important; /* Margem esquerda reduzida */
-            }
-            
             /* Garante que os botões internos fiquem centralizados e visíveis */
             .btn-cssbuttons ul {
                 width: 100%;
