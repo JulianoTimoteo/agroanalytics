@@ -9,5 +9,8 @@
   },
   "scripts": {
     "start": "npx @google-cloud/functions-framework --target=generateReport"
+  },
+  "engines": {
+    "node": "18"
   }
 }
