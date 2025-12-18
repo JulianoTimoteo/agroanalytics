@@ -280,6 +280,149 @@ body {
 .logo { display: flex; align-items: center; color: var(--primary); gap: 10px; }
 .header-controls { display: flex; align-items: center; gap: 15px; }
 
+/* --- NOVO: BOTÃO SLIDE UP (SPACE SAVER) - CORRIGIDO --- */
+/* Substitui os botões individuais por um grupo animado */
+.btn-cssbuttons {
+    --btn-color: var(--primary);
+    position: relative;
+    padding: 0 16px;
+    height: 40px; /* Altura padrão do header */
+    min-width: 140px; /* Largura para o texto */
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 1;
+    color: white;
+    background: rgba(255, 255, 255, 0.05); /* Efeito glass */
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    outline: none;
+    overflow: hidden;
+    cursor: pointer;
+    transition: 0.3s cubic-bezier(0.215, 0.61, 0.355, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* Fundo colorido que sobe */
+.btn-cssbuttons::before {
+    position: absolute;
+    content: "";
+    top: 0;
+    left: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--btn-color);
+    border-radius: 20px;
+    transition: 0.3s cubic-bezier(0.215, 0.61, 0.355, 1);
+    transform: translateY(100%); /* Começa escondido embaixo */
+}
+
+/* O Texto "Menu" ou "Ações" */
+.btn-cssbuttons > span {
+    position: relative;
+    z-index: 5; /* Garante que o texto fique acima de tudo quando visível */
+    display: inline-flex;
+    vertical-align: middle;
+    align-items: center;
+    transition: 0.3s cubic-bezier(0.215, 0.61, 0.355, 1);
+    gap: 8px;
+    color: var(--text);
+}
+.btn-cssbuttons > span i { font-size: 1rem; }
+
+/* Container dos ícones (oculto inicialmente) */
+.btn-cssbuttons ul {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 15px; /* Espaço entre ícones */
+    margin: 0;
+    padding: 0;
+    list-style-type: none;
+    transform: translateY(-50%);
+    z-index: 4;
+    width: 100%;
+    opacity: 0; /* CORREÇÃO: Ícones invisíveis por padrão */
+    visibility: hidden; /* CORREÇÃO EXTRA: Garante que não capturem eventos ou sejam vistos */
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.btn-cssbuttons ul li {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Botões internos (ícones) */
+.btn-cssbuttons ul li a,
+.btn-cssbuttons ul li button {
+    display: inline-flex;
+    vertical-align: middle;
+    transform: translateY(60px); /* Escondido embaixo */
+    transition: 0.3s cubic-bezier(0.215, 0.61, 0.355, 1);
+    background: none;
+    border: none;
+    color: white !important; /* Força cor branca para contraste com bg azul */
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 5px;
+}
+
+.btn-cssbuttons ul li a:hover,
+.btn-cssbuttons ul li button:hover {
+    transform: scale(1.2) translateY(0);
+    text-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+/* --- ESTADOS DE ANIMAÇÃO (Hover e Focus) --- */
+.btn-cssbuttons:hover::before,
+.btn-cssbuttons:focus-within::before {
+    transform: translateY(0); /* Sobe o fundo colorido */
+}
+
+.btn-cssbuttons:hover > span,
+.btn-cssbuttons:focus-within > span {
+    transform: translateY(-60px); /* Sobe o texto */
+    opacity: 0;
+}
+
+.btn-cssbuttons:hover ul,
+.btn-cssbuttons:focus-within ul {
+    opacity: 1; /* CORREÇÃO: Mostra container dos ícones */
+    visibility: visible;
+}
+
+.btn-cssbuttons:hover ul li a,
+.btn-cssbuttons:hover ul li button,
+.btn-cssbuttons:focus-within ul li a,
+.btn-cssbuttons:focus-within ul li button {
+    transform: translateY(0); /* Sobem os ícones */
+}
+
+/* Delays para efeito cascata */
+.btn-cssbuttons:hover ul li:nth-child(1) a,
+.btn-cssbuttons:hover ul li:nth-child(1) button { transition-delay: 0.05s; }
+
+.btn-cssbuttons:hover ul li:nth-child(2) a,
+.btn-cssbuttons:hover ul li:nth-child(2) button { transition-delay: 0.1s; }
+
+.btn-cssbuttons:hover ul li:nth-child(3) a,
+.btn-cssbuttons:hover ul li:nth-child(3) button { transition-delay: 0.15s; }
+
+.btn-cssbuttons:hover ul li:nth-child(4) a,
+.btn-cssbuttons:hover ul li:nth-child(4) button { transition-delay: 0.2s; }
+
+/* Botões antigos (mantidos para compatibilidade se necessário) */
+.btn-icon { background: var(--glass); color: var(--text); border: 1px solid var(--glass-border); border-radius: 50%; width: 35px; height: 35px; cursor: pointer; transition: background 0.3s; display: flex; align-items: center; justify-content: center; }
+.btn-icon:hover { background: rgba(255, 255, 255, 0.2); }
+
 /* --- NOVO DISPLAY DE TURNO (Barra de Progresso) --- */
 .turno-display-container {
     position: relative;
@@ -295,7 +438,6 @@ body {
     box-shadow: inset 0 2px 5px rgba(0,0,0,0.2);
 }
 
-/* A barra de progresso que enche o fundo */
 .shift-progress-fill {
     position: absolute;
     top: 0;
@@ -307,7 +449,6 @@ body {
     opacity: 0.6; 
 }
 
-/* Cores específicas para cada Turno */
 .shift-progress-fill.turno-a {
     background: linear-gradient(90deg, #4ade80 0%, #22c55e 100%); 
     box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
@@ -323,7 +464,6 @@ body {
     box-shadow: 0 0 10px rgba(124, 58, 237, 0.4);
 }
 
-/* O Texto por cima da barra */
 .shift-info-content {
     position: relative;
     z-index: 1;
@@ -343,28 +483,13 @@ body {
 }
 
 .theme-toggle { 
-    background: var(--glass); 
-    color: var(--text); 
-    border: 1px solid var(--glass-border); 
-    border-radius: 50%; 
-    width: 35px; 
-    height: 35px; 
+    background: transparent; 
+    color: inherit; 
+    border: none;
+    font-size: 1.2rem;
     cursor: pointer; 
-    transition: background 0.3s; 
+    padding: 5px;
 }
-.theme-toggle:hover { 
-    background: rgba(255, 255, 255, 0.2); 
-}
-.theme-toggle i {
-    color: var(--text); /* Ícone no tema escuro */
-}
-[data-theme="light"] .theme-toggle i {
-    color: var(--text); /* Ícone no tema claro */
-}
-
-
-.btn-icon { background: var(--glass); color: var(--text); border: 1px solid var(--glass-border); border-radius: 50%; width: 35px; height: 35px; cursor: pointer; transition: background 0.3s; }
-.btn-icon:hover { background: rgba(255, 255, 255, 0.2); }
 
 /* --- NOVO: Botão de Menu (Apenas visível no mobile) --- */
 .menu-toggle-btn {
@@ -1773,7 +1898,10 @@ main {
     font-size: 0.8rem;
     text-align: center;
 }
-/* ========================================================================= *//* 🚀 CORREÇÕES COMPLETAS PARA MOBILE - EXPERIÊNCIA OTIMIZADA *//* ========================================================================= *//* 1. CORREÇÕES CRÍTICAS DE VIEWPORT E LAYOUT */
+/* ========================================================================= */
+/* 🚀 CORREÇÕES COMPLETAS PARA MOBILE - EXPERIÊNCIA OTIMIZADA */
+/* ========================================================================= */
+/* 1. CORREÇÕES CRÍTICAS DE VIEWPORT E LAYOUT */
 html, body {
     max-width: 100vw;
     overflow-x: hidden;
@@ -2380,7 +2508,10 @@ html, body {
     }
 }
 
-/* ========================================================================= *//* ✅ FIM DAS CORREÇÕES MOBILE *//* ========================================================================= *//* Classes auxiliares para corrigir problemas específicos */
+/* ========================================================================= */
+/* ✅ FIM DAS CORREÇÕES MOBILE */
+/* ========================================================================= */
+/* Classes auxiliares para corrigir problemas específicos */
 .no-scroll {
     overflow: hidden !important;
 }

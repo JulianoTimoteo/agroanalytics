@@ -1,4 +1,4 @@
-// dataanalyzer.js - VERSÃO CORE COM DELEGAÇÃO - CORREÇÃO DE ÚLTIMA PESAGEM
+// dataanalyzer.js - VERSÃO FINAL (INTEGRAÇÃO ACUMULADO SAFRA)
 
 // Encapsulamento para evitar o erro "Identifier 'DataAnalyzer' has already been declared"
 if (typeof DataAnalyzer === 'undefined') {
@@ -11,10 +11,14 @@ if (typeof DataAnalyzer === 'undefined') {
 
         constructor() {
             // Inicializa Submódulos de Análise
+            // Assume que as classes dos submódulos já foram carregadas globalmente (window.DataAnalyzerKPIs, etc.)
             this.kpisModule = new DataAnalyzerKPIs(this);
             this.rankingsModule = new DataAnalyzerRankings(this);
             this.timeModule = new DataAnalyzerTime(this);
         }
+
+        // ... isPropria, isTerceiro, _isValidHarvesterCode, _extractEquipments, isAggregationRow, _getFrontMetadata ...
+        // (Copying these helper methods exactly as they were in the file provided in Turn 28 prompt)
 
         /**
          * Verifica se um registro pertence ao contexto 'Própria'.
@@ -331,13 +335,13 @@ if (typeof DataAnalyzer === 'undefined') {
                 requiredHourlyRates: [],
                 metaData: null,
                 lastExitTimestamp: null,
-                lastExitTimestampFormatted: 'Aguardando dados.'
+                lastExitTimestampFormatted: 'Aguardando dados.',
+                acumuladoSafra: 0 // Default value
             };
         }
 
         /**
          * Encontra o timestamp de saída mais recente (o último registro).
-         * @description CORREÇÃO: Busca a data/hora mais recente SEM filtros restritivos de ano
          */
         _findLastExitTimestamp(data) {
             let lastTimestamp = null;
@@ -346,24 +350,19 @@ if (typeof DataAnalyzer === 'undefined') {
             console.log(`[ANALYZER] Buscando última pesagem em ${data.length} registros...`);
             
             data.forEach(row => {
-                // Ignora linhas de agregação
                 if (this.isAggregationRow(row)) return;
                 
-                // Deve ter timestamp válido
                 if (!row.timestamp || !(row.timestamp instanceof Date)) return;
                 
                 const ts = row.timestamp;
                 const tsTime = ts.getTime();
                 
-                // Valida se é um objeto Date válido
                 if (isNaN(tsTime)) return;
                 
-                // FILTRO: Ignora timestamps sem data original (gerados por fallback)
                 if (!row.data || row.data === '') {
                     return;
                 }
                 
-                // Aceita a data se for mais recente (sem filtros de ano)
                 if (!lastTimestamp || tsTime > lastTimestamp.getTime()) {
                     lastTimestamp = ts;
                     lastRow = row;
@@ -374,7 +373,6 @@ if (typeof DataAnalyzer === 'undefined') {
                 const dateStr = lastTimestamp.toLocaleDateString('pt-BR');
                 const timeStr = lastTimestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                 console.log(`[ANALYZER] ✅ Última pesagem encontrada: ${dateStr} às ${timeStr}`);
-                console.log(`[ANALYZER] Detalhes: Viagem=${lastRow.viagem || lastRow.idViagem}, Frota=${lastRow.frota}, Peso=${lastRow.peso}t`);
             } else {
                 console.warn('[ANALYZER] ⚠️ Nenhum timestamp válido encontrado nos dados.');
             }
@@ -392,15 +390,17 @@ if (typeof DataAnalyzer === 'undefined') {
                 if (this.rankingsModule && this.rankingsModule.analyzeMetas) {
                     emptyAnalysis.metaData = this.rankingsModule.analyzeMetas(metaData); 
                 }
+                // Ainda precisamos calcular o acumulado mesmo sem dados de produção, caso o AcmSafra (metaData) exista
+                if (this.kpisModule && this.kpisModule.calculateAcumuladoSafra) {
+                    emptyAnalysis.acumuladoSafra = this.kpisModule.calculateAcumuladoSafra(metaData);
+                }
                 return emptyAnalysis;
             }
 
             console.log(`[ANALYZER] Iniciando análise com ${data.length} registros`);
 
-            // Busca o último timestamp (CORRIGIDO - sem filtros de ano)
             const lastExitTimestamp = this._findLastExitTimestamp(data);
             
-            // Formata a data para exibição
             let lastExitTimestampFormatted = 'Aguardando dados.';
             if (lastExitTimestamp) {
                 const dateStr = lastExitTimestamp.toLocaleDateString('pt-BR');
@@ -417,12 +417,14 @@ if (typeof DataAnalyzer === 'undefined') {
             const ownerTypeData = this.kpisModule.analyzeOwnerType(data); 
             const lastTripAvgResult = this.kpisModule.calculateLastTripAverage(data);
             
+            // 🔥 CÁLCULO DO ACUMULADO SAFRA
+            const acumuladoSafra = this.kpisModule.calculateAcumuladoSafra(metaData);
+
             // --- DELEGAÇÃO PARA o MÓDULO DE TIME ---
             const projecaoMoagem = this.timeModule.calculateProjectionMoagem(data, totalPesoLiquido);
             const requiredHourlyRates = this.timeModule.calculateRequiredHourlyRates(data, totalPesoLiquido);
             const analise24h = this.timeModule.analyze24hComplete(data);
             const fleetHourly = this.timeModule.analyzeFleetHourly(data);
-            const harvestHourly = [];
             
             // --- DELEGAÇÃO PARA o MÓDULO DE RANKINGS ---
             const filteredData = data.filter(row =>
@@ -478,7 +480,7 @@ if (typeof DataAnalyzer === 'undefined') {
 
                 analise24h,
                 fleetHourly,
-                harvestHourly,
+                // harvestHourly, // Removed as unused
                 frentes,
                 equipmentDistribution,
                 projecaoMoagem,
@@ -486,6 +488,8 @@ if (typeof DataAnalyzer === 'undefined') {
                 
                 lastExitTimestamp: lastExitTimestamp,
                 lastExitTimestampFormatted: lastExitTimestampFormatted,
+                
+                acumuladoSafra: acumuladoSafra, // 🔥 Campo Adicionado
 
                 analyzeFrontHourly: (d) => this.timeModule.analyzeFrontHourlyComplete(d),
                 data: filteredData,

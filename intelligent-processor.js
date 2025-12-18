@@ -1,4 +1,4 @@
-// intelligent-processor.js - VERSÃO FINAL ESTÁVEL E CORRIGIDA (COMPENSAÇÃO DE FUSO HORÁRIO DEFINITIVA E ORDEM CRONOLÓGICA)
+// intelligent-processor.js - VERSÃO FINAL ESTÁVEL E CORRIGIDA (COM SUPORTE A ACMSAFRA)
 class IntelligentProcessor {
     constructor() {
         this.columnMappings = {
@@ -76,6 +76,14 @@ class IntelligentProcessor {
                 'viagens': ['VIAGENS'],
                 'tempo': ['TEMPO'],
                 'previsao_mudanca': ['PREVISAO MUDANCA', 'PREVISÃO MUDANÇA', 'PREVISAO']
+            },
+            // 🔥 NOVO: Mapeamento para AcmSafra
+            'acmSafra': {
+                'pesoLiquido': ['PESO LIQUIDO', 'PESOLIQUIDO', 'LIQUIDO', 'PESO LÍQUIDO'],
+                'pesoBruto': ['PESO BRUTO', 'PESOBRUTO', 'BRUTO'],
+                'pesoTara': ['PESO TARA', 'PESOTARA', 'TARA'],
+                'qtdViagem': ['QTD VIAGEM', 'QTDVIAGEM', 'QUANTIDADE DE VIAGENS', 'VIAGENS'],
+                'distMedia': ['DIST MEDIA', 'DISTANCIA MEDIA', 'DIST. MEDIA']
             }
         };
     }
@@ -142,6 +150,8 @@ class IntelligentProcessor {
                     return { type: 'POTENTIAL', fileName, data: this.processPotentialData(worksheet, fileType.headerRow) };
                 } else if (fileType.type === 'META') {
                     return { type: 'META', fileName: fileName, data: this.processMetaData(worksheet, fileType.headerRow) };
+                } else if (fileType.type === 'ACMSAFRA') { // 🔥 NOVO: Processamento AcmSafra
+                    return { type: 'ACMSAFRA', fileName: fileName, data: this.processAcmSafraData(worksheet, fileType.headerRow) };
                 } else {
                     return { type: 'UNKNOWN', fileName, data: [] };
                 }
@@ -188,6 +198,8 @@ class IntelligentProcessor {
                             resolve({ type: 'POTENTIAL', fileName: file.name, data: this.processPotentialData(worksheet, fileType.headerRow) });
                         } else if (fileType.type === 'META') {
                             resolve({ type: 'META', fileName: file.name, data: this.processMetaData(worksheet, fileType.headerRow) });
+                        } else if (fileType.type === 'ACMSAFRA') { // 🔥 NOVO
+                            resolve({ type: 'ACMSAFRA', fileName: file.name, data: this.processAcmSafraData(worksheet, fileType.headerRow) });
                         } else {
                             resolve({ type: 'UNKNOWN', fileName: file.name, data: [] });
                         }
@@ -235,6 +247,9 @@ class IntelligentProcessor {
             } else if (fileType.type === 'META') {
                 const processedData = this.processMetaData(worksheet, fileType.headerRow);
                 return { type: 'META', fileName, data: processedData };
+            } else if (fileType.type === 'ACMSAFRA') { // 🔥 NOVO
+                const processedData = this.processAcmSafraData(worksheet, fileType.headerRow);
+                return { type: 'ACMSAFRA', fileName, data: processedData };
             }
 
             return { type: 'UNKNOWN', fileName, data: [] };
@@ -248,6 +263,12 @@ class IntelligentProcessor {
 
     identifyFileTypeIntelligently(matrix, fileName) {
         const fileNameUpper = fileName.toUpperCase();
+        
+        // 🔥 NOVO: Identificação do Acumulado Safra
+        if (fileNameUpper.includes('ACM') || fileNameUpper.includes('SAFRA')) {
+            return { type: 'ACMSAFRA', headerRow: 0 };
+        }
+
         if (fileNameUpper.includes('METAS') || fileNameUpper.includes('META')) return { type: 'META', headerRow: 0 };
 
         for (let i = 0; i < Math.min(matrix.length, 20); i++) {
@@ -265,6 +286,34 @@ class IntelligentProcessor {
         return { type: 'UNKNOWN', headerRow: 0 };
     }
     
+    // 🔥 NOVO: Processador específico para AcmSafra
+    processAcmSafraData(worksheet, headerRow) {
+        const structuredData = XLSX.utils.sheet_to_json(worksheet, { range: headerRow, defval: null, raw: false });
+        
+        return structuredData.map(row => {
+            const normalized = {};
+            const rawNormalized = this.normalizeRowKeys(row);
+            
+            // Mapeia colunas específicas se encontrar
+            Object.keys(rawNormalized).forEach(key => {
+                const value = rawNormalized[key];
+                // Tenta encontrar um mapeamento conhecido
+                let mappedKey = key; // Padrão: usa a chave normalizada
+                
+                for (const standardKey in this.columnMappings.acmSafra) {
+                    if (this.columnMappings.acmSafra[standardKey].some(pattern => 
+                        key.includes(pattern.replace(/\s+/g, '')))) {
+                        mappedKey = standardKey;
+                        break;
+                    }
+                }
+                normalized[mappedKey] = value;
+            });
+            
+            return normalized;
+        });
+    }
+
     /**
      * FUNÇÃO PARA PEGAR A ÚLTIMA DATA/HORA SAÍDA (CRONOLÓGICA)
      */

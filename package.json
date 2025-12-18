@@ -1,0 +1,13 @@
+{
+  "name": "whatsapp-report-generator",
+  "version": "1.0.0",
+  "description": "Generates dashboard screenshots for WhatsApp sharing.",
+  "main": "index.js",
+  "dependencies": {
+    "@google-cloud/functions-framework": "^3.0.0",
+    "puppeteer": "21.6.0"
+  },
+  "scripts": {
+    "start": "npx @google-cloud/functions-framework --target=generateReport"
+  }
+}

@@ -1,4 +1,4 @@
-// app.js - Orquestrador Principal (VERSÃO FINAL CORRIGIDA E OTIMIZADA PARA MOBILE/LOGIN)
+// app.js - Orquestrador Principal (VERSÃO FINAL - CORREÇÃO LOGIN, UI, PRINT & CLIPBOARD)
 class AgriculturalDashboard {
     constructor() {
         // Inicializa os módulos
@@ -11,12 +11,13 @@ class AgriculturalDashboard {
         this.data = []; 
         this.potentialData = []; 
         this.metaData = []; 
+        this.acmSafraData = []; // NOVO: Armazena dados específicos do AcmSafra
         this.analysisResult = null;
         this.validationResult = null;
         this.isAnimatingParticles = true;
         this.animationFrameId = null; 
         
-        // Estado do Carrossel e Auto-Refresh
+        // Estado do Carrossel de Gráficos (Aba Moagem - Visão Horária)
         this.currentSlideIndex = 0;
         this.carouselInterval = null; 
         this.refreshIntervalId = null; 
@@ -42,6 +43,7 @@ class AgriculturalDashboard {
         this.tabPermissions = {}; // Permissões customizadas carregadas do Firestore
 
         // Configuração
+        this._applyVisualFixes(); // Aplica correções visuais (Botão maior, alinhamento)
         this.initializeEventListeners();
         this.initializeParticles();
         this.loadTheme();
@@ -49,14 +51,7 @@ class AgriculturalDashboard {
         this.loadMeta(); 
         this.initShiftTracker(); 
 
-        this.showTab('tab-gerenciar'); // Inicia na aba de gerenciamento/upload
         this.clearResults(); 
-        
-        // Estado para as novas funcionalidades
-        this.slideshowInterval = null;
-        this.slideshowTabs = ['tab-moagem', 'tab-caminhao', 'tab-equipamento', 'tab-frentes', 'tab-metas', 'tab-horaria'];
-        this.currentSlideshowIndex = 0;
-        this.whatsappAutomationActive = false;
         
         // 🟥 PROTEÇÃO DE ROTA: Monitora o estado de autenticação
         if (this.auth) {
@@ -65,6 +60,45 @@ class AgriculturalDashboard {
             this.startLoadingProcess(); 
             this.setupAutoRefresh();
         }
+    }
+
+    // 🔥 NOVO: Função para aplicar correções visuais sem precisar editar o CSS
+    _applyVisualFixes() {
+        const style = document.createElement('style');
+        style.innerHTML = `
+            /* Aumenta o tamanho do botão Ações para acomodar os ícones confortavelmente */
+            .btn-cssbuttons {
+                min-width: 200px !important;
+                height: 54px !important;
+                padding: 0 25px !important;
+            }
+            
+            /* Ajuste para telas muito grandes: empurra conteúdo para a esquerda */
+            .header-content {
+                max-width: 98% !important; /* Usa mais largura da tela */
+                margin: 0 20px 0 10px !important; /* Margem esquerda reduzida */
+            }
+            
+            /* Garante que os botões internos fiquem centralizados e visíveis */
+            .btn-cssbuttons ul {
+                width: 100%;
+                justify-content: space-between !important;
+                padding: 0 10px !important;
+            }
+
+            /* Aumenta a área de clique dos ícones internos */
+            .btn-cssbuttons ul li a, 
+            .btn-cssbuttons ul li button {
+                padding: 8px !important; 
+                transform: translateY(80px); /* Ajuste da animação inicial */
+            }
+            
+            .btn-cssbuttons:hover ul li a, 
+            .btn-cssbuttons:hover ul li button {
+                transform: translateY(0);
+            }
+        `;
+        document.head.appendChild(style);
     }
     
     // =================== 🟥 LÓGICA DE AUTENTICAÇÃO E MODAL ===================
@@ -80,13 +114,18 @@ class AgriculturalDashboard {
 
             await this.fixUserProfile(user);
             
-            // Carrega dados do usuário atual e permissões de abas
+            // 1. Carrega dados do usuário e permissões PRIMEIRO (Crucial para evitar erro de role null)
             await this.loadCurrentUserProfile();
             
-            // Renderiza a navegação de abas (RBAC)
+            // 2. Renderiza a navegação baseada no perfil carregado
             this.renderTabsNavigation();
             
-            // Inicia a busca e o auto-refresh
+            // 3. Define a aba inicial com segurança
+            // Se for admin/editor vai para Gerenciar, senão vai para Moagem
+            const initialTab = this.canAccessTab('tab-gerenciar') ? 'tab-gerenciar' : 'tab-moagem';
+            this.showTab(initialTab);
+
+            // 4. Inicia o carregamento de dados
             this.startLoadingProcess(); 
             this.setupAutoRefresh(); 
             
@@ -119,7 +158,6 @@ class AgriculturalDashboard {
 
             if (!email.includes('@')) {
                 // Mantemos o login direto por EMAIL para a segurança do Firebase Auth.
-                
                 const userCredential = await this.auth.signInWithEmailAndPassword(email, password);
                 
                 document.getElementById('login-user').value = '';
@@ -228,9 +266,13 @@ class AgriculturalDashboard {
 
     showModalAlert(message, type) {
         const alertEl = document.getElementById('modal-alert-message');
-        alertEl.textContent = message;
-        alertEl.className = type === 'success' ? 'alert-success-login' : 'alert-danger';
-        alertEl.classList.remove('hidden');
+        if (alertEl) {
+            alertEl.textContent = message;
+            alertEl.className = type === 'success' ? 'alert-success-login' : 'alert-danger';
+            alertEl.classList.remove('hidden');
+        } else {
+            alert(message);
+        }
     }
     
     openModal(modalId) {
@@ -249,141 +291,111 @@ class AgriculturalDashboard {
         }
     }
     
-    // =================== 🚀 NOVAS FUNÇÕES DE AUTOMAÇÃO 🚀 ===================
+    // =================== 📸 NOVA FUNÇÃO DE CAPTURA DE TELA (CORRIGIDA) 📸 ===================
 
-    // Alterna entre Iniciar/Parar a Apresentação na TV
-    toggleSlideshow() {
-        if (this.slideshowInterval) {
-            // Parar Slideshow
-            clearInterval(this.slideshowInterval);
-            this.slideshowInterval = null;
-            document.getElementById('slideshow-toggle-btn').innerHTML = '<i class="fas fa-play"></i> Iniciar';
-            document.body.classList.remove('slideshow-mode');
-            
-            // Volta para a aba de gerenciamento ou a última ativa
-            this.showTab('tab-gerenciar'); 
-
-            console.log("Slideshow Parado.");
-        } else {
-            // Iniciar Slideshow
-            if (!this.data || this.data.length === 0) {
-                 this.showError("Carregue os dados primeiro para iniciar a apresentação.");
-                 return;
-            }
-            
-            document.getElementById('slideshow-toggle-btn').innerHTML = '<i class="fas fa-pause"></i> Parar';
-            document.body.classList.add('slideshow-mode');
-
-            // Inicia o ciclo na primeira aba
-            this.startSlideshowCycle();
-
-            console.log("Slideshow Iniciado.");
-        }
-    }
-
-    startSlideshowCycle() {
-        const intervalTime = 20000; // 20 segundos
+    async captureScreenshot() {
+        // Encontra a aba ativa
+        const activeTab = document.querySelector('.tab-pane.active');
+        const btn = document.querySelector('.btn-cssbuttons'); 
         
-        // Função para avançar a aba
-        const nextSlide = () => {
-            const tabs = this.slideshowTabs.filter(tabId => this.canAccessTab(tabId));
-            if (tabs.length === 0) return;
-
-            this.currentSlideshowIndex = (this.currentSlideshowIndex + 1) % tabs.length;
-            const nextTabId = tabs[this.currentSlideshowIndex];
-            
-            this.showTab(nextTabId);
-            
-            // Força o resize do gráfico na aba atual (se for moagem)
-            if (nextTabId === 'tab-moagem' && this.visualizer && this.visualizer.charts) {
-                 setTimeout(() => {
-                    this.showSlide(this.currentSlideIndex);
-                 }, 500);
-            }
-        };
-
-        // Garante que o ciclo comece imediatamente na primeira aba
-        nextSlide(); 
-
-        // Configura o intervalo
-        if (this.slideshowInterval) clearInterval(this.slideshowInterval);
-        this.slideshowInterval = setInterval(nextSlide, intervalTime);
-    }
-    
-    // Alterna entre Ativar/Desativar o envio de WhatsApp
-    toggleWhatsappAutomation() {
-        this.whatsappAutomationActive = !this.whatsappAutomationActive;
-        const statusEl = document.getElementById('whatsapp-status');
-        const btnEl = document.getElementById('whatsapp-toggle-btn');
-        
-        if (this.whatsappAutomationActive) {
-            statusEl.innerHTML = 'Ativado';
-            btnEl.innerHTML = '<i class="fas fa-toggle-on"></i> Desativar';
-            btnEl.classList.remove('btn-primary');
-            btnEl.classList.add('btn-danger');
-            
-            this.startWhatsappScheduler();
-
-            this.showModalAlert("Agendamento de WhatsApp ATIVADO. O servidor externo tentará enviar relatórios a cada hora no modo Claro.", 'success');
-        } else {
-            statusEl.innerHTML = 'Desativado';
-            btnEl.innerHTML = '<i class="fas fa-toggle-off"></i> Ativar';
-            btnEl.classList.add('btn-primary');
-            btnEl.classList.remove('btn-danger');
-
-            if (this.whatsappInterval) clearInterval(this.whatsappInterval);
-            
-            this.showModalAlert("Agendamento de WhatsApp DESATIVADO.", 'warning');
-        }
-    }
-
-    // SIMULAÇÃO: Lógica de agendamento (A CADA 1 HORA)
-    startWhatsappScheduler() {
-        const oneHour = 60 * 60 * 1000;
-        
-        // Tenta enviar o primeiro relatório após 5 segundos (para teste)
-        // Em produção, isso seria gerenciado por um CRON JOB em um servidor
-        setTimeout(() => this.sendWhatsappReport(), 5000); 
-
-        // Agenda o envio a cada 1 hora
-        this.whatsappInterval = setInterval(() => {
-            this.sendWhatsappReport();
-        }, oneHour);
-    }
-
-    // SIMULAÇÃO: Envio de relatório via Webhook
-    sendWhatsappReport() {
-        const webhookUrl = 'SUA_URL_DO_WEBHOOK_AQUI'; // <--- VOCÊ DEVE CONFIGURAR ISSO!
-        const reportData = {
-            group_id: 'ID_DO_GRUPO_WHATSAPP',
-            mode: 'light', 
-            report_pages: this.slideshowTabs, 
-            timestamp: new Date().toISOString()
-        };
-
-        if (webhookUrl === 'SUA_URL_DO_WEBHOOK_AQUI') {
-             console.warn("Webhook URL não configurada. Simulação de envio concluída.");
-             this.showModalAlert("Simulação de envio WhatsApp: Servidor externo notificado.", 'info');
-             return;
+        if (!activeTab) {
+            this.showError("Nenhuma aba ativa para capturar.");
+            return;
         }
 
-        fetch(webhookUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(reportData)
-        })
-        .then(response => {
-            if (response.ok) {
-                console.log("Relatório WhatsApp enviado via Webhook.");
+        // Feedback visual
+        if (btn) {
+            btn.style.opacity = '0.3'; // Deixa quase transparente
+            btn.style.pointerEvents = 'none';
+        }
+
+        // SALVAR ESTADO ORIGINAL
+        const originalBg = document.body.style.background;
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        // Esconde todos os modais/overlays que possam estar visíveis (causa da película escura)
+        const modals = document.querySelectorAll('.modal-overlay, .full-screen-overlay, #loading-overlay, #menu-backdrop');
+
+        try {
+            // 1. Preparar ambiente para o print
+            modals.forEach(m => {
+                if (m) m.style.visibility = 'hidden'; // Força invisibilidade
+            });
+
+            // Remove gradientes complexos temporariamente e aplica cor sólida
+            if (currentTheme === 'light') {
+                document.body.style.background = '#f5f5f5';
+                activeTab.style.background = '#f5f5f5';
             } else {
-                console.error("Falha ao enviar Webhook:", response.statusText);
+                document.body.style.background = '#050A14';
+                activeTab.style.background = '#050A14';
             }
-        })
-        .catch(error => {
-            console.error("Erro na conexão Webhook:", error);
-        });
+
+            // Aguarda renderização das mudanças
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // 2. Gerar Canvas com html2canvas
+            const canvas = await html2canvas(activeTab, {
+                scale: 2, // Alta resolução
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: currentTheme === 'light' ? '#f5f5f5' : '#050A14', // Cor sólida explícita
+                logging: false,
+                ignoreElements: (element) => {
+                    // Ignora o botão de ações e outros controles flutuantes
+                    return element.classList.contains('btn-cssbuttons') || 
+                           element.classList.contains('header-controls') ||
+                           element.id === 'loading-overlay' ||
+                           element.id === 'user-settings-modal' ||
+                           element.id === 'menu-backdrop'; 
+                }
+            });
+
+            // 3. Criar Blob para Download e Clipboard
+            canvas.toBlob(async (blob) => {
+                if (!blob) return;
+
+                // Tenta copiar para o Clipboard (Ctrl+C)
+                try {
+                    const item = new ClipboardItem({ "image/png": blob });
+                    await navigator.clipboard.write([item]);
+                    console.log("Imagem copiada para a área de transferência.");
+                } catch (clipboardError) {
+                    console.warn("Falha ao copiar para clipboard (pode não ser suportado neste contexto/navegador):", clipboardError);
+                }
+
+                // Força o Download
+                const link = document.createElement('a');
+                const now = new Date();
+                const timestamp = now.toLocaleDateString('pt-BR').replace(/\//g, '-') + '_' + now.toLocaleTimeString('pt-BR').replace(/:/g, '-');
+                const tabName = activeTab.id.replace('tab-', '').toUpperCase();
+                
+                link.download = `AgroAnalytics_${tabName}_${timestamp}.png`;
+                link.href = URL.createObjectURL(blob);
+                link.click();
+                
+                // Limpeza
+                URL.revokeObjectURL(link.href);
+
+                alert("Captura realizada com sucesso!\n\n✅ Imagem baixada.\n✅ Copiada para a área de transferência (Ctrl+V).");
+            }, 'image/png');
+
+        } catch (error) {
+            console.error("Erro ao capturar tela:", error);
+            alert("Erro ao capturar a tela. Verifique o console.");
+        } finally {
+            // 4. Restaurar Estado Original
+            document.body.style.background = originalBg;
+            activeTab.style.background = '';
+            
+            modals.forEach(m => {
+                if (m) m.style.visibility = ''; // Restaura visibilidade
+            });
+            
+            if (btn) {
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+            }
+        }
     }
 
     // =================== 🟥 FUNÇÕES DE DADOS E LAYOUT (Mantidas) ===================
@@ -984,8 +996,8 @@ class AgriculturalDashboard {
             `;
         }).join('');
 
-        const defaultTab = this.canAccessTab('tab-moagem') ? 'tab-moagem' : 'tab-gerenciar';
-        this.showTab(defaultTab);
+        // 3. Define a aba inicial com base no acesso permitido (CORREÇÃO DO ERRO DE ACESSO)
+        // OBS: A chamada real de showTab acontece no handleAuthStateChange
         
         // No mobile, define o menu como "ativo" para a transição
         if (window.innerWidth <= 768) {
@@ -1186,10 +1198,6 @@ class AgriculturalDashboard {
     }
     
     stopCarousel() {
-        if (this.slideshowInterval) {
-            clearInterval(this.slideshowInterval);
-            this.slideshowInterval = null;
-        }
         if (this.carouselInterval) {
             clearInterval(this.carouselInterval);
             this.carouselInterval = null;
@@ -1306,6 +1314,8 @@ class AgriculturalDashboard {
         
         this.visualizer.updateDashboard(this.analysisResult);
         
+        this.updateAcmSafraDisplay(); // 🔥 ATUALIZA O ACUMULADO
+        
         this.hideLoadingAnimation();
         
         this.initializeCarousel();
@@ -1417,9 +1427,11 @@ class AgriculturalDashboard {
         }
     }
     
+    // --- CORREÇÃO TEXTO ATUALIZAÇÃO ---
+    // Agora aponta para o novo ID exclusivo 'refreshStatusText'
     updateNextRefreshDisplay(targetTime) {
         const targetTimeStr = targetTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        const displayEl = document.getElementById('lastWeighingText');
+        const displayEl = document.getElementById('refreshStatusText'); // Alvo correto
 
         if (displayEl) {
             displayEl.innerHTML = `Próxima atualização: ${targetTimeStr} 🔄️`;
@@ -1438,6 +1450,9 @@ class AgriculturalDashboard {
         
         await this._yieldControl(); 
         this.visualizer.updateDashboard(this.analysisResult);
+        
+        // 🔥 ATUALIZA O ACUMULADO SAFRA APÓS O DASHBOARD
+        this.updateAcmSafraDisplay();
 
         this.showAnalyticsSection(true);
         if (this.canAccessTab('tab-moagem')) {
@@ -1449,10 +1464,48 @@ class AgriculturalDashboard {
         this.initializeCarousel();
     }
     
+    // 🔥 FUNÇÃO PARA PROCESSAR E EXIBIR DADOS DO ACMSAFRA
+    updateAcmSafraDisplay() {
+        if (!this.acmSafraData || this.acmSafraData.length === 0) return;
+
+        let totalAcumulado = 0;
+        let encontrou = false;
+
+        this.acmSafraData.forEach(row => {
+            const keys = Object.keys(row);
+            keys.forEach(key => {
+                const cleanKey = key.toUpperCase().normalize("NFD").replace(/[^A-Z]/g, '');
+                // Procura especificamente 'PESOLIQUIDO' (normalizado)
+                if (cleanKey.includes('PESOLIQUIDO')) {
+                    // Remove pontos de milhar e troca vírgula por ponto
+                    let rawVal = String(row[key]);
+                    if (rawVal.includes(',') || rawVal.includes('.')) {
+                        rawVal = rawVal.replace(/\./g, '').replace(',', '.');
+                    }
+                    
+                    const val = parseFloat(rawVal);
+                    if (!isNaN(val) && val > 0) {
+                        totalAcumulado += val;
+                        encontrou = true;
+                    }
+                }
+            });
+        });
+
+        if (encontrou) {
+            const elPeso = document.getElementById('acumuladoSafra');
+            
+            if (elPeso) {
+                elPeso.textContent = (typeof Utils !== 'undefined' ? Utils.formatNumber(totalAcumulado) : totalAcumulado.toLocaleString('pt-BR', {minimumFractionDigits: 2})) + ' ton';
+            }
+        }
+    }
+
     async fetchFilesFromCloud() {
         const SHEET_ID_PRODUCAO = "1jefysQxtcwSg5fGM-F1BSfAPljyatKwz9OBCRIOg_bo";
         const SHEET_ID_METAS = "1RWjssOEZmmLQwxzFNCrQpLlPvw1bZqT1kEAVcXp6g90";
         const SHEET_ID_POTENCIAL = "1qxhVvQAfVtE8P4EDdwBb-m3ShlWLfFq_YoToJkFKZh4";
+        const SHEET_ID_ACMSAFRA = "1VEXjvegAtWrAAlCxMQkdG3qFNOX0F8LR3JDIFivBEPk"; 
         
         const cacheBuster = Date.now(); 
 
@@ -1460,6 +1513,7 @@ class AgriculturalDashboard {
             'Producao.xlsx': `https://docs.google.com/spreadsheets/d/${SHEET_ID_PRODUCAO}/export?format=csv&gid=0&t=${cacheBuster}`,
             'Metas.xlsx': `https://docs.google.com/spreadsheets/d/${SHEET_ID_METAS}/export?format=csv&gid=0&t=${cacheBuster}`,
             'Potencial.xlsx': `https://docs.google.com/spreadsheets/d/${SHEET_ID_POTENCIAL}/export?format=csv&gid=0&t=${cacheBuster}`,
+            'AcmSafra.xlsx': `https://docs.google.com/spreadsheets/d/${SHEET_ID_ACMSAFRA}/export?format=csv&gid=0&t=${cacheBuster}`
         };
 
         let results = [];
@@ -1472,6 +1526,7 @@ class AgriculturalDashboard {
                 
                 const response = await fetch(url);
                 
+                let csvText;
                 if (!response.ok) {
                     const gvizUrl = url.replace('/export?format=csv&gid=0', '/gviz/tq?tqx=out:csv&gid=0');
                     const gvizResponse = await fetch(gvizUrl);
@@ -1479,27 +1534,42 @@ class AgriculturalDashboard {
                     if (!gvizResponse.ok) {
                         throw new Error(`Falha no download - Status HTTP: ${response.status} ou ${gvizResponse.status}`);
                     }
-                    var csvText = await gvizResponse.text();
+                    csvText = await gvizResponse.text();
                 } else {
-                    var csvText = await response.text(); 
+                    csvText = await response.text(); 
                 }
 
-                const result = await this.processor.processCSV(csvText, name);
-                
-                if (result && Array.isArray(result.data) && result.data.length > 0) {
-                    
-                    if (result.type === 'PRODUCTION') {
-                        this.data = this.data.concat(result.data); 
-                    } else if (result.type === 'POTENTIAL') {
-                        this.potentialData = this.potentialData.concat(result.data); 
-                    } else if (result.type === 'META') {
-                        this.metaData = this.metaData.concat(result.data); 
+                // 🔥 LÓGICA ESPECIAL PARA ACMSAFRA
+                if (name.includes('AcmSafra')) {
+                    if (typeof XLSX !== 'undefined') {
+                        // Se o CSV vier como string, converte. Se for blob, usa readAsBinaryString
+                        // Aqui assumimos que csvText é string CSV
+                        const wb = XLSX.read(csvText, { type: 'string' });
+                        const sheet = wb.Sheets[wb.SheetNames[0]];
+                        const json = XLSX.utils.sheet_to_json(sheet);
+                        this.acmSafraData = json; 
+                        
+                        // Também adiciona aos metadados gerais
+                        this.metaData = this.metaData.concat(json);
                     }
-                    
-                    results.push(result);
-                    successCount++;
                 } else {
-                     missingFiles.push(name + ' (Vazio/Inválido)');
+                    const result = await this.processor.processCSV(csvText, name);
+                    
+                    if (result && Array.isArray(result.data) && result.data.length > 0) {
+                        
+                        if (result.type === 'PRODUCTION') {
+                            this.data = this.data.concat(result.data); 
+                        } else if (result.type === 'POTENTIAL') {
+                            this.potentialData = this.potentialData.concat(result.data); 
+                        } else if (result.type === 'META') {
+                            this.metaData = this.metaData.concat(result.data); 
+                        }
+                        
+                        results.push(result);
+                        successCount++;
+                    } else {
+                         missingFiles.push(name + ' (Vazio/Inválido)');
+                    }
                 }
 
             } catch (error) {
@@ -1524,6 +1594,8 @@ class AgriculturalDashboard {
         this.data = [];
         this.potentialData = [];
         this.metaData = []; 
+        this.acmSafraData = []; // Limpa dados antigos
+        
         this.clearResults(); 
         this.stopCarousel(); 
 
@@ -1539,6 +1611,21 @@ class AgriculturalDashboard {
             for (const file of files) {
                 if (file.name.startsWith('.')) continue; 
                 if (!file.name.toLowerCase().match(/\.(xlsx|xls|csv)$/)) continue;
+                
+                // 🔥 Upload Manual de AcmSafra
+                if (file.name.includes('AcmSafra')) {
+                    const reader = new FileReader();
+                    reader.onload = (evt) => {
+                        const wb = XLSX.read(evt.target.result, { type: 'binary' });
+                        const sheet = wb.Sheets[wb.SheetNames[0]];
+                        const json = XLSX.utils.sheet_to_json(sheet);
+                        this.acmSafraData = json;
+                        this.metaData = this.metaData.concat(json);
+                        this.updateAcmSafraDisplay(); // Atualiza UI imediatamente
+                    };
+                    reader.readAsBinaryString(file);
+                    continue; 
+                }
                 
                 try {
                     const result = await this.processor.processFile(file);
@@ -1562,8 +1649,8 @@ class AgriculturalDashboard {
                 }
             }
             
-            if (productionData.length === 0 && potentialData.length === 0 && metaData.length === 0) {
-                throw new Error("Nenhum arquivo válido encontrado. Verifique se os arquivos são de Produção, Potencial ou Metas.");
+            if (productionData.length === 0 && potentialData.length === 0 && metaData.length === 0 && this.acmSafraData.length === 0) {
+                throw new Error("Nenhum arquivo válido encontrado.");
             }
 
             this.data = productionData;
@@ -1620,6 +1707,7 @@ class AgriculturalDashboard {
         this.data = [];
         this.potentialData = [];
         this.metaData = [];
+        this.acmSafraData = [];
         this.clearResults();
         this.stopCarousel();
         
@@ -1630,7 +1718,7 @@ class AgriculturalDashboard {
         
         cloudMissingFiles = cloudResult.missingFiles;
 
-        if (this.data.length === 0 && this.potentialData.length === 0 && this.metaData.length === 0) {
+        if (this.data.length === 0 && this.potentialData.length === 0 && this.metaData.length === 0 && this.acmSafraData.length === 0) {
             this.hideLoadingAnimation();
             this.showAnalyticsSection(false);
             
@@ -1649,12 +1737,14 @@ class AgriculturalDashboard {
             const essentialFiles = {
                 'Produção': this.data.length > 0,
                 'Potencial': this.potentialData.length > 0,
-                'Metas': this.metaData.length > 0
+                'Metas': this.metaData.length > 0,
+                'AcmSafra': this.acmSafraData.length > 0
             };
             
             if (essentialFiles.Produção) msg.push(`Produção`);
             if (essentialFiles.Potencial) msg.push(`Potencial`);
             if (essentialFiles.Metas) msg.push(`Metas`);
+            if (essentialFiles.AcmSafra) msg.push(`AcmSafra`);
 
             let finalMessage = `Arquivos carregados: ${msg.join(' + ')}.`;
             let statusColor = 'var(--success)';
