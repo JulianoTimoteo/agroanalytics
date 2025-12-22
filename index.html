@@ -10,9 +10,16 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#050A14"> 
     <meta name="apple-mobile-web-app-title" content="AgroAnalytics">
-    <link rel="manifest" href="manifest.json">
+    
+    <!-- CORREÇÃO 1: Caminho relativo ./ para o manifesto -->
+    <link rel="manifest" href="./manifest.json">
+    
+    <!-- Ícone do Navegador -->
     <link rel="icon" type="image/x-icon" href="https://usinapitangueiras.com.br/wp-content/uploads/2020/10/cropped-favicon-180x180.png">
-    <link rel="apple-touch-icon" href="icon-192.png">
+    
+    <!-- CORREÇÃO 2: Ícone do iPhone usando o link direto (já que o arquivo local pode não existir) -->
+    <link rel="apple-touch-icon" href="https://usinapitangueiras.com.br/wp-content/uploads/2020/10/cropped-favicon-180x180.png">
+    
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
@@ -42,7 +49,25 @@
         const db = firebase.firestore();
     </script>
     
-    <link rel="stylesheet" href="style.css"> 
+    <!-- CORREÇÃO 3: Caminho relativo ./ para o CSS -->
+    <link rel="stylesheet" href="./style.css"> 
+    
+    <!-- Estilo Inline para o Checkbox de Login -->
+    <style>
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            margin-bottom: 15px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        .checkbox-container input {
+            width: auto !important;
+            margin-right: 8px !important;
+            margin-bottom: 0 !important;
+        }
+    </style>
 </head>
 <body>
     <div id="user-settings-modal" class="modal-overlay">
@@ -113,6 +138,12 @@
                 <input type="text" id="login-user" placeholder="Apelido ou E-mail" required autocomplete="username">
                 <input type="password" id="login-password" placeholder="Senha" required autocomplete="current-password">
                 
+                <!-- 🔥 NOVO: CHECKBOX MANTER CONECTADO -->
+                <div class="checkbox-container">
+                    <input type="checkbox" id="remember-me" checked>
+                    <label for="remember-me" style="cursor: pointer;">Manter conectado</label>
+                </div>
+
                 <div class="login-actions">
                     <button type="submit" class="btn-primary">Entrar</button>
                 </div>
@@ -703,27 +734,28 @@
         <footer class="dashboard-footer"></footer>
     </div>
     
-    <script src="utils.js"></script>
-    <script src="intelligent-processor.js"></script>
+    <!-- CORREÇÃO 4: Caminhos relativos ./ em todos os scripts JS -->
+    <script src="./utils.js"></script>
+    <script src="./intelligent-processor.js"></script>
     
-    <script src="data-analyzer-kpis.js"></script>
-    <script src="data-analyzer-rankings.js"></script>
-    <script src="data-analyzer-time.js"></script>
-    <script src="data-analyzer-metas.js"></script> 
-    <script src="dataanalyzer.js"></script> 
+    <script src="./data-analyzer-kpis.js"></script>
+    <script src="./data-analyzer-rankings.js"></script>
+    <script src="./data-analyzer-time.js"></script>
+    <script src="./data-analyzer-metas.js"></script> 
+    <script src="./dataanalyzer.js"></script> 
 
-    <script src="datavalidator.js"></script>
+    <script src="./datavalidator.js"></script>
 
-    <script src="visualizer-kpis.js"></script>
-    <script src="visualizer-charts-base.js"></script>
-    <script src="visualizer-charts-moagem.js"></script>
-    <script src="visualizer-grid.js"></script>
-    <script src="visualizer-metas.js"></script> 
-    <script src="datavisualizer.js"></script>
+    <script src="./visualizer-kpis.js"></script>
+    <script src="./visualizer-charts-base.js"></script>
+    <script src="./visualizer-charts-moagem.js"></script>
+    <script src="./visualizer-grid.js"></script>
+    <script src="./visualizer-metas.js"></script> 
+    <script src="./datavisualizer.js"></script>
 
-    <script src="app.js"></script>
+    <script src="./app.js"></script>
     
-    <script src="mobile-fixes.js"></script>
+    <script src="./mobile-fixes.js"></script>
 
     <script>
         // Sistema de autenticação
