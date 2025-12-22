@@ -2701,6 +2701,152 @@ html, body {
 }
 
 /* ========================================================================= */
+/* 📱 MELHORIAS DE VISUALIZAÇÃO E ALINHAMENTO MOBILE (REQ. USUÁRIO) */
+/* ========================================================================= */
+
+@media (max-width: 768px) {
+    /* 1. CENTRALIZAÇÃO GERAL DO LAYOUT */
+    .dashboard-main {
+        padding: 15px !important; /* Espaçamento equilibrado */
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* Centraliza blocos principais */
+    }
+
+    .main-content-layout {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    .analytics-container {
+        width: 100%;
+    }
+
+    /* 2. HEADER MAIS EQUILIBRADO */
+    .dashboard-header {
+        padding: 0 15px !important; /* Padding lateral consistente */
+        justify-content: space-between;
+    }
+
+    .header-content {
+        padding: 0 !important;
+        width: 100%;
+        display: grid;
+        grid-template-columns: 50px 1fr 50px; /* Menu - Logo - Ações */
+        align-items: center;
+        gap: 0;
+    }
+
+    .menu-toggle-btn {
+        margin: 0 !important;
+        justify-self: start;
+    }
+
+    .logo {
+        justify-self: center; /* Logo bem no centro */
+        margin: 0 !important;
+        display: flex !important; /* Volta ao flex para alinhar icone e texto */
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    
+    .logo i {
+        font-size: 1.5rem !important;
+        margin-bottom: 2px;
+    }
+    
+    .logo h1 {
+        font-size: 1rem !important;
+    }
+    
+    .beta-tag {
+        display: none !important; /* Simplifica header mobile */
+    }
+
+    .header-controls {
+        justify-self: end;
+        width: auto !important;
+    }
+
+    /* Botão Ações (Mais limpo) */
+    body .dashboard-header .header-controls .btn-cssbuttons {
+        margin-right: 0 !important;
+    }
+
+    /* 3. CARDS E CONTEÚDO CENTRALIZADO */
+    .glass-card, 
+    .stat-card-mini,
+    .analytics-card {
+        width: 100%;
+        text-align: center; /* Centraliza texto dentro dos cards */
+    }
+
+    .card-header {
+        justify-content: center; /* Centraliza títulos dos cards */
+        text-align: center;
+    }
+    
+    .header-title-with-tooltip {
+        justify-content: center;
+    }
+
+    /* KPIS HORIZONTAIS - MELHOR VISUALIZAÇÃO */
+    .kpi-fixed-top-moagem {
+        margin: 0 -15px 1.5rem -15px !important; /* Sangria total */
+        padding: 0.5rem 15px 1rem 15px !important; /* Padding interno para o primeiro item */
+        justify-content: flex-start; /* Mantém scroll natural */
+    }
+    
+    .kpi-fixed-top-moagem .stat-card-mini {
+        min-width: 85vw; /* Card ocupa quase toda a tela para foco */
+        scroll-snap-align: center; /* Centraliza ao rolar */
+        margin-right: 10px;
+        justify-content: center; /* Centraliza conteudo do card */
+    }
+    
+    /* Scroll Snap no container */
+    .kpi-fixed-top-moagem {
+        scroll-snap-type: x mandatory;
+    }
+
+    /* 4. GRIDS E LISTAS */
+    .fleet-status-grid {
+        grid-template-columns: repeat(3, 1fr); /* 3 colunas fixas para melhor alinhamento */
+        gap: 8px;
+    }
+    
+    .status-item {
+        padding: 10px 5px;
+    }
+
+    /* 5. FORMULÁRIOS E INPUTS */
+    .moagem-control-panel {
+        align-items: center;
+    }
+    
+    .meta-setting-rodape-moagem {
+        flex-direction: column;
+        gap: 10px;
+        width: 100%;
+    }
+    
+    .meta-item-rodape {
+        width: 100%;
+        justify-content: space-between;
+        background: rgba(255,255,255,0.05);
+        padding: 8px 15px;
+        border-radius: 6px;
+    }
+
+    /* Ajuste fino para evitar que tudo fique "alinhado à direita" */
+    .stat-info, .stat-sub-info {
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+/* ========================================================================= */
 /* ✅ FIM DAS CORREÇÕES MOBILE */
 /* ========================================================================= */
 /* Classes auxiliares para corrigir problemas específicos */
