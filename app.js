@@ -1,6 +1,17 @@
-// app.js - Orquestrador Principal (VERSÃO FINAL - CORREÇÃO LOGIN, UI, PRINT & CLIPBOARD)
+// app.js - Orquestrador Principal (VERSÃO FINAL 3.7 - SNAPSHOT ROBUSTO/LIVE TOGGLE)
 class AgriculturalDashboard {
     constructor() {
+        // 1. Definição da Configuração do Firebase
+        this.firebaseConfig = {
+            apiKey: "AIzaSyADUuqh_THzGInTSytxzUFEwHV5LmwdvYc",
+            authDomain: "agroanalytics-api.firebaseapp.com",
+            projectId: "agroanalytics-api",
+            storageBucket: "agroanalytics-api.firebasestorage.app",
+            messagingSenderId: "739888244342",
+            appId: "1:739888244342:web:558d620583469ec515e157",
+            measurementId: "G-6TYZDXMJZ5"
+        };
+
         // Inicializa os módulos
         if (typeof IntelligentProcessor !== 'undefined') this.processor = new IntelligentProcessor(); 
         if (typeof DataVisualizer !== 'undefined') this.visualizer = new DataVisualizer();
@@ -11,20 +22,29 @@ class AgriculturalDashboard {
         this.data = []; 
         this.potentialData = []; 
         this.metaData = []; 
-        this.acmSafraData = []; // NOVO: Armazena dados específicos do AcmSafra
+        this.acmSafraData = []; 
         this.analysisResult = null;
         this.validationResult = null;
         this.isAnimatingParticles = true;
         this.animationFrameId = null; 
         
-        // Estado do Carrossel de Gráficos (Aba Moagem - Visão Horária)
+        // Estado do Carrossel e Apresentação
         this.currentSlideIndex = 0;
         this.carouselInterval = null; 
         this.refreshIntervalId = null; 
         this.refreshTimeoutId = null; 
+        
+        // Variáveis de Controle de Apresentação
+        this.presentationInterval = null;
+        this.isPresentationActive = false;
 
         // 🟥 AUTENTICAÇÃO E INICIALIZAÇÃO
         if (typeof firebase !== 'undefined') {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(this.firebaseConfig);
+            } else {
+                firebase.app(); 
+            }
             this.auth = firebase.auth();
             this.db = firebase.firestore();
         } else {
@@ -33,17 +53,18 @@ class AgriculturalDashboard {
 
         this.userList = [];
         this.currentUserRole = null;
+        this.currentUserCustomPermissions = null;
         
-        // 🟥 RBAC: Permissões padrão para fallback
+        // 🟥 RBAC: Permissões padrão
         this.permissions = {
             'admin': ['tab-gerenciar', 'tab-moagem', 'tab-alertas', 'tab-caminhao', 'tab-equipamento', 'tab-frentes', 'tab-metas', 'tab-horaria', 'tab-usuarios'],
             'editor': ['tab-gerenciar', 'tab-moagem', 'tab-alertas', 'tab-caminhao', 'tab-equipamento', 'tab-frentes', 'tab-metas', 'tab-horaria'],
             'viewer': ['tab-moagem', 'tab-alertas', 'tab-caminhao', 'tab-equipamento', 'tab-frentes', 'tab-horaria'] 
         };
-        this.tabPermissions = {}; // Permissões customizadas carregadas do Firestore
+        this.tabPermissions = {}; 
 
         // Configuração
-        this._applyVisualFixes(); // Aplica correções visuais (Botão maior, alinhamento)
+        this._applyVisualFixes(); // 🔥 INJEÇÃO DE CSS DE CORREÇÃO
         this.initializeEventListeners();
         this.initializeParticles();
         this.loadTheme();
@@ -53,7 +74,7 @@ class AgriculturalDashboard {
 
         this.clearResults(); 
         
-        // 🟥 PROTEÇÃO DE ROTA: Monitora o estado de autenticação
+        // 🟥 PROTEÇÃO DE ROTA
         if (this.auth) {
             this.auth.onAuthStateChanged(this.handleAuthStateChange.bind(this));
         } else {
@@ -62,39 +83,371 @@ class AgriculturalDashboard {
         }
     }
 
-    // 🔥 NOVO: Função para aplicar correções visuais sem precisar editar o CSS
+    // =================== 🔥 CORREÇÃO VISUAL CRÍTICA (CSS INJETADO) ===================
     _applyVisualFixes() {
         const style = document.createElement('style');
         style.innerHTML = `
-            /* Aumenta o tamanho do botão Ações para acomodar os ícones confortavelmente */
-            .btn-cssbuttons {
-                min-width: 200px !important;
-                height: 54px !important;
-                padding: 0 25px !important;
+            /* ========== CORREÇÃO DE TOOLTIPS (ANTI-TREMEDEIRA) ========== */
+            .info-icon {
+                color: var(--primary, #00D4FF);
+                margin-left: 6px;
+                cursor: help;
+                font-size: 0.9em;
+                position: relative;
+                display: inline-block;
+                vertical-align: middle;
+                z-index: 1001;
+                text-decoration: none !important;
+                border-bottom: none !important;
             }
             
-            /* Garante que os botões internos fiquem centralizados e visíveis */
-            .btn-cssbuttons ul {
-                width: 100%;
-                justify-content: space-between !important;
-                padding: 0 10px !important;
+            .info-icon:hover::after {
+                content: attr(title); 
+                position: absolute;
+                top: 150%; 
+                left: 50%;
+                transform: translateX(-50%);
+                background: #1e1e24; 
+                color: #ffffff;
+                padding: 10px 14px;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: normal;
+                line-height: 1.4;
+                white-space: normal;
+                width: max-content;
+                min-width: 200px;
+                max-width: 280px;
+                pointer-events: none !important; 
+                z-index: 2147483647 !important; 
+                border: 1px solid var(--primary);
+                box-shadow: 0 10px 30px rgba(0,0,0,0.9);
+                text-align: center;
+                display: block !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                text-decoration: none !important;
+            }
+            
+            .info-icon:hover::before {
+                content: '';
+                position: absolute;
+                top: 135%; 
+                left: 50%;
+                transform: translateX(-50%);
+                border: 6px solid transparent;
+                border-bottom-color: var(--primary);
+                z-index: 2147483647 !important;
+                display: block !important;
+                pointer-events: none !important;
             }
 
-            /* Aumenta a área de clique dos ícones internos */
-            .btn-cssbuttons ul li a, 
-            .btn-cssbuttons ul li button {
-                padding: 8px !important; 
-                transform: translateY(80px); /* Ajuste da animação inicial */
+            /* CORREÇÃO PARA GRÁFICOS */
+            .chart-container {
+                background: transparent !important;
+            }
+
+            /* ========== CORREÇÃO MODO APRESENTAÇÃO ========== */
+            [data-theme="light"] body.presentation-mode {
+                background-color: #FFFFFF !important;
+            }
+            [data-theme="dark"] body.presentation-mode {
+                background-color: #000000 !important;
+            }
+
+            /* ========== MODO SNAPSHOT (TOGGLE LIVE) ========== */
+            /* Quando a classe .snapshot-mode é adicionada ao BODY, tudo vira sólido */
+            body.snapshot-mode {
+                background-color: #050A14 !important; /* Fundo Dark Padrão */
             }
             
-            .btn-cssbuttons:hover ul li a, 
-            .btn-cssbuttons:hover ul li button {
-                transform: translateY(0);
+            [data-theme="light"] body.snapshot-mode {
+                background-color: #F5F7FA !important; /* Fundo Light Padrão */
+            }
+
+            /* Desliga efeitos de vidro e sombras em TUDO */
+            body.snapshot-mode * {
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+                box-shadow: none !important;
+                text-shadow: none !important;
+                transition: none !important; /* Evita animações durante o print */
+            }
+
+            /* Força Cards Sólidos (Dark) */
+            body.snapshot-mode .glass-card,
+            body.snapshot-mode .analytics-card,
+            body.snapshot-mode .hover-zoom-card,
+            body.snapshot-mode .stat-card-mini,
+            body.snapshot-mode .front-card,
+            body.snapshot-mode .alert-card,
+            body.snapshot-mode .potential-card,
+            body.snapshot-mode .top-list-item,
+            body.snapshot-mode .upload-card-compact {
+                background-color: #1e1e24 !important;
+                background-image: none !important;
+                border: 1px solid #444 !important;
+                color: #ffffff !important;
+                opacity: 1 !important;
+                transform: none !important; /* Remove zoom */
+            }
+
+            /* Força Cards Sólidos (Light) */
+            [data-theme="light"] body.snapshot-mode .glass-card,
+            [data-theme="light"] body.snapshot-mode .analytics-card,
+            [data-theme="light"] body.snapshot-mode .hover-zoom-card,
+            [data-theme="light"] body.snapshot-mode .stat-card-mini,
+            [data-theme="light"] body.snapshot-mode .front-card,
+            [data-theme="light"] body.snapshot-mode .alert-card,
+            [data-theme="light"] body.snapshot-mode .potential-card,
+            [data-theme="light"] body.snapshot-mode .top-list-item {
+                background-color: #ffffff !important;
+                border: 1px solid #ccc !important;
+                color: #000000 !important;
+            }
+
+            /* Esconde elementos flutuantes durante o print */
+            body.snapshot-mode .header-controls,
+            body.snapshot-mode .btn-cssbuttons,
+            body.snapshot-mode #particles-js,
+            body.snapshot-mode .menu-toggle-btn {
+                opacity: 0 !important;
+                pointer-events: none !important;
             }
         `;
         document.head.appendChild(style);
     }
     
+    // =================== 🟥 MODO APRESENTAÇÃO (CORREÇÃO DE FUNDO) ===================
+
+    togglePresentation() {
+        if (this.isPresentationActive) {
+            this.stopPresentation();
+        } else {
+            this.startPresentation();
+        }
+    }
+
+    startPresentation() {
+        const timerInput = document.getElementById('presentation-timer');
+        const seconds = timerInput ? parseInt(timerInput.value) : 30;
+        const intervalMs = seconds * 1000;
+
+        this.isPresentationActive = true;
+        document.body.classList.add('presentation-mode');
+        
+        // 🔥 CORREÇÃO: Força a cor de fundo para evitar cinza/branco quebrado em fullscreen
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        if (currentTheme === 'light') {
+            document.body.style.backgroundColor = '#FFFFFF';
+            document.documentElement.style.backgroundColor = '#FFFFFF';
+        } else {
+            document.body.style.backgroundColor = '#000000';
+            document.documentElement.style.backgroundColor = '#000000';
+        }
+        
+        // Tenta entrar em tela cheia
+        if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().catch(e => console.log("Fullscreen negado"));
+        }
+
+        const presentationTabs = ['tab-moagem', 'tab-caminhao', 'tab-equipamento', 'tab-frentes', 'tab-horaria'];
+        let currentTabIdx = 0;
+
+        this.showTab(presentationTabs[currentTabIdx]);
+
+        this.presentationInterval = setInterval(() => {
+            currentTabIdx = (currentTabIdx + 1) % presentationTabs.length;
+            this.showTab(presentationTabs[currentTabIdx]);
+        }, intervalMs);
+
+        // Listener para sair do modo apresentação via ESC
+        const exitHandler = () => {
+            if (!document.fullscreenElement && this.isPresentationActive) {
+                this.stopPresentation();
+            }
+        };
+        document.addEventListener('fullscreenchange', exitHandler);
+        
+        const btn = document.querySelector('[onclick*="togglePresentation"]');
+        if (btn) btn.innerHTML = '<i class="fas fa-stop"></i> PARAR APRESENTAÇÃO';
+    }
+
+    stopPresentation() {
+        this.isPresentationActive = false;
+        document.body.classList.remove('presentation-mode');
+        document.body.style.backgroundColor = ''; // Remove cor forçada
+        document.documentElement.style.backgroundColor = '';
+        
+        if (this.presentationInterval) {
+            clearInterval(this.presentationInterval);
+            this.presentationInterval = null;
+        }
+        
+        if (document.fullscreenElement) {
+            document.exitFullscreen().catch(e => console.log("Erro ao sair fullscreen"));
+        }
+        
+        const btn = document.querySelector('[onclick*="togglePresentation"]');
+        if (btn) btn.innerHTML = '<i class="fas fa-play"></i> INICIAR APRESENTAÇÃO';
+        
+        // Retorna para aba de gerenciamento
+        this.showTab('tab-gerenciar');
+    }
+
+    // =================== 🟥 GESTÃO DE USUÁRIO (CORREÇÃO: INJEÇÃO DINÂMICA) ===================
+
+    openUserModal(userId = null) {
+        let modal = document.getElementById('admin-user-modal');
+        let form = document.getElementById('admin-user-form');
+        
+        // Fallback se não existir o modal de admin
+        if (!modal) {
+            modal = document.getElementById('user-settings-modal');
+            if (!modal) return;
+        }
+
+        if (form) form.reset();
+        
+        const idInput = document.getElementById('admin-user-id');
+        if (idInput) idInput.value = userId || '';
+        
+        // --- 🔥 INJEÇÃO DE CHECKBOXES DE PERMISSÃO ---
+        // Garante que as opções de permissão existam no formulário
+        const permsContainerId = 'admin-user-perms-container';
+        let permsContainer = document.getElementById(permsContainerId);
+        
+        if (!permsContainer && form) {
+            // Cria o container se não existir
+            permsContainer = document.createElement('div');
+            permsContainer.id = permsContainerId;
+            permsContainer.className = 'permissions-grid';
+            permsContainer.style.marginTop = '15px';
+            permsContainer.style.borderTop = '1px solid var(--glass-border)';
+            permsContainer.style.paddingTop = '10px';
+            
+            const title = document.createElement('h4');
+            title.textContent = "Permissões de Acesso (Abas):";
+            title.style.marginBottom = '10px';
+            title.style.fontSize = '0.9rem';
+            title.style.color = 'var(--text-secondary)';
+            permsContainer.appendChild(title);
+
+            const grid = document.createElement('div');
+            grid.style.display = 'grid';
+            grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+            grid.style.gap = '8px';
+
+            const allTabs = [
+                { id: 'tab-gerenciar', label: 'Gerenciar' },
+                { id: 'tab-moagem', label: 'Moagem' },
+                { id: 'tab-alertas', label: 'Alertas' },
+                { id: 'tab-caminhao', label: 'Caminhões' },
+                { id: 'tab-equipamento', label: 'Colheita' },
+                { id: 'tab-frentes', label: 'Frentes' },
+                { id: 'tab-metas', label: 'Metas' },
+                { id: 'tab-horaria', label: 'Entrega HxH' },
+                { id: 'tab-usuarios', label: 'Usuários' }
+            ];
+
+            allTabs.forEach(tab => {
+                const label = document.createElement('label');
+                label.style.display = 'flex';
+                label.style.alignItems = 'center';
+                label.style.gap = '5px';
+                label.style.fontSize = '0.85rem';
+                
+                const box = document.createElement('input');
+                box.type = 'checkbox';
+                box.name = 'perm';
+                box.value = tab.id;
+                box.id = `perm-chk-${tab.id}`;
+
+                const lbl = document.createElement('label');
+                lbl.htmlFor = `perm-chk-${tab.id}`;
+                lbl.textContent = tab.label;
+
+                label.appendChild(box);
+                label.appendChild(document.createTextNode(tab.label));
+                grid.appendChild(label);
+            });
+            permsContainer.appendChild(grid);
+            
+            // Insere antes dos botões de ação ou no final do formulário
+            const btns = form.querySelector('.modal-buttons') || form.lastElementChild;
+            form.insertBefore(permsContainer, btns);
+        }
+        // ---------------------------------------------
+
+        if (userId && this.userList.length > 0) {
+            const user = this.userList.find(u => u.id === userId);
+            if (user) {
+                const nicknameInput = document.getElementById('admin-user-nickname');
+                if (nicknameInput) nicknameInput.value = user.nickname || user.email.split('@')[0];
+                
+                // 🔥 Lógica de Permissões: Verifica se o usuário tem permissões customizadas.
+                // Se tiver, usa elas. Se não, usa as do papel (role).
+                let activePerms = [];
+                if (user.customPermissions && Array.isArray(user.customPermissions) && user.customPermissions.length > 0) {
+                    activePerms = user.customPermissions;
+                } else {
+                    activePerms = this.permissions[user.role] || [];
+                }
+
+                // Marca as checkboxes
+                if (permsContainer) {
+                    const checkboxes = permsContainer.querySelectorAll('input[name="perm"]');
+                    checkboxes.forEach(cb => {
+                        cb.checked = activePerms.includes(cb.value);
+                    });
+                }
+            }
+        } else {
+            // Novo usuário: limpa checkboxes
+            if (permsContainer) {
+                const checkboxes = permsContainer.querySelectorAll('input[name="perm"]');
+                checkboxes.forEach(cb => cb.checked = false);
+            }
+        }
+        modal.classList.add('visible');
+    }
+
+    async saveAdminUser(e) {
+        e.preventDefault();
+        const id = document.getElementById('admin-user-id').value;
+        const nickname = document.getElementById('admin-user-nickname').value;
+        
+        // Coleta checkboxes marcados
+        const checkboxes = document.querySelectorAll('#admin-user-form input[name="perm"]:checked');
+        const selectedPerms = Array.from(checkboxes).map(cb => cb.value);
+
+        if (!nickname) {
+            alert("O campo Apelido é obrigatório.");
+            return;
+        }
+
+        try {
+            // Se tiver ID, atualiza
+            if (id) {
+                const updateData = {
+                    nickname: nickname,
+                    customPermissions: selectedPerms, // 🔥 SALVA AS PERMISSÕES CUSTOMIZADAS
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                await this.db.collection("users").doc(id).update(updateData);
+                alert("Usuário e permissões atualizados com sucesso!");
+                this.closeModal('admin-user-modal');
+                this.loadUserManagementData(); // Recarrega a tabela
+            } else {
+                alert("Para criar um novo usuário, utilize a aba de Solicitações ou o formulário de cadastro.");
+            }
+        } catch (error) {
+            console.error("Erro ao salvar:", error);
+            alert("Erro ao salvar: " + error.message);
+        }
+    }
+
     // =================== 🟥 LÓGICA DE AUTENTICAÇÃO E MODAL ===================
     
     async handleAuthStateChange(user) {
@@ -103,19 +456,18 @@ class AgriculturalDashboard {
         
         if (user) {
             // Usuário logado
-            loginScreen.classList.add('hidden');
-            mainDashboard.classList.remove('hidden');
+            if (loginScreen) loginScreen.classList.add('hidden');
+            if (mainDashboard) mainDashboard.classList.remove('hidden');
 
             await this.fixUserProfile(user);
             
-            // 1. Carrega dados do usuário e permissões PRIMEIRO (Crucial para evitar erro de role null)
+            // 1. Carrega dados do usuário e permissões PRIMEIRO
             await this.loadCurrentUserProfile();
             
             // 2. Renderiza a navegação baseada no perfil carregado
             this.renderTabsNavigation();
             
             // 3. Define a aba inicial com segurança
-            // Se for admin/editor vai para Gerenciar, senão vai para Moagem
             const initialTab = this.canAccessTab('tab-gerenciar') ? 'tab-gerenciar' : 'tab-moagem';
             this.showTab(initialTab);
 
@@ -130,50 +482,46 @@ class AgriculturalDashboard {
 
         } else {
             // Usuário deslogado
-            mainDashboard.classList.add('hidden');
-            loginScreen.classList.remove('hidden');
+            if (mainDashboard) mainDashboard.classList.add('hidden');
+            if (loginScreen) loginScreen.classList.remove('hidden');
             this.currentUserRole = null;
+            this.currentUserCustomPermissions = null;
             
             if (this.refreshTimeoutId) clearTimeout(this.refreshTimeoutId);
         }
     }
     
-    // 🔥 NOVO: Suporte para login por Nick/E-mail (Requer que todos os emails sejam minúsculos no Firestore)
     async handleLogin(e) {
         e.preventDefault();
         const userIdentifier = document.getElementById('login-user').value;
         const password = document.getElementById('login-password').value;
         const errorEl = document.getElementById('auth-error');
-        errorEl.classList.add('hidden');
+        if (errorEl) errorEl.classList.add('hidden');
         document.getElementById('auth-success').classList.add('hidden');
 
         try {
             let email = userIdentifier.trim().toLowerCase();
 
             if (!email.includes('@')) {
-                // Mantemos o login direto por EMAIL para a segurança do Firebase Auth.
-                const userCredential = await this.auth.signInWithEmailAndPassword(email, password);
-                
-                document.getElementById('login-user').value = '';
-                document.getElementById('login-password').value = '';
-                errorEl.textContent = '';
-                
-            } else {
-                // Login por E-mail
-                const userCredential = await this.auth.signInWithEmailAndPassword(email, password);
-                document.getElementById('login-user').value = '';
-                document.getElementById('login-password').value = '';
-                errorEl.textContent = '';
+                // Tenta login direto assumindo que é email mesmo sem @
+                email += "@agro.local"; // Exemplo de sufixo se necessário, ou deixe como está
             }
+            
+            await this.auth.signInWithEmailAndPassword(email, password);
+            
+            document.getElementById('login-user').value = '';
+            document.getElementById('login-password').value = '';
+            if (errorEl) errorEl.textContent = '';
         }
         catch (error) {
-            let message = error.message.includes('password') ? 'E-mail ou senha incorretos.' : error.message;
-            errorEl.textContent = `Erro: ${message}`;
-            errorEl.classList.remove('hidden');
+            if (errorEl) {
+                let message = error.message.includes('password') ? 'E-mail ou senha incorretos.' : error.message;
+                errorEl.textContent = `Erro: ${message}`;
+                errorEl.classList.remove('hidden');
+            }
         }
     }
 
-    // 🔥 NOVO: Fluxo de redefinição de senha (Esqueceu a senha?)
     handleForgotPassword(e) {
         e.preventDefault();
         const userIdentifier = document.getElementById('login-user').value;
@@ -185,8 +533,10 @@ class AgriculturalDashboard {
         let email = userIdentifier.trim().toLowerCase();
 
         if (!email || !email.includes('@')) {
-            errorEl.textContent = "Por favor, insira o seu E-mail no campo acima para redefinir a senha.";
-            errorEl.classList.remove('hidden');
+            if (errorEl) {
+                errorEl.textContent = "Por favor, insira o seu E-mail no campo acima para redefinir a senha.";
+                errorEl.classList.remove('hidden');
+            }
             return;
         }
 
@@ -196,8 +546,10 @@ class AgriculturalDashboard {
 
         this.auth.sendPasswordResetEmail(email)
             .then(() => {
-                successEl.innerHTML = `<i class="fas fa-check-circle"></i> E-mail de redefinição enviado para <strong>${email}</strong>. Verifique sua caixa de entrada.`;
-                successEl.classList.remove('hidden');
+                if (successEl) {
+                    successEl.innerHTML = `<i class="fas fa-check-circle"></i> E-mail de redefinição enviado para <strong>${email}</strong>. Verifique sua caixa de entrada.`;
+                    successEl.classList.remove('hidden');
+                }
             })
             .catch((error) => {
                 let message;
@@ -206,19 +558,20 @@ class AgriculturalDashboard {
                 } else {
                     message = `Erro ao enviar e-mail: ${error.message}`;
                 }
-                errorEl.textContent = message;
-                errorEl.classList.remove('hidden');
+                if (errorEl) {
+                    errorEl.textContent = message;
+                    errorEl.classList.remove('hidden');
+                }
             });
     }
 
-    // 🔥 NOVO: Lógica do Modal de Configurações de Usuário (Troca de Senha)
     async updatePassword(e) {
         e.preventDefault();
         const currentPassword = document.getElementById('current-password').value;
         const newPassword = document.getElementById('new-password').value;
         const confirmNewPassword = document.getElementById('confirm-new-password').value;
         const alertEl = document.getElementById('modal-alert-message');
-        alertEl.classList.add('hidden');
+        if (alertEl) alertEl.classList.add('hidden');
 
         if (newPassword !== confirmNewPassword) {
             this.showModalAlert("As novas senhas não coincidem.", 'danger');
@@ -273,8 +626,8 @@ class AgriculturalDashboard {
         const modal = document.getElementById(modalId);
         if (modal) {
             modal.classList.add('visible');
-            document.getElementById('update-password-form')?.reset();
-            document.getElementById('modal-alert-message')?.classList.add('hidden');
+            const form = document.getElementById('update-password-form');
+            if(form) form.reset();
         }
     }
 
@@ -284,115 +637,8 @@ class AgriculturalDashboard {
             modal.classList.remove('visible');
         }
     }
-    
-    // =================== 📸 NOVA FUNÇÃO DE CAPTURA DE TELA (CORRIGIDA) 📸 ===================
 
-    async captureScreenshot() {
-        // Encontra a aba ativa
-        const activeTab = document.querySelector('.tab-pane.active');
-        const btn = document.querySelector('.btn-cssbuttons'); 
-        
-        if (!activeTab) {
-            this.showError("Nenhuma aba ativa para capturar.");
-            return;
-        }
-
-        // Feedback visual
-        if (btn) {
-            btn.style.opacity = '0.3'; // Deixa quase transparente
-            btn.style.pointerEvents = 'none';
-        }
-
-        // SALVAR ESTADO ORIGINAL
-        const originalBg = document.body.style.background;
-        const currentTheme = document.documentElement.getAttribute('data-theme');
-        // Esconde todos os modais/overlays que possam estar visíveis (causa da película escura)
-        const modals = document.querySelectorAll('.modal-overlay, .full-screen-overlay, #loading-overlay, #menu-backdrop');
-
-        try {
-            // 1. Preparar ambiente para o print
-            modals.forEach(m => {
-                if (m) m.style.visibility = 'hidden'; // Força invisibilidade
-            });
-
-            // Remove gradientes complexos temporariamente e aplica cor sólida
-            if (currentTheme === 'light') {
-                document.body.style.background = '#f5f5f5';
-                activeTab.style.background = '#f5f5f5';
-            } else {
-                document.body.style.background = '#050A14';
-                activeTab.style.background = '#050A14';
-            }
-
-            // Aguarda renderização das mudanças
-            await new Promise(resolve => setTimeout(resolve, 300));
-
-            // 2. Gerar Canvas com html2canvas
-            const canvas = await html2canvas(activeTab, {
-                scale: 2, // Alta resolução
-                useCORS: true,
-                allowTaint: true,
-                backgroundColor: currentTheme === 'light' ? '#f5f5f5' : '#050A14', // Cor sólida explícita
-                logging: false,
-                ignoreElements: (element) => {
-                    // Ignora o botão de ações e outros controles flutuantes
-                    return element.classList.contains('btn-cssbuttons') || 
-                           element.classList.contains('header-controls') ||
-                           element.id === 'loading-overlay' ||
-                           element.id === 'user-settings-modal' ||
-                           element.id === 'menu-backdrop'; 
-                }
-            });
-
-            // 3. Criar Blob para Download e Clipboard
-            canvas.toBlob(async (blob) => {
-                if (!blob) return;
-
-                // Tenta copiar para o Clipboard (Ctrl+C)
-                try {
-                    const item = new ClipboardItem({ "image/png": blob });
-                    await navigator.clipboard.write([item]);
-                    console.log("Imagem copiada para a área de transferência.");
-                } catch (clipboardError) {
-                    console.warn("Falha ao copiar para clipboard (pode não ser suportado neste contexto/navegador):", clipboardError);
-                }
-
-                // Força o Download
-                const link = document.createElement('a');
-                const now = new Date();
-                const timestamp = now.toLocaleDateString('pt-BR').replace(/\//g, '-') + '_' + now.toLocaleTimeString('pt-BR').replace(/:/g, '-');
-                const tabName = activeTab.id.replace('tab-', '').toUpperCase();
-                
-                link.download = `AgroAnalytics_${tabName}_${timestamp}.png`;
-                link.href = URL.createObjectURL(blob);
-                link.click();
-                
-                // Limpeza
-                URL.revokeObjectURL(link.href);
-
-                alert("Captura realizada com sucesso!\n\n✅ Imagem baixada.\n✅ Copiada para a área de transferência (Ctrl+V).");
-            }, 'image/png');
-
-        } catch (error) {
-            console.error("Erro ao capturar tela:", error);
-            alert("Erro ao capturar a tela. Verifique o console.");
-        } finally {
-            // 4. Restaurar Estado Original
-            document.body.style.background = originalBg;
-            activeTab.style.background = '';
-            
-            modals.forEach(m => {
-                if (m) m.style.visibility = ''; // Restaura visibilidade
-            });
-            
-            if (btn) {
-                btn.style.opacity = '1';
-                btn.style.pointerEvents = 'auto';
-            }
-        }
-    }
-
-    // =================== 🟥 FUNÇÕES DE DADOS E LAYOUT (Mantidas) ===================
+    // =================== 🟥 FUNÇÕES DE DADOS E LAYOUT ===================
 
     async fixUserProfile(user) {
         try {
@@ -403,8 +649,6 @@ class AgriculturalDashboard {
                 !userDoc.data().role || 
                 userDoc.data().password || 
                 userDoc.data().role === user.uid) {
-                
-                console.log("Corrigindo perfil do usuário:", user.email);
                 
                 const updateData = {
                     email: user.email,
@@ -424,7 +668,6 @@ class AgriculturalDashboard {
                 }
                 
                 await userRef.set(updateData, { merge: true });
-                console.log("Perfil corrigido com sucesso!");
             }
             
         } catch (error) {
@@ -439,12 +682,14 @@ class AgriculturalDashboard {
         const phone = document.getElementById('signup-phone').value;
         const errorEl = document.getElementById('auth-error');
         const successEl = document.getElementById('auth-success');
-        errorEl.classList.add('hidden');
-        successEl.classList.add('hidden');
+        if(errorEl) errorEl.classList.add('hidden');
+        if(successEl) successEl.classList.add('hidden');
         
         if (!name || !email || !phone) {
-             errorEl.textContent = "Preencha todos os campos para solicitar o cadastro.";
-             errorEl.classList.remove('hidden');
+             if(errorEl) {
+                 errorEl.textContent = "Preencha todos os campos para solicitar o cadastro.";
+                 errorEl.classList.remove('hidden');
+             }
              return;
         }
 
@@ -460,19 +705,23 @@ class AgriculturalDashboard {
             document.getElementById('signup-email').value = '';
             document.getElementById('signup-phone').value = '';
             
-            successEl.innerHTML = "<strong>Solicitação de cadastro enviada!</strong> Você receberá uma mensagem em até 24h com a senha de acesso após a aprovação do administrador.";
-            successEl.classList.remove('hidden');
+            if(successEl) {
+                successEl.innerHTML = "<strong>Solicitação de cadastro enviada!</strong> Você receberá uma mensagem em até 24h com a senha de acesso após a aprovação do administrador.";
+                successEl.classList.remove('hidden');
+            }
             
             setTimeout(() => {
                  document.getElementById('signup-form').classList.add('hidden');
                  document.getElementById('login-form').classList.remove('hidden');
-                 successEl.classList.add('hidden');
+                 if(successEl) successEl.classList.add('hidden');
             }, 5000);
 
         })
         .catch((error) => {
-            errorEl.textContent = `Erro ao solicitar cadastro: ${error.message}`;
-            errorEl.classList.remove('hidden');
+            if(errorEl) {
+                errorEl.textContent = `Erro ao solicitar cadastro: ${error.message}`;
+                errorEl.classList.remove('hidden');
+            }
         });
     }
 
@@ -517,8 +766,11 @@ class AgriculturalDashboard {
             if (userDoc.exists) {
                 const userData = userDoc.data();
                 this.currentUserRole = userData.role;
+                // 🔥 Carrega permissões personalizadas se existirem
+                this.currentUserCustomPermissions = userData.customPermissions || null;
             } else {
                  this.currentUserRole = 'viewer';
+                 this.currentUserCustomPermissions = null;
             }
             
             await this.loadTabPermissions();
@@ -706,10 +958,17 @@ class AgriculturalDashboard {
                     <td>
                         ${!isCurrentUser ? `
                             <button 
+                                class="btn-primary btn-sm"
+                                onclick="window.agriculturalDashboard.openUserModal('${user.id}')"
+                                style="margin-right: 5px;"
+                            >
+                                <i class="fas fa-edit"></i> Permissões
+                            </button>
+                            <button 
                                 class="btn-danger btn-sm delete-user-btn"
                                 onclick="window.agriculturalDashboard.deleteUserPrompt('${user.id}', '${user.email}')"
                             >
-                                <i class="fas fa-trash"></i> Excluir
+                                <i class="fas fa-trash"></i>
                             </button>
                         ` : `
                             <span class="text-muted" style="font-size: 0.9rem;">
@@ -733,8 +992,7 @@ class AgriculturalDashboard {
                         <li><strong>Admin:</strong> Acesso completo ao sistema</li>
                         <li><strong>Editor:</strong> Pode editar dados e fazer uploads</li>
                         <li><strong>Viewer:</strong> Apenas visualização dos dados</li>
-                        <li>Senhas NUNCA são armazenadas no Firestore</li>
-                        <li>Para excluir completamente uma conta, use o Firebase Console</li>
+                        <li>Use "Editar" para configurar permissões específicas por usuário.</li>
                     </ul>
                 </div>
             </div>
@@ -829,9 +1087,9 @@ class AgriculturalDashboard {
 
         try {
             const snapshot = await this.db.collection("requests")
-                                          .where("status", "==", "pending")
-                                          .orderBy("requestedAt", "asc")
-                                          .get();
+                                      .where("status", "==", "pending")
+                                      .orderBy("requestedAt", "asc")
+                                      .get();
             const requests = [];
             snapshot.forEach(doc => requests.push({ id: doc.id, ...doc.data() }));
 
@@ -894,30 +1152,65 @@ class AgriculturalDashboard {
         }
     }
 
+    // =================== 🟥 APROVAÇÃO SIMPLIFICADA (SEM CLOUD FUNCTIONS) ===================
+
     async approveRequest(requestId, email, name) {
         if (!confirm(`Aprovar cadastro para ${email}?\n\nVocê deverá criar o usuário no Firebase Authentication e fornecer a senha manualmente ao solicitante.`)) return;
         
+        const SENHA_PADRAO = 'a123456@';
+        
         try {
-            await this.db.collection("requests").doc(requestId).update({ status: 'approved', approvedAt: firebase.firestore.FieldValue.serverTimestamp() });
-            
-            const tempUserId = 'new_' + Date.now(); 
-            
-            await this.db.collection("users").doc(tempUserId).set({
+            // TRUQUE DO APP SECUNDÁRIO:
+            // Inicializa uma segunda instância do Firebase para criar o usuário
+            // sem deslogar o admin atual da instância principal.
+            // Usa a config armazenada na classe para inicializar
+            const secondaryApp = firebase.initializeApp(this.firebaseConfig, "SecondaryApp");
+            const secondaryAuth = secondaryApp.auth();
+
+            // 1. Cria o usuário no Authentication (usando o app secundário)
+            const userCredential = await secondaryAuth.createUserWithEmailAndPassword(email, SENHA_PADRAO);
+            const newUid = userCredential.user.uid;
+
+            // 2. Salva os dados no Firestore (Coleção 'users')
+            // Usamos 'this.db' que é o banco principal onde o admin tem permissão de escrita
+            await this.db.collection('users').doc(newUid).set({
                 email: email,
                 name: name,
-                role: 'viewer', 
+                role: 'viewer', // Papel padrão
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                approvedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
+
+            // 3. Atualiza o status da solicitação
+            await this.db.collection("requests").doc(requestId).update({ 
+                status: 'approved', 
+                authUid: newUid,
+                approvedAt: firebase.firestore.FieldValue.serverTimestamp() 
+            });
+
+            // 4. Limpeza: Desloga e deleta o app secundário para não pesar a memória
+            await secondaryAuth.signOut();
+            await secondaryApp.delete();
+
+            alert(`Sucesso! Usuário criado.\nEmail: ${email}\nSenha: ${SENHA_PADRAO}\n\nEnvie estes dados ao usuário.`);
             
+            // Recarrega as listas
             this.loadRegistrationRequests();
             this.loadUserManagementData();
-            
-            alert(`Solicitação de ${email} aprovada! O registro foi movido para Usuários Ativos. Lembre-se de criar o usuário no Firebase Auth.`);
-            
+
         } catch (error) {
-            console.error("Erro ao aprovar:", error);
-            alert(`Erro ao aprovar solicitação: ${error.message}`);
+            console.error("Erro na aprovação:", error);
+            if (error.code === 'auth/email-already-in-use') {
+                alert("Erro: Este e-mail já possui um cadastro no sistema.");
+            } else {
+                alert(`Erro ao criar usuário: ${error.message}`);
+            }
+            
+            // Tenta limpar o app secundário se deu erro no meio
+            try {
+                const app = firebase.app("SecondaryApp");
+                if(app) await app.delete();
+            } catch(e) {}
         }
     }
 
@@ -939,16 +1232,21 @@ class AgriculturalDashboard {
     canAccessTab(tabId) {
         if (!this.currentUserRole) return false;
 
+        // Admin sempre tem acesso
         if (this.currentUserRole === 'admin') return true;
         
         if (tabId === 'tab-gerenciar') {
              return this.currentUserRole === 'admin' || this.currentUserRole === 'editor';
         }
 
-        if (this.tabPermissions[tabId] && typeof this.tabPermissions[tabId][this.currentUserRole] === 'boolean') {
-            return this.tabPermissions[tabId][this.currentUserRole];
+        // 🔥 CORREÇÃO: Verifica se o usuário tem permissões customizadas (se sim, usa elas)
+        if (this.currentUserCustomPermissions && Array.isArray(this.currentUserCustomPermissions)) {
+            // Se o usuário tem lista personalizada, verifica se o tabId está nela
+            // Mas 'tab-gerenciar' continua restrito a admin/editor acima
+            return this.currentUserCustomPermissions.includes(tabId);
         }
 
+        // Fallback: Verifica as permissões padrão do papel
         return this.permissions[this.currentUserRole] && this.permissions[this.currentUserRole].includes(tabId);
     }
     
@@ -1325,7 +1623,7 @@ class AgriculturalDashboard {
             let cssClass = '';
             
             const startA = 7 * 60 + 45; 
-            const startB = 16 * 60;      
+            const startB = 16 * 60;        
             const startC = 23 * 60 + 40; 
 
             if (currentMinutes >= startA && currentMinutes < startB) {
@@ -1769,8 +2067,6 @@ class AgriculturalDashboard {
         this.hideLoadingAnimation();
     }
     
-    // =================== 🟥 EVENT LISTENERS E FUNÇÕES DE UI 🟥 ===================
-    
     initializeEventListeners() {
         const fileInput = document.getElementById('fileInput');
         if (fileInput) {
@@ -1913,6 +2209,12 @@ class AgriculturalDashboard {
                  this.closeModal('user-settings-modal');
              }
         });
+
+        // 🟥 Listener para form admin de usuário (NOVO)
+        const adminUserForm = document.getElementById('admin-user-form');
+        if (adminUserForm) {
+            adminUserForm.addEventListener('submit', (e) => this.saveAdminUser(e));
+        }
         
         // 🟥 Navegação de sub-abas (Gerenciamento de Usuários)
         document.querySelectorAll('#tab-usuarios .sub-tabs-nav button').forEach(button => {
@@ -2261,6 +2563,79 @@ class AgriculturalDashboard {
             this.animationFrameId = requestAnimationFrame(animate); 
         };
         this.animationFrameId = requestAnimationFrame(animate); 
+    }
+
+    // =================== 📸 CAPTURA DE TELA (CORREÇÃO DE PELÍCULA BRANCA - LIVE TOGGLE) ===================
+
+    async captureScreenshot() {
+        const activeTab = document.querySelector('.tab-pane.active');
+        if (!activeTab) {
+            this.showError("Nenhuma aba ativa para capturar.");
+            return;
+        }
+
+        const exportBtn = document.querySelector('.btn-export');
+        const originalBtnText = exportBtn ? exportBtn.innerHTML : '';
+        if (exportBtn) exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
+
+        // 1. PREPARAÇÃO DO DOM REAL
+        const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+        const bgColor = isDark ? '#050A14' : '#F5F7FA'; // Cor sólida para o fundo
+
+        // Desliga efeitos de partículas para evitar ruído
+        const particles = document.getElementById('particles-js');
+        if(particles) particles.style.display = 'none';
+
+        // 🔥 O PULO DO GATO: Adiciona a classe que "nuked" todos os filtros
+        document.body.classList.add('snapshot-mode');
+        
+        // Força uma pequena espera para o navegador repintar (remove o blur da tela)
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        try {
+            const canvas = await html2canvas(activeTab, {
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: bgColor, 
+                logging: false,
+                imageTimeout: 0
+            });
+
+            canvas.toBlob(async (blob) => {
+                if (!blob) throw new Error("Erro ao gerar imagem.");
+
+                try {
+                    const item = new ClipboardItem({ "image/png": blob });
+                    await navigator.clipboard.write([item]);
+                    alert("Captura copiada para a área de transferência!");
+                } catch (e) { 
+                    console.warn("Clipboard falhou, iniciando download.");
+                    const link = document.createElement('a');
+                    const now = new Date();
+                    const timestamp = now.toLocaleDateString('pt-BR').replace(/\//g, '-') + '_' + now.toLocaleTimeString('pt-BR').replace(/:/g, '-');
+                    const tabName = activeTab.id.replace('tab-', '').toUpperCase();
+                    
+                    link.download = `SNAPSHOT_${tabName}_${timestamp}.png`;
+                    link.href = URL.createObjectURL(blob);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(link.href);
+                    alert("Captura salva com sucesso!");
+                }
+            }, 'image/png');
+
+        } catch (error) {
+            console.error("Erro no snapshot:", error);
+            alert("Erro ao capturar tela: " + error.message);
+        } finally {
+            // 2. RESTAURAÇÃO (Liga tudo de volta)
+            document.body.classList.remove('snapshot-mode');
+            
+            if(particles) particles.style.display = 'block';
+            if (exportBtn) exportBtn.innerHTML = originalBtnText || '<i class="fas fa-camera"></i> Ações';
+        }
     }
 }
 

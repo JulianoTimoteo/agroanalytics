@@ -11,12 +11,10 @@
     <meta name="theme-color" content="#050A14"> 
     <meta name="apple-mobile-web-app-title" content="AgroAnalytics">
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="icon" type="image/x-icon" href="https://usinapitangueiras.com.br/wp-content/uploads/2020/10/cropped-favicon-180x180.png">
     <link rel="apple-touch-icon" href="icon-192.png">
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/luxon@3.3.0/build/global/luxon.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -68,6 +66,42 @@
             </form>
         </div>
     </div>
+
+    <div id="admin-user-modal" class="modal-overlay">
+        <div class="modal-content modal-content-medium">
+            <button class="close-btn" onclick="window.agriculturalDashboard.closeModal('admin-user-modal')" aria-label="Fechar"><i class="fas fa-times"></i></button>
+            <h3><i class="fas fa-user-shield"></i> Gerenciar Usuário</h3>
+            
+            <form id="admin-user-form">
+                <input type="hidden" id="admin-user-id"> <div class="input-group-row margin-bottom-10">
+                    <input type="text" id="admin-user-nickname" placeholder="Apelido (Login)" required style="width: 100%;">
+                </div>
+                
+                <div class="input-group-row margin-bottom-10">
+                    <input type="password" id="admin-user-password" placeholder="Senha (Deixe em branco para manter)" style="width: 100%;">
+                </div>
+
+                <div class="permissions-container margin-bottom-15">
+                    <p class="text-secondary" style="margin-bottom: 5px;"><strong>Permissões de Acesso:</strong></p>
+                    <div class="checkbox-grid">
+                        <label><input type="checkbox" name="perm" value="tab-moagem"> Moagem</label>
+                        <label><input type="checkbox" name="perm" value="tab-alertas"> Alertas</label>
+                        <label><input type="checkbox" name="perm" value="tab-caminhao"> Caminhões</label>
+                        <label><input type="checkbox" name="perm" value="tab-equipamento"> Colheita</label>
+                        <label><input type="checkbox" name="perm" value="tab-frentes"> Frentes</label>
+                        <label><input type="checkbox" name="perm" value="tab-metas"> Metas</label>
+                        <label><input type="checkbox" name="perm" value="tab-horaria"> Entrega HxH</label>
+                        <label><input type="checkbox" name="perm" value="tab-gerenciar"> Gerenciar (Admin)</label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Salvar Usuário
+                </button>
+            </form>
+        </div>
+    </div>
+
     <div id="login-screen" class="full-screen-overlay">
         <div class="login-container">
             <h1>AgroAnalytics</h1>
@@ -76,7 +110,7 @@
             <div id="auth-success" class="alert-success-login hidden"></div>
 
             <form id="login-form">
-                <input type="text" id="login-user" placeholder="Usuário ou E-mail" required autocomplete="username">
+                <input type="text" id="login-user" placeholder="Apelido ou E-mail" required autocomplete="username">
                 <input type="password" id="login-password" placeholder="Senha" required autocomplete="current-password">
                 
                 <div class="login-actions">
@@ -90,8 +124,8 @@
 
             <form id="signup-form" class="hidden">
                 <p>Preencha os dados abaixo para solicitar seu acesso. Responderemos em até 24h.</p>
-                <input type="text" id="signup-name" placeholder="Nome Completo" required autocomplete="name">
-                <input type="email" id="signup-email" placeholder="E-mail" required autocomplete="email">
+                <input type="text" id="signup-name" placeholder="Nome Completo / Apelido" required autocomplete="name">
+                <input type="email" id="signup-email" placeholder="E-mail (para recuperação)" required autocomplete="email">
                 <input type="tel" id="signup-phone" placeholder="Telefone/WhatsApp" required autocomplete="tel">
                 <button type="submit" class="btn-primary">Solicitar Cadastro</button>
                 <p>Já tem conta? <a href="#" id="show-login">Fazer Login</a></p>
@@ -215,6 +249,26 @@
                         
                         <div id="tab-gerenciar" class="tab-pane active">
                             <div class="analytics-row">
+                                <div class="analytics-card glass-card full-width hover-zoom-card">
+                                    <div class="card-header">
+                                        <h3><i class="fas fa-tv"></i> Modo Apresentação (TV/Quiosque)</h3>
+                                    </div>
+                                    <div class="presentation-controls" style="display: flex; align-items: center; gap: 20px; padding: 10px;">
+                                        <div class="input-group-row" style="flex: 0 0 auto;">
+                                            <label for="presentation-timer">Tempo por Slide (seg):</label>
+                                            <input type="number" id="presentation-timer" value="30" min="5" style="width: 80px; text-align: center; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: var(--text); padding: 5px; border-radius: 4px;">
+                                        </div>
+                                        <button class="btn-primary" onclick="window.agriculturalDashboard.togglePresentation()">
+                                            <i class="fas fa-play"></i> INICIAR APRESENTAÇÃO
+                                        </button>
+                                        <p class="text-secondary" style="margin: 0;">
+                                            <i class="fas fa-info-circle"></i> Pressione <strong>ESC</strong> para sair do modo tela cheia.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="analytics-row">
                                 <div class="analytics-card glass-card half-width hover-zoom-card">
                                     <div class="card-header">
                                         <h3><i class="fas fa-upload"></i> Carregamento de Dados</h3>
@@ -255,7 +309,7 @@
                                     <div class="mini-list">
                                         <p>Status de Conexão: <span class="success-color-bold">ATIVO</span></p>
                                         <p>Usuário: <span id="current-user-email" class="primary-color">-</span></p>
-                                        <p>Última Configuração: <span class="primary-color">v1.2.3 - 2025-11-30</span></p>
+                                        <p>Última Configuração: <span class="primary-color">v1.3.0 - 2025-12-18</span></p>
                                         <p><button class="btn-action" onclick="alert('Baixando Log de Eventos.')">Baixar Log</button></p>
                                     </div>
                                 </div>
@@ -270,17 +324,17 @@
                                 <button class="tab-button" onclick="window.agriculturalDashboard.showSubTab('subtab-solicitacoes', this)">
                                     <i class="fas fa-bell"></i> Solicitações (<span id="requests-count">0</span>)
                                 </button>
-                                <button class="tab-button" onclick="window.agriculturalDashboard.showSubTab('subtab-permissoes-abas', this)">
-                                    <i class="fas fa-eye"></i> Permissões de Abas
-                                </button>
-                            </div>
+                                </div>
                             
                             <div class="tabs-content-sub">
                                 <div id="subtab-gerenciar-acesso" class="tab-pane-sub active">
                                     <div class="analytics-row">
                                         <div class="analytics-card glass-card full-width hover-zoom-card">
                                             <div class="card-header">
-                                                <h3><i class="fas fa-user-lock"></i> Gestão de Usuários Ativos (Firebase)</h3>
+                                                <h3><i class="fas fa-user-lock"></i> Gestão de Usuários (Login por Apelido)</h3>
+                                                <button class="btn-primary" onclick="window.agriculturalDashboard.openUserModal()">
+                                                    <i class="fas fa-plus"></i> Novo Usuário
+                                                </button>
                                             </div>
                                             <div id="user-management-container" class="meta-table-wrapper">
                                                 <p>Carregando dados de usuários...</p>
@@ -297,19 +351,6 @@
                                             </div>
                                             <div id="registration-requests-container" class="meta-table-wrapper">
                                                 <p>Nenhuma solicitação pendente.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div id="subtab-permissoes-abas" class="tab-pane-sub">
-                                     <div class="analytics-row">
-                                        <div class="analytics-card glass-card full-width hover-zoom-card">
-                                            <div class="card-header">
-                                                <h3><i class="fas fa-eye-slash"></i> Configuração de Visualização por Papel</h3>
-                                            </div>
-                                            <div id="tab-permissions-container" class="meta-table-wrapper">
-                                                <p>Carregando permissões...</p>
                                             </div>
                                         </div>
                                     </div>
@@ -373,7 +414,7 @@
                                         <div class="header-title-with-tooltip">
                                             <h3><i class="fas fa-chart-bar"></i> Acumulado & Progresso</h3>
                                             <div class="tooltip-container">
-                                                <i class="fas fa-info-circle info-icon"></i>
+                                                <i class="fas fa-info-circle info icon"></i>
                                                 <div class="tooltip-text">Acompanhamento do progresso da Moagem em relação à meta diária configurada.</div>
                                             </div>
                                         </div>
@@ -707,7 +748,17 @@
                 if (user) {
                     loginScreen.classList.add('hidden');
                     mainDashboard.classList.remove('hidden');
-                    currentUserEmail.textContent = user.email;
+                    // 🔥 CORREÇÃO: Mostra Apelido se disponível
+                    if(user.displayName) {
+                        currentUserEmail.textContent = user.displayName;
+                    } else {
+                        // Tenta remover o sufixo de domínio interno se for um login por apelido
+                        let display = user.email;
+                        if(display.includes('@agro.local')) {
+                            display = display.split('@')[0];
+                        }
+                        currentUserEmail.textContent = display;
+                    }
                     
                 } else {
                     mainDashboard.classList.add('hidden');

@@ -10,6 +10,23 @@
           "meta[name=theme-color]"
         ]
       }
-    ]
-  }
+    ],
+    "compat-api/css": [
+      "default",
+      {
+        "ignore": [
+          "-webkit-backdrop-filter"
+        ]
+      }
+    ],
+    "no-inline-styles": "off"
+  },
+  "browserslist": [
+    "defaults",
+    "not ie 11",
+    "not chrome <= 112",
+    "not ios_saf <= 26",
+    "not safari <= 26.1",
+    "not samsung <= 29"
+  ]
 }
