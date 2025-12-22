@@ -1,4 +1,4 @@
-/* style.css - ARQUIVO COMPLETO CORRIGIDO (VERSÃO FINAL 3.8 - SEM SETAS NOS INPUTS) */
+/* style.css - ARQUIVO COMPLETO CORRIGIDO (VERSÃO FINAL 3.9 - CORREÇÃO CARD VIAGENS) */
 
 /* Reset e Variáveis */
 :root {
@@ -686,6 +686,27 @@ body {
     margin-top: 0.5rem;
 }
 
+main { 
+    max-width: 1400px; 
+    margin: 0rem auto; 
+    padding: 0 2rem 4rem;
+    height: calc(100vh - 80px); 
+    overflow-y: auto; 
+    overflow-x: hidden;
+}
+.glass-card { 
+    background: var(--glass); 
+    border: 1px solid var(--glass-border); 
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1); 
+    -webkit-backdrop-filter: blur(10px); 
+    backdrop-filter: blur(10px); 
+    border-radius: 0.5rem; /* Mais quadrado (era 1rem) */
+    padding: 1.5rem; 
+    transition: transform 0.3s ease, box-shadow 0.3s ease; 
+}
+.glass-card:hover, .hover-zoom-card:hover { transform: scale(1.02); z-index: 10; box-shadow: 0 15px 35px rgba(0,0,0,0.3); }
+
+/* 🔥 CORREÇÃO DA COR LATERAL (Movido para DEPOIS de .glass-card) */
 .stat-card-mini { 
     display: flex; 
     align-items: center; 
@@ -710,26 +731,6 @@ body {
 
 #statAnalise.critical-low .stat-value { color: var(--danger) !important; animation: pulse 1.5s infinite; }
 @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
-
-main { 
-    max-width: 1400px; 
-    margin: 0rem auto; 
-    padding: 0 2rem 4rem;
-    height: calc(100vh - 80px); 
-    overflow-y: auto; 
-    overflow-x: hidden;
-}
-.glass-card { 
-    background: var(--glass); 
-    border: 1px solid var(--glass-border); 
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1); 
-    -webkit-backdrop-filter: blur(10px); 
-    backdrop-filter: blur(10px); 
-    border-radius: 0.5rem; /* Mais quadrado (era 1rem) */
-    padding: 1.5rem; 
-    transition: transform 0.3s ease, box-shadow 0.3s ease; 
-}
-.glass-card:hover, .hover-zoom-card:hover { transform: scale(1.02); z-index: 10; box-shadow: 0 15px 35px rgba(0,0,0,0.3); }
 
 #analyticalContent.analytical-disabled {
     opacity: 0.3;
@@ -1200,8 +1201,10 @@ main {
     color: var(--text);
     font-size: 0.7rem; 
     text-align: right;
-    /* Firefox */
+    /* Standard & Vendor Prefixes */
+    appearance: textfield;
     -moz-appearance: textfield;
+    -webkit-appearance: textfield;
 }
 
 /* Chrome, Safari, Edge, Opera - Remove as setas */
@@ -2784,8 +2787,8 @@ iframe, video, embed {
 /* 1. REGRA MESTRA: Desliga efeitos globais de vidro, filtros e sombras no print */
 body.snapshot-mode,
 body.snapshot-mode * {
-    backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
     filter: none !important; /* Desliga filtros gerais como brilho/contraste */
     box-shadow: none !important;
     text-shadow: none !important;
@@ -2805,7 +2808,9 @@ body.snapshot-mode .analytics-container {
     background: transparent !important; /* Garante que não haja sobreposição de fundos */
 }
 
-/* 3. CARDS SÓLIDOS (Sem transparência nenhuma - Estilo "Flat") */
+/* 3. CARDS SÓLIDOS (CORRIGIDO: Especificidade e Cor Escura para evitar o branco) */
+/* Adicionado [data-theme="dark"] para garantir prioridade sobre regras light */
+html[data-theme="dark"] body.snapshot-mode .glass-card,
 body.snapshot-mode .glass-card,
 body.snapshot-mode .stat-card-mini,
 body.snapshot-mode .front-card,
@@ -2824,7 +2829,19 @@ body.snapshot-mode .tab-pane {
     opacity: 1 !important;
     border-radius: 8px !important;
     transform: none !important; /* Remove zoom/transformações */
+    -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
+}
+
+/* CORREÇÃO DAS BORDAS LATERAIS NO SNAPSHOT */
+/* Garante que a borda sólida não sobrescreva a cor lateral (border-left) */
+body.snapshot-mode .stat-card-mini,
+body.snapshot-mode .alert-card,
+body.snapshot-mode .top-list-item {
+    border-top: 1px solid #333 !important;
+    border-right: 1px solid #333 !important;
+    border-bottom: 1px solid #333 !important;
+    /* NÃO define border-left aqui para preservar a cor original */
 }
 
 /* 4. AJUSTE PARA MODO CLARO (Light Mode) */
@@ -2853,6 +2870,7 @@ body.snapshot-mode *::before,
 body.snapshot-mode *::after {
     display: none !important;
     content: none !important;
+    -webkit-backdrop-filter: none !important;
     backdrop-filter: none !important;
 }
 
@@ -2884,4 +2902,31 @@ body.snapshot-mode canvas#particles-js {
     display: none !important;
     width: 0 !important;
     height: 0 !important;
+}
+
+/* ========================================================================= */
+/* 🛠️ TRUQUE CSS PARA RENOMEAR "Frota Móvel Total" -> "Frota" */
+/* ========================================================================= */
+/* Esconde o texto original no Card de Total da Frota */
+/* Assume que o card Total é o primeiro elemento dentro do Grid ou tem a classe específica */
+#fleetStatusCardsGrid > div:first-child .stat-label,
+.total-fleet-card .stat-label {
+    visibility: hidden;
+    position: relative;
+}
+
+/* Insere o novo texto "Frota" no lugar */
+#fleetStatusCardsGrid > div:first-child .stat-label::after,
+.total-fleet-card .stat-label::after {
+    content: "Frota";
+    visibility: visible;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    color: var(--text-secondary); /* Usa a cor padrão do tema */
+    text-transform: uppercase;
+    font-size: 0.6rem; /* Garante tamanho correto */
+    letter-spacing: 0.5px;
 }
