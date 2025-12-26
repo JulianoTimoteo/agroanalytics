@@ -1,6 +1,4 @@
-// intelligent-processor.js - VERSÃO FINAL COMPLETA (SEM CORTES)
-// Corrige: Gráficos Vazios (Extração de Hora) e Isolamento de Safra
-
+// intelligent-processor.js - VERSÃO FINAL CORRIGIDA (SEM DADOS FANTASMAS)
 class IntelligentProcessor {
     constructor() {
         this.columnMappings = {
@@ -106,53 +104,41 @@ class IntelligentProcessor {
         return `${data}${hora}${String(item.frota).replace(/\W/g, '')}`.toUpperCase();
     }
 
-    _formatExcelTime(value) {
-        if (!value) return null;
-        if (value instanceof Date) {
-            return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
-        }
-        if (typeof value === 'number') {
-            const fractional_day = value - Math.floor(value) + 0.0000001;
-            const total_seconds = Math.floor(86400 * fractional_day);
-            const hours = Math.floor(total_seconds / (60 * 60));
-            const minutes = Math.floor((total_seconds / 60) % 60);
-            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-        }
-        const strValue = String(value).trim();
-        const hourMatch = strValue.match(/(\d{1,2}:\d{1,2})/);
-        if (hourMatch) return hourMatch[1];
-        
-        const intValue = parseInt(strValue);
-        if (!isNaN(intValue) && intValue >= 0 && intValue < 24) return `${String(intValue).padStart(2, '0')}:00`;
-        return strValue; 
-    }
-
-    // 🔥 Extração de Hora "Vale Tudo" - Essencial para os gráficos
+    // Função ROBUSTA para extrair APENAS a hora HH:MM de qualquer formato
     _forceExtractTime(value) {
         if (value === null || value === undefined || value === '') return null;
 
+        // 1. Se for um objeto Date
         if (value instanceof Date && !isNaN(value.getTime())) {
+            // Ajusta fuso se necessário, mas pega a hora bruta
             return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
         }
+        
+        // 2. Se for número (fração de dia Excel, ex: 0.5 = 12:00)
         if (typeof value === 'number') {
-            // Se for fração de dia Excel (ex: 0.5 = 12:00)
             let fraction = value % 1; 
             const total_seconds = Math.floor(86400 * fraction);
             const hours = Math.floor(total_seconds / 3600);
             const minutes = Math.floor((total_seconds % 3600) / 60);
             return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
         }
+
         const strValue = String(value).trim();
+
+        // 3. Procura padrão HH:MM:SS ou HH:MM
         const timeMatch = strValue.match(/(\d{1,2}):(\d{2})/);
         if (timeMatch) {
             let h = parseInt(timeMatch[1]);
             let m = parseInt(timeMatch[2]);
             return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
         }
+        
+        // 4. Se for apenas um número inteiro string "14" -> "14:00"
         if (/^\d{1,2}$/.test(strValue)) {
             let h = parseInt(strValue);
             if (h >= 0 && h <= 23) return `${String(h).padStart(2, '0')}:00`;
         }
+
         return null;
     }
 
@@ -380,23 +366,29 @@ class IntelligentProcessor {
                 }
             });
 
-            // Consolidação de Data
+            // 3. CONSOLIDAÇÃO DE DATAS E HORAS
+            
+            // Caso ideal: Temos data completa de saída
             if (dataSaidaData && dataSaidaData.fullDate) {
                 item.timestamp = dataSaidaData.fullDate;
                 item.data = dataSaidaData.dateStr;
                 item.hora = dataSaidaData.timeStr;
-            } else if (diaBalancaData && diaBalancaData.dateStr && horaSaidaStr) {
+            } 
+            // Caso comum: Temos Data separada da Hora (string)
+            else if (diaBalancaData && diaBalancaData.dateStr && horaSaidaStr) {
                 const dt = this.parseDateTime(`${diaBalancaData.dateStr} ${horaSaidaStr}`);
                 if (dt.fullDate) {
                     item.timestamp = dt.fullDate;
                     item.data = dt.dateStr;
                     item.hora = dt.timeStr;
                 }
-            } else if (horaSaidaStr) {
-                 // Fallback para Gráficos Horários (sem data real, mas com hora válida)
-                 item.timestamp = null; 
-                 item.data = null; 
-                 item.hora = horaSaidaStr; 
+            } 
+            // Fallback: Se temos apenas HORA, mas sem data válida, IGNORAMOS para não sujar a previsão 24h
+            // Se o usuário reclama de previsão errada (430k), é porque estamos assumindo "hoje" para dados velhos ou sem data.
+            else if (horaSaidaStr) {
+                 // item.timestamp = new Date(); // REMOVIDO PARA EVITAR DADOS FANTASMAS
+                 // item.data = ...
+                 item.hora = horaSaidaStr; // Mantemos a hora para gráficos puramente horários, mas sem data, não entra na projeção temporal correta
             }
 
             [1, 2, 3].forEach(idx => {
@@ -424,11 +416,13 @@ class IntelligentProcessor {
             if (!finalViagemId || String(finalViagemId).toUpperCase().includes('TOTAL')) return;
             item.idViagem = finalViagemId;
             
-            // Só adiciona se tiver timestamp ou pelo menos hora válida (evita linhas fantasmas)
-            if (item.hora) {
+            // 🔥 FILTRO FINAL: Só aceita se tiver DATA válida OU se tiver hora válida.
+            // Se não tiver nem data nem hora, é lixo.
+            if (item.timestamp || item.hora) {
                 processedData.push(item);
             }
         });
+
         return processedData;
     }
     
