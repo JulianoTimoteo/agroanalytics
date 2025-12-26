@@ -1,4 +1,4 @@
-// intelligent-processor.js - VERSÃO FINAL ESTÁVEL E CORRIGIDA (COM SUPORTE A ACMSAFRA E BLINDAGEM DE DATAS)
+// intelligent-processor.js - VERSÃO FINAL "SUPER PARSER" (CORREÇÃO DE GRÁFICOS VAZIOS)
 class IntelligentProcessor {
     constructor() {
         this.columnMappings = {
@@ -104,15 +104,11 @@ class IntelligentProcessor {
         return `${data}${hora}${String(item.frota).replace(/\W/g, '')}`.toUpperCase();
     }
 
-    // Função auxiliar robusta para extrair hora do Excel ou String
     _formatExcelTime(value) {
         if (!value) return null;
-        // Se for um objeto Date
         if (value instanceof Date) {
             return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
         }
-        
-        // Se for número (fração de dia Excel)
         if (typeof value === 'number') {
             const fractional_day = value - Math.floor(value) + 0.0000001;
             const total_seconds = Math.floor(86400 * fractional_day);
@@ -122,11 +118,9 @@ class IntelligentProcessor {
         }
 
         const strValue = String(value).trim();
-        // Tenta achar padrão HH:MM
         const hourMatch = strValue.match(/(\d{1,2}:\d{1,2})/);
         if (hourMatch) return hourMatch[1];
         
-        // Tenta achar apenas a hora inteira (0-23)
         const intValue = parseInt(strValue);
         if (!isNaN(intValue) && intValue >= 0 && intValue < 24) return `${String(intValue).padStart(2, '0')}:00`;
         
@@ -141,9 +135,7 @@ class IntelligentProcessor {
                 const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                 const rawMatrix = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null });
                 
-                if (!rawMatrix || rawMatrix.length === 0) {
-                    return { type: 'UNKNOWN', fileName, data: [] };
-                }
+                if (!rawMatrix || rawMatrix.length === 0) return { type: 'UNKNOWN', fileName, data: [] };
 
                 const fileType = this.identifyFileTypeIntelligently(rawMatrix, fileName);
                 
@@ -166,7 +158,7 @@ class IntelligentProcessor {
                     return { type: 'UNKNOWN', fileName, data: [] };
                 }
             } catch (error) {
-                console.error(`Erro ao processar ArrayBuffer de ${fileName}:`, error);
+                console.error(`Erro ArrayBuffer ${fileName}:`, error);
                 throw error;
             }
             
@@ -207,7 +199,6 @@ class IntelligentProcessor {
                             resolve({ type: 'UNKNOWN', fileName: file.name, data: [] });
                         }
                     } catch (error) {
-                        console.error(`Erro:`, error);
                         reject(error);
                     }
                 };
@@ -221,7 +212,7 @@ class IntelligentProcessor {
         if (!csvText) return { type: 'UNKNOWN', fileName, data: [] };
 
         try {
-            // cellDates: false para evitar conversão automática bugada do XLSX em CSVs
+            // raw: false força o XLSX a tentar interpretar, mas cellDates: false nos dá a string original para parser
             const workbook = XLSX.read(csvText, { type: 'string', raw: false, cellDates: false });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
@@ -252,7 +243,7 @@ class IntelligentProcessor {
             return { type: 'UNKNOWN', fileName, data: [] };
 
         } catch (error) {
-            console.error(`Erro no processamento CSV para ${fileName}:`, error);
+            console.error(`Erro processamento CSV ${fileName}:`, error);
             return { type: 'UNKNOWN', fileName, data: [] };
         }
     }
@@ -647,7 +638,7 @@ class IntelligentProcessor {
         return normalized;
     }
 
-    // CORREÇÃO: Parser de números blindado contra o erro de "2.818" -> "2818" (milhares)
+    // CORREÇÃO: Parser de números blindado
     parseNumber(value) {
         if (typeof value === 'number') return value;
         if (value === undefined || value === null || value === '') return 0;
@@ -658,17 +649,17 @@ class IntelligentProcessor {
         if (str.includes(',')) {
             str = str.replace(/\./g, '').replace(',', '.');
         } 
-        // Se só tiver ponto, assume padrão US ou sem milhar -> mantém
         
         const num = parseFloat(str);
         return isNaN(num) ? 0 : num;
     }
 
-    // CORREÇÃO: Parser de data blindado (Troca Mês/Dia se necessário)
+    // 🔥 CORREÇÃO FINAL: SUPER PARSER DE DATAS
+    // Resolve problemas de T, espaço duplo, traço e barra misturados
     parseDateTime(val) {
         let dateObj = null, dateStr = '', timeStr = '';
         
-        // --- 1. CASO: Valor Numérico do Excel (CORREÇÃO DE FUSO HORÁRIO) ---
+        // 1. Número Excel (Serial)
         if (typeof val === 'number' && val > 1) { 
             const excelEpochMs = (val - 25569) * 86400 * 1000;
             const compensationMs = 3 * 3600 * 1000; 
@@ -686,19 +677,21 @@ class IntelligentProcessor {
             }
         } 
         
-        // --- 2. CASO: String (CSV/Planilha) ---
+        // 2. String (CSV)
         if (!dateObj && typeof val === 'string') {
             const trimmedVal = val.trim();
             
-            // Caso 2a: Apenas Hora
+            // 2a: Apenas Hora
             const timeOnlyMatch = trimmedVal.match(/^(\d{1,2}:\d{1,2})(?::\d{1,2})?$/);
             if (timeOnlyMatch) {
                 timeStr = timeOnlyMatch[1];
                 return { fullDate: null, dateStr: '', timeStr: timeStr };
             }
 
-            // Caso 2b: Data e Hora completa (DD/MM/YYYY HH:MM ou MM/DD/YYYY HH:MM)
-            const dateTimeMatch = trimmedVal.match(/(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})\s+(\d{1,2}:\d{1,2})(?::\d{1,2})?/);
+            // 2b: Data e Hora completa (Aceita T, espaço, traço, barra)
+            // Ex: 2024-12-26T15:30 ou 26/12/2024 15:30
+            const dateTimeMatch = trimmedVal.match(/(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})[\sT]+(\d{1,2}:\d{1,2})(?::\d{1,2})?/);
+            
             if (dateTimeMatch) {
                 let datePart = dateTimeMatch[1];
                 let timePart = dateTimeMatch[2];
@@ -709,19 +702,9 @@ class IntelligentProcessor {
                 let m = parts[1];
                 let y = parts[2];
                 
-                // Lógica de Correção US/BR:
-                // Se o mês (m) for > 12, com certeza é o dia. Inverte.
-                // Ex: 12/26/2024 -> parts[0]=12, parts[1]=26. 26 > 12? Sim. Troca.
-                // Mas espera, se vier 26/12/2024 -> parts[0]=26, parts[1]=12.
-                // Se parts[0] > 12, então parts[0] É o Dia. (Padrão BR: DD/MM).
-                // Se parts[1] > 12, então parts[1] É o Dia. (Padrão US: MM/DD).
-                
+                // Lógica Inteligente BR vs US:
+                // Se m > 12, com certeza o que achamos que era mês (parts[1]) é dia.
                 if (m > 12) {
-                   // Formato US (MM/DD/YYYY) detectado incorretamente como (DD/MM/YYYY)
-                   // Na verdade, se m > 12, o formato original era MM/DD e foi lido como Dia=MM, Mês=DD.
-                   // Não, espera. Se a string é "12/26/2024". split dá [12, 26, 2024].
-                   // Assumimos inicialmente [d, m, y]. Então d=12, m=26.
-                   // Se m > 12, então o que achamos que era mês (26) é dia. E o que achamos que era dia (12) é mês.
                    const temp = d;
                    d = m;
                    m = temp;
@@ -738,24 +721,21 @@ class IntelligentProcessor {
                     timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
                 }
             }
-            
-            // Caso 2c: Data ISO (YYYY-MM-DD)
+            // 2c: Data ISO Pura (YYYY-MM-DD...)
             else {
-                const csvDateTimeMatch = trimmedVal.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+(\d{1,2}):(\d{1,2}):(\d{1,2})/);
+                const csvDateTimeMatch = trimmedVal.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})[\sT]+(\d{1,2}):(\d{1,2}):(\d{1,2})/);
                 if (csvDateTimeMatch) {
                     const parts = csvDateTimeMatch.slice(1).map(Number);
-                    if (parts.length === 6) {
-                        const [y, m, d, h, min, s] = parts;
-                        dateObj = new Date(y, m - 1, d, h, min, s); 
-                        if (!isNaN(dateObj.getTime())) {
-                            dateStr = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
-                            timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-                        }
+                    const [y, m, d, h, min, s] = parts;
+                    dateObj = new Date(y, m - 1, d, h, min, s); 
+                    if (!isNaN(dateObj.getTime())) {
+                        dateStr = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+                        timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
                     }
                 }
             }
             
-            // Caso 2d: Apenas data
+            // 2d: Apenas data
             if (!dateObj) {
                 const dateOnlyMatch = trimmedVal.match(/^(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})$/);
                 if (dateOnlyMatch) {
@@ -771,7 +751,6 @@ class IntelligentProcessor {
                     }
 
                     if (y < 100) y += 2000;
-                    
                     dateObj = new Date(y, m - 1, d, 0, 0, 0);
                     
                     if (!isNaN(dateObj.getTime())) {
@@ -782,7 +761,6 @@ class IntelligentProcessor {
             }
         }
         
-        // Verifica sanidade do ano (evita ano 1900 ou futuro distante por erro de parser)
         if (dateObj && !isNaN(dateObj.getTime())) {
             if (dateObj.getFullYear() < 2020) {
                  dateObj.setFullYear(new Date().getFullYear());
