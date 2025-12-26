@@ -1,4 +1,4 @@
-// app.js - Orquestrador Principal (VERSÃO FINAL COM LINKS PÚBLICOS)
+// app.js - Orquestrador Principal (CORRIGIDO: CÁLCULO ACUMULADO E LABEL VIAGENS)
 class AgriculturalDashboard {
     constructor() {
         // 1. Definição da Configuração do Firebase
@@ -215,6 +215,36 @@ class AgriculturalDashboard {
         document.head.appendChild(style);
     }
     
+    // =================== 🟥 FUNÇÃO DE CORREÇÃO DE TEXTO DA INTERFACE ===================
+    _fixInterfaceLabels() {
+        // Esta função procura o card que contém a contagem de viagens e corrige o texto "Frota" para "Viagens"
+        // Ela deve ser chamada sempre que o dashboard for renderizado
+        setTimeout(() => {
+            const labels = document.querySelectorAll('.stat-label, .card-title, h3, h4, span, div');
+            labels.forEach(el => {
+                // Se encontrar o texto exato "Frota" em um contexto de contador (geralmente abaixo de um número)
+                if (el.textContent.trim() === 'Frota') {
+                    // Verifica se os irmãos ou contexto indicam que é o contador de viagens (ex: vizinho de "Própria"/"Terceiros")
+                    // Ou simplesmente força a troca se for o card principal
+                    const parentText = el.parentElement ? el.parentElement.textContent : '';
+                    if (parentText.includes('Pró') || parentText.includes('Terc')) {
+                         el.textContent = 'Viagens';
+                    }
+                }
+                
+                // Correção específica para o texto de contagem total se estiver concatenado
+                if (el.innerHTML.includes('Frota') && el.innerHTML.includes('Pró')) {
+                    el.innerHTML = el.innerHTML.replace('Frota', 'Viagens');
+                }
+            });
+            
+            // Tenta buscar pelo ID se existir no HTML padrão
+            const labelTotal = document.getElementById('label-total-frota'); // ID hipotético
+            if (labelTotal) labelTotal.textContent = 'Viagens';
+            
+        }, 500); // Pequeno delay para garantir que o DOM foi montado
+    }
+
     // =================== 🟥 MODO APRESENTAÇÃO ===================
 
     togglePresentation() {
@@ -1545,6 +1575,7 @@ class AgriculturalDashboard {
         this.visualizer.updateDashboard(this.analysisResult);
         
         this.updateAcmSafraDisplay();
+        this._fixInterfaceLabels(); // 🔥 APLICA CORREÇÃO DE LABEL
         
         this.hideLoadingAnimation();
         
@@ -1679,7 +1710,8 @@ class AgriculturalDashboard {
         await this._yieldControl(); 
         this.visualizer.updateDashboard(this.analysisResult);
         
-        this.updateAcmSafraDisplay();
+        this.updateAcmSafraDisplay(); // Atualiza o valor corrigido
+        this._fixInterfaceLabels();   // 🔥 ATUALIZA O TEXTO "VIAGENS"
 
         this.showAnalyticsSection(true);
         if (this.canAccessTab('tab-moagem')) {
@@ -1691,6 +1723,7 @@ class AgriculturalDashboard {
         this.initializeCarousel();
     }
     
+    // 🔥 CORREÇÃO LÓGICA DO VALOR ACUMULADO
     updateAcmSafraDisplay() {
         if (!this.acmSafraData || this.acmSafraData.length === 0) return;
 
@@ -1702,10 +1735,14 @@ class AgriculturalDashboard {
             keys.forEach(key => {
                 const cleanKey = key.toUpperCase().normalize("NFD").replace(/[^A-Z]/g, '');
                 if (cleanKey.includes('PESOLIQUIDO')) {
-                    let rawVal = String(row[key]);
-                    if (rawVal.includes(',') || rawVal.includes('.')) {
+                    let rawVal = String(row[key]).trim();
+                    
+                    // Lógica de parsing robusta para evitar o erro de trilhões
+                    // Se tiver vírgula, assumimos formato BR (1.000,00) -> remove pontos de milhar
+                    if (rawVal.includes(',')) {
                         rawVal = rawVal.replace(/\./g, '').replace(',', '.');
                     }
+                    // Se NÃO tiver vírgula e tiver ponto, assume formato padrão JS (1000.00) -> não faz nada
                     
                     const val = parseFloat(rawVal);
                     if (!isNaN(val) && val > 0) {
@@ -1718,19 +1755,16 @@ class AgriculturalDashboard {
 
         if (encontrou) {
             const elPeso = document.getElementById('acumuladoSafra');
-            
             if (elPeso) {
                 elPeso.textContent = (typeof Utils !== 'undefined' ? Utils.formatNumber(totalAcumulado) : totalAcumulado.toLocaleString('pt-BR', {minimumFractionDigits: 2})) + ' ton';
             }
         }
     }
 
-    // 🔥 NOVA FUNÇÃO FETCH: Usa os links PÚBLICOS (pub?output=csv)
+    // 🔥 NOVA FUNÇÃO FETCH: Usa os links PÚBLICOS
     async fetchFilesFromCloud() {
-        // Cache Buster para evitar dados antigos
         const cacheBuster = Date.now(); 
 
-        // LINKS DIRETOS fornecidos pelo usuário
         const googleSheetsUrls = {
             'Producao.xlsx': `https://docs.google.com/spreadsheets/d/e/2PACX-1vTxQGupaac6UXLCR1CHPP6B5goadSCpYlhX1tN5DHHHdXpS9hgFYMbgVXrmbrYP-jcoirOQ0N4oi5ze/pub?output=csv&t=${cacheBuster}`,
             'Metas.xlsx': `https://docs.google.com/spreadsheets/d/e/2PACX-1vQNEyAUSGlaGXiM2ph5B8ti0OEIBhbtTjE3qOcWhmtJAAatW3G6_HFkFu94oZApjofbDWyL3s7YSAVm/pub?output=csv&t=${cacheBuster}`,
@@ -1746,7 +1780,6 @@ class AgriculturalDashboard {
             try {
                 this.showLoadingAnimation();
                 
-                // Fetch direto (CORS não deve bloquear links pub?output=csv)
                 const response = await fetch(url);
                 
                 let csvText;
@@ -1756,20 +1789,15 @@ class AgriculturalDashboard {
                     csvText = await response.text(); 
                 }
 
-                // 🔥 LÓGICA ESPECIAL PARA ACMSAFRA
                 if (name.includes('AcmSafra')) {
                     if (typeof XLSX !== 'undefined') {
-                        // Lê o CSV como string e converte para JSON
                         const wb = XLSX.read(csvText, { type: 'string' });
                         const sheet = wb.Sheets[wb.SheetNames[0]];
                         const json = XLSX.utils.sheet_to_json(sheet);
                         this.acmSafraData = json; 
-                        
-                        // Também adiciona aos metadados gerais
                         this.metaData = this.metaData.concat(json);
                     }
                 } else {
-                    // Processador padrão para Produção, Metas e Potencial
                     const result = await this.processor.processCSV(csvText, name);
                     
                     if (result && Array.isArray(result.data) && result.data.length > 0) {
@@ -1929,7 +1957,6 @@ class AgriculturalDashboard {
         let cloudMissingFiles = [];
         const fileInfoElement = document.getElementById('fileInfo');
         
-        // CHAMA A FUNÇÃO FETCH ATUALIZADA
         const cloudResult = await this.fetchFilesFromCloud();
         
         cloudMissingFiles = cloudResult.missingFiles;
@@ -1946,7 +1973,6 @@ class AgriculturalDashboard {
         }
 
         if(fileInfoElement) {
-            
             let msg = [];
             let missingFilesList = cloudMissingFiles;
             
