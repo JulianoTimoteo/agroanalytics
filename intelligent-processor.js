@@ -1,4 +1,4 @@
-// intelligent-processor.js - VERSÃO CORRIGIDA (SEM MISTURAR SAFRA COM DIA)
+// intelligent-processor.js - VERSÃO FINAL (CORREÇÃO DE GRÁFICOS E ISOLAMENTO SAFRA)
 class IntelligentProcessor {
     constructor() {
         this.columnMappings = {
@@ -30,7 +30,6 @@ class IntelligentProcessor {
                 'variedade': ['VARIEDADE'],
                 'analisado': ['ANALISADO'],
                 'liberacao': ['LIBERAÇÃO', 'LIB', 'COD LIBERACAO'], 
-                // CORREÇÃO AQUI: Mais opções para Tipo Proprietário
                 'tipoProprietarioFa': ['TIPO PROPRIETARIO F A', 'TIPO PROPRIETARIO (F.A.)', 'TIPO PROPRIETARIO', 'PROPRIETARIO', 'TIPO PROPRIEDADE', 'TIPO', 'PROP'], 
                 'qtdViagem': ['QTD VIAGEM', 'QUANTIDADE VIAGEM'],
                 'distancia': ['DIST MEDIA', 'DISTANCIA', 'KM', 'RAIO MEDIO'],
@@ -126,7 +125,7 @@ class IntelligentProcessor {
         return strValue; 
     }
 
-    // 🔥 Extração de Hora "Vale Tudo"
+    // 🔥 Extração de Hora "Vale Tudo" - Essencial para os gráficos funcionarem
     _forceExtractTime(value) {
         if (value === null || value === undefined || value === '') return null;
 
@@ -308,6 +307,7 @@ class IntelligentProcessor {
             
             const normalizedRow = this.normalizeRowKeys(row);
             
+            // 1. Coleta de Dados Básicos
             Object.keys(normalizedRow).forEach(key => {
                  const value = normalizedRow[key];
                  if (value === null || value === undefined || value === '') return;
@@ -324,10 +324,13 @@ class IntelligentProcessor {
                  }
             });
 
+            // 2. Coleta de Dados Detalhados
             Object.keys(normalizedRow).forEach(key => {
                 const value = normalizedRow[key];
                 if (value === null || value === undefined || value === '') return;
+                
                 if (String(value).toUpperCase().includes('TOTAL') && isNaN(value)) isAggregationRow = true;
+                
                 const cleanKey = key.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
 
                 if (this.matchesPattern(cleanKey, this.columnMappings.production.equipamento)) this._addToList(item.equipamentos, value);
@@ -374,26 +377,30 @@ class IntelligentProcessor {
                 }
             });
 
-            // Consolidação de Data
+            // 3. CONSOLIDAÇÃO DE DATAS E HORAS (A Mágica acontece aqui)
+            
+            // Caso ideal: Temos data completa de saída
             if (dataSaidaData && dataSaidaData.fullDate) {
                 item.timestamp = dataSaidaData.fullDate;
                 item.data = dataSaidaData.dateStr;
                 item.hora = dataSaidaData.timeStr;
-            } else if (diaBalancaData && diaBalancaData.dateStr && horaSaidaStr) {
+            } 
+            // Caso comum: Temos Data separada da Hora (string)
+            else if (diaBalancaData && diaBalancaData.dateStr && horaSaidaStr) {
                 const dt = this.parseDateTime(`${diaBalancaData.dateStr} ${horaSaidaStr}`);
                 if (dt.fullDate) {
                     item.timestamp = dt.fullDate;
                     item.data = dt.dateStr;
                     item.hora = dt.timeStr;
                 }
-            } else if (horaSaidaStr) {
-                 // Fallback para Gráficos Horários (sem data real, mas com hora válida)
-                 item.timestamp = null; 
-                 item.data = null; 
-                 item.hora = horaSaidaStr; 
-            } else {
-                 // SEM HORA VÁLIDA: Descartar ou marcar como inválido para não sujar projeção
-                 // Se não tem hora, não tem como calcular projection 24h corretamente
+            } 
+            // Fallback Crítico: Se temos apenas HORA, forçamos a entrada
+            // (Isso garante que o gráfico horário funcione, mesmo sem data real)
+            else if (horaSaidaStr) {
+                 // Usa data de hoje como dummy se não tiver data, apenas para ordenar
+                 item.timestamp = new Date(); 
+                 item.data = new Date().toLocaleDateString('pt-BR');
+                 item.hora = horaSaidaStr; // Isso é o que o gráfico precisa!
             }
 
             [1, 2, 3].forEach(idx => {
@@ -421,7 +428,7 @@ class IntelligentProcessor {
             if (!finalViagemId || String(finalViagemId).toUpperCase().includes('TOTAL')) return;
             item.idViagem = finalViagemId;
             
-            // Só adiciona se tiver timestamp ou pelo menos hora válida (evita linhas fantasmas)
+            // Só adiciona se tiver hora válida (evita linhas fantasmas)
             if (item.hora) {
                 processedData.push(item);
             }
@@ -429,9 +436,69 @@ class IntelligentProcessor {
         return processedData;
     }
     
-    // ... processMetaData, processPotentialData (Mantidos iguais aos da versão anterior)
+    processMetaData(worksheet, headerRow) {
+        const structuredData = XLSX.utils.sheet_to_json(worksheet, { range: headerRow, defval: null, raw: false }); 
+        const processedData = [];
+        structuredData.forEach((row) => {
+            const item = {}, normalizedRow = this.normalizeRowKeys(row);
+            let isMetaRow = false;
+            Object.keys(normalizedRow).forEach(key => {
+                const value = normalizedRow[key];
+                if (!value) return;
+                const cleanKey = key.toUpperCase().normalize("NFD").replace(/[^A-Z0-9]/g, ' ').trim();
+                
+                Object.keys(this.columnMappings.meta).forEach(standardKey => {
+                    if (this.matchesPattern(cleanKey, this.columnMappings.meta[standardKey])) {
+                        isMetaRow = true;
+                        const numericFields = ['raio', 'tmd', 'cd', 'potencial', 'meta', 'atr', 'vel', 'tc', 'tch', 'ton_hora', 'cm_hora', 'tempo_carre_min', 'cam', 'ciclo', 'viagens', 'tempo'];
+                        item[standardKey] = numericFields.includes(standardKey) ? this.parseNumber(value) : String(value).trim();
+                    }
+                });
+            });
+            if (item.frente && isMetaRow) processedData.push(item);
+        });
+        return processedData;
+    }
     
-    // Métodos Auxiliares e Parsers (Mantidos e Blindados)
+    processPotentialData(worksheet, headerRow) {
+        const structuredData = XLSX.utils.sheet_to_json(worksheet, { range: headerRow, defval: null, raw: false, cellDates: true });
+        return structuredData.map(row => {
+            const item = {};
+            let hasHour = false;
+            Object.keys(row).forEach(key => {
+                const value = row[key];
+                if (value == null || value === '') return;
+                const mappedKey = this.findPotentialKey(key);
+                if (mappedKey === 'hora') {
+                    const horaString = this._forceExtractTime(value);
+                    if (horaString) { item['HORA'] = horaString; item[mappedKey] = horaString; hasHour = true; }
+                } else if (mappedKey) {
+                    item[mappedKey] = this.parseNumber(value);
+                }
+            });
+            
+            // Tenta pegar colunas extras específicas se o mapeamento genérico falhar
+            ['Caminhões  Ida', 'Caminhões  Campo', 'Caminhões  Volta', 'Caminhões  Descarga', 'Caminhões  PARADO', 'CARRETAS CARREGADAS', 'POTENCIAL', 'Caminhões Fila externa'].forEach(exactKey => {
+                let value = row[exactKey] || row[exactKey.replace(/\s{2,}/g, ' ')];
+                if (value != null && value !== '') item[exactKey] = this.parseNumber(value);
+            });
+
+            return hasHour ? item : null;
+        }).filter(i => i); 
+    }
+    
+    findPotentialKey(originalKey) {
+        const cleanKey = originalKey.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, ' ').trim().replace(/\s+/g, ' ');
+        for (const standardKey in this.columnMappings.potential) {
+            if (this.columnMappings.potential[standardKey].some(pattern => {
+                const patUpper = pattern.toUpperCase().replace(/[^A-Z0-9]/g, ' ').trim().replace(/\s+/g, ' ');
+                return cleanKey === patUpper || cleanKey.includes(patUpper);
+            })) return standardKey;
+        }
+        return null;
+    }
+    
+    // Métodos Auxiliares e Parsers
     matchesPattern(key, patterns) {
         return patterns.some(pattern => key.toUpperCase().includes(pattern.toUpperCase()));
     }
@@ -497,62 +564,6 @@ class IntelligentProcessor {
             return { fullDate: dateObj, dateStr, timeStr };
         }
         return { fullDate: null, dateStr: '', timeStr: '' };
-    }
-    
-    // Funções de processamento restantes (meta, potential) permanecem
-    processMetaData(worksheet, headerRow) {
-        const structuredData = XLSX.utils.sheet_to_json(worksheet, { range: headerRow, defval: null, raw: false }); 
-        const processedData = [];
-        structuredData.forEach((row) => {
-            const item = {}, normalizedRow = this.normalizeRowKeys(row);
-            let isMetaRow = false;
-            Object.keys(normalizedRow).forEach(key => {
-                const value = normalizedRow[key];
-                if (!value) return;
-                const cleanKey = key.toUpperCase().normalize("NFD").replace(/[^A-Z0-9]/g, ' ').trim();
-                
-                Object.keys(this.columnMappings.meta).forEach(standardKey => {
-                    if (this.matchesPattern(cleanKey, this.columnMappings.meta[standardKey])) {
-                        isMetaRow = true;
-                        const numericFields = ['raio', 'tmd', 'cd', 'potencial', 'meta', 'atr', 'vel', 'tc', 'tch', 'ton_hora', 'cm_hora', 'tempo_carre_min', 'cam', 'ciclo', 'viagens', 'tempo'];
-                        item[standardKey] = numericFields.includes(standardKey) ? this.parseNumber(value) : String(value).trim();
-                    }
-                });
-            });
-            if (item.frente && isMetaRow) processedData.push(item);
-        });
-        return processedData;
-    }
-    
-    processPotentialData(worksheet, headerRow) {
-        const structuredData = XLSX.utils.sheet_to_json(worksheet, { range: headerRow, defval: null, raw: false, cellDates: true });
-        return structuredData.map(row => {
-            const item = {};
-            let hasHour = false;
-            Object.keys(row).forEach(key => {
-                const value = row[key];
-                if (value == null || value === '') return;
-                const mappedKey = this.findPotentialKey(key);
-                if (mappedKey === 'hora') {
-                    const horaString = this._forceExtractTime(value);
-                    if (horaString) { item['HORA'] = horaString; item[mappedKey] = horaString; hasHour = true; }
-                } else if (mappedKey) {
-                    item[mappedKey] = this.parseNumber(value);
-                }
-            });
-            return hasHour ? item : null;
-        }).filter(i => i); 
-    }
-    
-    findPotentialKey(originalKey) {
-        const cleanKey = originalKey.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, ' ').trim().replace(/\s+/g, ' ');
-        for (const standardKey in this.columnMappings.potential) {
-            if (this.columnMappings.potential[standardKey].some(pattern => {
-                const patUpper = pattern.toUpperCase().replace(/[^A-Z0-9]/g, ' ').trim().replace(/\s+/g, ' ');
-                return cleanKey === patUpper || cleanKey.includes(patUpper);
-            })) return standardKey;
-        }
-        return null;
     }
 }
 if (typeof window !== 'undefined') window.IntelligentProcessor = IntelligentProcessor;
