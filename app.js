@@ -1,6 +1,7 @@
-// app.js - VERSÃO FINAL (CORREÇÃO DE REFRESH E ISOLAMENTO SAFRA)
+// app.js - Orquestrador Principal (VERSÃO FINAL 3.7 - SNAPSHOT ROBUSTO/LIVE TOGGLE)
 class AgriculturalDashboard {
     constructor() {
+        // 1. Definição da Configuração do Firebase
         this.firebaseConfig = {
             apiKey: "AIzaSyADUuqh_THzGInTSytxzUFEwHV5LmwdvYc",
             authDomain: "agroanalytics-api.firebaseapp.com",
@@ -11,11 +12,13 @@ class AgriculturalDashboard {
             measurementId: "G-6TYZDXMJZ5"
         };
 
+        // Inicializa os módulos
         if (typeof IntelligentProcessor !== 'undefined') this.processor = new IntelligentProcessor(); 
         if (typeof DataVisualizer !== 'undefined') this.visualizer = new DataVisualizer();
         if (typeof DataValidator !== 'undefined') this.validator = new DataValidator();
         if (typeof DataAnalyzer !== 'undefined') this.analyzer = new DataAnalyzer();
         
+        // Estado da aplicação
         this.data = []; 
         this.potentialData = []; 
         this.metaData = []; 
@@ -25,24 +28,34 @@ class AgriculturalDashboard {
         this.isAnimatingParticles = true;
         this.animationFrameId = null; 
         
+        // Estado do Carrossel e Apresentação
         this.currentSlideIndex = 0;
         this.carouselInterval = null; 
         this.refreshIntervalId = null; 
         this.refreshTimeoutId = null; 
+        
+        // Variáveis de Controle de Apresentação
         this.presentationInterval = null;
         this.isPresentationActive = false;
 
+        // 🟥 AUTENTICAÇÃO E INICIALIZAÇÃO
         if (typeof firebase !== 'undefined') {
-            if (!firebase.apps.length) firebase.initializeApp(this.firebaseConfig);
-            else firebase.app(); 
+            if (!firebase.apps.length) {
+                firebase.initializeApp(this.firebaseConfig);
+            } else {
+                firebase.app(); 
+            }
             this.auth = firebase.auth();
             this.db = firebase.firestore();
+        } else {
+             console.error("Firebase não inicializado. Verifique o index.html.");
         }
 
         this.userList = [];
         this.currentUserRole = null;
         this.currentUserCustomPermissions = null;
         
+        // 🟥 RBAC: Permissões padrão
         this.permissions = {
             'admin': ['tab-gerenciar', 'tab-moagem', 'tab-alertas', 'tab-caminhao', 'tab-equipamento', 'tab-frentes', 'tab-metas', 'tab-horaria', 'tab-usuarios'],
             'editor': ['tab-gerenciar', 'tab-moagem', 'tab-alertas', 'tab-caminhao', 'tab-equipamento', 'tab-frentes', 'tab-metas', 'tab-horaria'],
@@ -50,14 +63,18 @@ class AgriculturalDashboard {
         };
         this.tabPermissions = {}; 
 
-        this._applyVisualFixes();
+        // Configuração
+        this._applyVisualFixes(); // 🔥 INJEÇÃO DE CSS DE CORREÇÃO
         this.initializeEventListeners();
         this.initializeParticles();
         this.loadTheme();
+
         this.loadMeta(); 
         this.initShiftTracker(); 
+
         this.clearResults(); 
         
+        // 🟥 PROTEÇÃO DE ROTA
         if (this.auth) {
             this.auth.onAuthStateChanged(this.handleAuthStateChange.bind(this));
         } else {
@@ -66,44 +83,142 @@ class AgriculturalDashboard {
         }
     }
 
+    // =================== 🔥 CORREÇÃO VISUAL CRÍTICA (CSS INJETADO) ===================
     _applyVisualFixes() {
         const style = document.createElement('style');
         style.innerHTML = `
-            .info-icon { color: var(--primary, #00D4FF); margin-left: 6px; cursor: help; font-size: 0.9em; position: relative; display: inline-block; vertical-align: middle; z-index: 1001; }
-            .info-icon:hover::after { content: attr(title); position: absolute; top: 150%; left: 50%; transform: translateX(-50%); background: #1e1e24; color: #ffffff; padding: 10px 14px; border-radius: 6px; font-size: 13px; font-weight: normal; width: max-content; min-width: 200px; max-width: 280px; z-index: 2147483647 !important; border: 1px solid var(--primary); box-shadow: 0 10px 30px rgba(0,0,0,0.9); text-align: center; display: block !important; opacity: 1 !important; visibility: visible !important; }
-            .info-icon:hover::before { content: ''; position: absolute; top: 135%; left: 50%; transform: translateX(-50%); border: 6px solid transparent; border-bottom-color: var(--primary); z-index: 2147483647 !important; display: block !important; }
-            .chart-container { background: transparent !important; }
-            [data-theme="light"] body.presentation-mode { background-color: #FFFFFF !important; }
-            [data-theme="dark"] body.presentation-mode { background-color: #000000 !important; }
-            body.snapshot-mode { background-color: #050A14 !important; }
-            [data-theme="light"] body.snapshot-mode { background-color: #F5F7FA !important; }
-            body.snapshot-mode * { backdrop-filter: none !important; box-shadow: none !important; transition: none !important; }
-            body.snapshot-mode .glass-card, body.snapshot-mode .analytics-card { background-color: #1e1e24 !important; border: 1px solid #444 !important; color: #ffffff !important; opacity: 1 !important; }
-            [data-theme="light"] body.snapshot-mode .glass-card { background-color: #ffffff !important; border: 1px solid #ccc !important; color: #000000 !important; }
-            body.snapshot-mode .header-controls, body.snapshot-mode .btn-cssbuttons, body.snapshot-mode #particles-js, body.snapshot-mode .menu-toggle-btn { opacity: 0 !important; pointer-events: none !important; }
+            /* ========== CORREÇÃO DE TOOLTIPS (ANTI-TREMEDEIRA) ========== */
+            .info-icon {
+                color: var(--primary, #00D4FF);
+                margin-left: 6px;
+                cursor: help;
+                font-size: 0.9em;
+                position: relative;
+                display: inline-block;
+                vertical-align: middle;
+                z-index: 1001;
+                text-decoration: none !important;
+                border-bottom: none !important;
+            }
+            
+            .info-icon:hover::after {
+                content: attr(title); 
+                position: absolute;
+                top: 150%; 
+                left: 50%;
+                transform: translateX(-50%);
+                background: #1e1e24; 
+                color: #ffffff;
+                padding: 10px 14px;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: normal;
+                line-height: 1.4;
+                white-space: normal;
+                width: max-content;
+                min-width: 200px;
+                max-width: 280px;
+                pointer-events: none !important; 
+                z-index: 2147483647 !important; 
+                border: 1px solid var(--primary);
+                box-shadow: 0 10px 30px rgba(0,0,0,0.9);
+                text-align: center;
+                display: block !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                text-decoration: none !important;
+            }
+            
+            .info-icon:hover::before {
+                content: '';
+                position: absolute;
+                top: 135%; 
+                left: 50%;
+                transform: translateX(-50%);
+                border: 6px solid transparent;
+                border-bottom-color: var(--primary);
+                z-index: 2147483647 !important;
+                display: block !important;
+                pointer-events: none !important;
+            }
+
+            /* CORREÇÃO PARA GRÁFICOS */
+            .chart-container {
+                background: transparent !important;
+            }
+
+            /* ========== CORREÇÃO MODO APRESENTAÇÃO ========== */
+            [data-theme="light"] body.presentation-mode {
+                background-color: #FFFFFF !important;
+            }
+            [data-theme="dark"] body.presentation-mode {
+                background-color: #000000 !important;
+            }
+
+            /* ========== MODO SNAPSHOT (TOGGLE LIVE) ========== */
+            /* Quando a classe .snapshot-mode é adicionada ao BODY, tudo vira sólido */
+            body.snapshot-mode {
+                background-color: #050A14 !important; /* Fundo Dark Padrão */
+            }
+            
+            [data-theme="light"] body.snapshot-mode {
+                background-color: #F5F7FA !important; /* Fundo Light Padrão */
+            }
+
+            /* Desliga efeitos de vidro e sombras em TUDO */
+            body.snapshot-mode * {
+                backdrop-filter: none !important;
+                -webkit-backdrop-filter: none !important;
+                box-shadow: none !important;
+                text-shadow: none !important;
+                transition: none !important; /* Evita animações durante o print */
+            }
+
+            /* Força Cards Sólidos (Dark) */
+            body.snapshot-mode .glass-card,
+            body.snapshot-mode .analytics-card,
+            body.snapshot-mode .hover-zoom-card,
+            body.snapshot-mode .stat-card-mini,
+            body.snapshot-mode .front-card,
+            body.snapshot-mode .alert-card,
+            body.snapshot-mode .potential-card,
+            body.snapshot-mode .top-list-item,
+            body.snapshot-mode .upload-card-compact {
+                background-color: #1e1e24 !important;
+                background-image: none !important;
+                border: 1px solid #444 !important;
+                color: #ffffff !important;
+                opacity: 1 !important;
+                transform: none !important; /* Remove zoom */
+            }
+
+            /* Força Cards Sólidos (Light) */
+            [data-theme="light"] body.snapshot-mode .glass-card,
+            [data-theme="light"] body.snapshot-mode .analytics-card,
+            [data-theme="light"] body.snapshot-mode .hover-zoom-card,
+            [data-theme="light"] body.snapshot-mode .stat-card-mini,
+            [data-theme="light"] body.snapshot-mode .front-card,
+            [data-theme="light"] body.snapshot-mode .alert-card,
+            [data-theme="light"] body.snapshot-mode .potential-card,
+            [data-theme="light"] body.snapshot-mode .top-list-item {
+                background-color: #ffffff !important;
+                border: 1px solid #ccc !important;
+                color: #000000 !important;
+            }
+
+            /* Esconde elementos flutuantes durante o print */
+            body.snapshot-mode .header-controls,
+            body.snapshot-mode .btn-cssbuttons,
+            body.snapshot-mode #particles-js,
+            body.snapshot-mode .menu-toggle-btn {
+                opacity: 0 !important;
+                pointer-events: none !important;
+            }
         `;
         document.head.appendChild(style);
     }
     
-    _fixInterfaceLabels() {
-        setTimeout(() => {
-            const labels = document.querySelectorAll('.stat-label, .card-title, h3, h4, span, div');
-            labels.forEach(el => {
-                if (el.textContent.trim() === 'Frota') {
-                    const parentText = el.parentElement ? el.parentElement.textContent : '';
-                    if (parentText.includes('Pró') || parentText.includes('Terc')) {
-                         el.textContent = 'Viagens';
-                    }
-                }
-                if (el.innerHTML.includes('Frota') && el.innerHTML.includes('Pró')) {
-                    el.innerHTML = el.innerHTML.replace('Frota', 'Viagens');
-                }
-            });
-            // Tenta buscar pelo ID se existir no HTML padrão
-            const labelTotal = document.getElementById('label-total-frota'); // ID hipotético
-            if (labelTotal) labelTotal.textContent = 'Viagens';
-        }, 500);
-    }
+    // =================== 🟥 MODO APRESENTAÇÃO (CORREÇÃO DE FUNDO) ===================
 
     togglePresentation() {
         if (this.isPresentationActive) {
@@ -121,6 +236,7 @@ class AgriculturalDashboard {
         this.isPresentationActive = true;
         document.body.classList.add('presentation-mode');
         
+        // 🔥 CORREÇÃO: Força a cor de fundo para evitar cinza/branco quebrado em fullscreen
         const currentTheme = document.documentElement.getAttribute('data-theme');
         if (currentTheme === 'light') {
             document.body.style.backgroundColor = '#FFFFFF';
@@ -130,6 +246,7 @@ class AgriculturalDashboard {
             document.documentElement.style.backgroundColor = '#000000';
         }
         
+        // Tenta entrar em tela cheia
         if (document.documentElement.requestFullscreen) {
             document.documentElement.requestFullscreen().catch(e => console.log("Fullscreen negado"));
         }
@@ -144,6 +261,7 @@ class AgriculturalDashboard {
             this.showTab(presentationTabs[currentTabIdx]);
         }, intervalMs);
 
+        // Listener para sair do modo apresentação via ESC
         const exitHandler = () => {
             if (!document.fullscreenElement && this.isPresentationActive) {
                 this.stopPresentation();
@@ -158,7 +276,7 @@ class AgriculturalDashboard {
     stopPresentation() {
         this.isPresentationActive = false;
         document.body.classList.remove('presentation-mode');
-        document.body.style.backgroundColor = ''; 
+        document.body.style.backgroundColor = ''; // Remove cor forçada
         document.documentElement.style.backgroundColor = '';
         
         if (this.presentationInterval) {
@@ -173,13 +291,17 @@ class AgriculturalDashboard {
         const btn = document.querySelector('[onclick*="togglePresentation"]');
         if (btn) btn.innerHTML = '<i class="fas fa-play"></i> INICIAR APRESENTAÇÃO';
         
+        // Retorna para aba de gerenciamento
         this.showTab('tab-gerenciar');
     }
+
+    // =================== 🟥 GESTÃO DE USUÁRIO (CORREÇÃO: INJEÇÃO DINÂMICA) ===================
 
     openUserModal(userId = null) {
         let modal = document.getElementById('admin-user-modal');
         let form = document.getElementById('admin-user-form');
         
+        // Fallback se não existir o modal de admin
         if (!modal) {
             modal = document.getElementById('user-settings-modal');
             if (!modal) return;
@@ -190,10 +312,13 @@ class AgriculturalDashboard {
         const idInput = document.getElementById('admin-user-id');
         if (idInput) idInput.value = userId || '';
         
+        // --- 🔥 INJEÇÃO DE CHECKBOXES DE PERMISSÃO ---
+        // Garante que as opções de permissão existam no formulário
         const permsContainerId = 'admin-user-perms-container';
         let permsContainer = document.getElementById(permsContainerId);
         
         if (!permsContainer && form) {
+            // Cria o container se não existir
             permsContainer = document.createElement('div');
             permsContainer.id = permsContainerId;
             permsContainer.className = 'permissions-grid';
@@ -248,9 +373,11 @@ class AgriculturalDashboard {
             });
             permsContainer.appendChild(grid);
             
+            // Insere antes dos botões de ação ou no final do formulário
             const btns = form.querySelector('.modal-buttons') || form.lastElementChild;
             form.insertBefore(permsContainer, btns);
         }
+        // ---------------------------------------------
 
         if (userId && this.userList.length > 0) {
             const user = this.userList.find(u => u.id === userId);
@@ -258,6 +385,8 @@ class AgriculturalDashboard {
                 const nicknameInput = document.getElementById('admin-user-nickname');
                 if (nicknameInput) nicknameInput.value = user.nickname || user.email.split('@')[0];
                 
+                // 🔥 Lógica de Permissões: Verifica se o usuário tem permissões customizadas.
+                // Se tiver, usa elas. Se não, usa as do papel (role).
                 let activePerms = [];
                 if (user.customPermissions && Array.isArray(user.customPermissions) && user.customPermissions.length > 0) {
                     activePerms = user.customPermissions;
@@ -265,6 +394,7 @@ class AgriculturalDashboard {
                     activePerms = this.permissions[user.role] || [];
                 }
 
+                // Marca as checkboxes
                 if (permsContainer) {
                     const checkboxes = permsContainer.querySelectorAll('input[name="perm"]');
                     checkboxes.forEach(cb => {
@@ -273,6 +403,7 @@ class AgriculturalDashboard {
                 }
             }
         } else {
+            // Novo usuário: limpa checkboxes
             if (permsContainer) {
                 const checkboxes = permsContainer.querySelectorAll('input[name="perm"]');
                 checkboxes.forEach(cb => cb.checked = false);
@@ -286,6 +417,7 @@ class AgriculturalDashboard {
         const id = document.getElementById('admin-user-id').value;
         const nickname = document.getElementById('admin-user-nickname').value;
         
+        // Coleta checkboxes marcados
         const checkboxes = document.querySelectorAll('#admin-user-form input[name="perm"]:checked');
         const selectedPerms = Array.from(checkboxes).map(cb => cb.value);
 
@@ -295,17 +427,18 @@ class AgriculturalDashboard {
         }
 
         try {
+            // Se tiver ID, atualiza
             if (id) {
                 const updateData = {
                     nickname: nickname,
-                    customPermissions: selectedPerms, 
+                    customPermissions: selectedPerms, // 🔥 SALVA AS PERMISSÕES CUSTOMIZADAS
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
                 
                 await this.db.collection("users").doc(id).update(updateData);
                 alert("Usuário e permissões atualizados com sucesso!");
                 this.closeModal('admin-user-modal');
-                this.loadUserManagementData(); 
+                this.loadUserManagementData(); // Recarrega a tabela
             } else {
                 alert("Para criar um novo usuário, utilize a aba de Solicitações ou o formulário de cadastro.");
             }
@@ -315,29 +448,40 @@ class AgriculturalDashboard {
         }
     }
 
+    // =================== 🟥 LÓGICA DE AUTENTICAÇÃO E MODAL ===================
+    
     async handleAuthStateChange(user) {
         const loginScreen = document.getElementById('login-screen');
         const mainDashboard = document.getElementById('main-dashboard');
         
         if (user) {
+            // Usuário logado
             if (loginScreen) loginScreen.classList.add('hidden');
             if (mainDashboard) mainDashboard.classList.remove('hidden');
 
             await this.fixUserProfile(user);
+            
+            // 1. Carrega dados do usuário e permissões PRIMEIRO
             await this.loadCurrentUserProfile();
+            
+            // 2. Renderiza a navegação baseada no perfil carregado
             this.renderTabsNavigation();
             
+            // 3. Define a aba inicial com segurança
             const initialTab = this.canAccessTab('tab-gerenciar') ? 'tab-gerenciar' : 'tab-moagem';
             this.showTab(initialTab);
 
+            // 4. Inicia o carregamento de dados
             this.startLoadingProcess(); 
             this.setupAutoRefresh(); 
             
+            // Verifica se é admin para carregar gerenciamento
             if (await this.isCurrentUserAdmin()) {
                 this.loadUserManagementData();
             }
 
         } else {
+            // Usuário deslogado
             if (mainDashboard) mainDashboard.classList.add('hidden');
             if (loginScreen) loginScreen.classList.remove('hidden');
             this.currentUserRole = null;
@@ -357,8 +501,10 @@ class AgriculturalDashboard {
 
         try {
             let email = userIdentifier.trim().toLowerCase();
+
             if (!email.includes('@')) {
-                email += "@agro.local";
+                // Tenta login direto assumindo que é email mesmo sem @
+                email += "@agro.local"; // Exemplo de sufixo se necessário, ou deixe como está
             }
             
             await this.auth.signInWithEmailAndPassword(email, password);
@@ -492,6 +638,8 @@ class AgriculturalDashboard {
         }
     }
 
+    // =================== 🟥 FUNÇÕES DE DADOS E LAYOUT ===================
+
     async fixUserProfile(user) {
         try {
             const userRef = this.db.collection("users").doc(user.uid);
@@ -618,6 +766,7 @@ class AgriculturalDashboard {
             if (userDoc.exists) {
                 const userData = userDoc.data();
                 this.currentUserRole = userData.role;
+                // 🔥 Carrega permissões personalizadas se existirem
                 this.currentUserCustomPermissions = userData.customPermissions || null;
             } else {
                  this.currentUserRole = 'viewer';
@@ -930,6 +1079,8 @@ class AgriculturalDashboard {
         `;
     }
     
+    // =================== 🟥 LÓGICA DE SOLICITAÇÕES DE CADASTRO 🟥 ===================
+    
     async loadRegistrationRequests() {
         const container = document.getElementById('registration-requests-container');
         if (!container || !this.db) return;
@@ -1001,37 +1152,49 @@ class AgriculturalDashboard {
         }
     }
 
+    // =================== 🟥 APROVAÇÃO SIMPLIFICADA (SEM CLOUD FUNCTIONS) ===================
+
     async approveRequest(requestId, email, name) {
         if (!confirm(`Aprovar cadastro para ${email}?\n\nVocê deverá criar o usuário no Firebase Authentication e fornecer a senha manualmente ao solicitante.`)) return;
         
         const SENHA_PADRAO = 'a123456@';
         
         try {
+            // TRUQUE DO APP SECUNDÁRIO:
+            // Inicializa uma segunda instância do Firebase para criar o usuário
+            // sem deslogar o admin atual da instância principal.
+            // Usa a config armazenada na classe para inicializar
             const secondaryApp = firebase.initializeApp(this.firebaseConfig, "SecondaryApp");
             const secondaryAuth = secondaryApp.auth();
 
+            // 1. Cria o usuário no Authentication (usando o app secundário)
             const userCredential = await secondaryAuth.createUserWithEmailAndPassword(email, SENHA_PADRAO);
             const newUid = userCredential.user.uid;
 
+            // 2. Salva os dados no Firestore (Coleção 'users')
+            // Usamos 'this.db' que é o banco principal onde o admin tem permissão de escrita
             await this.db.collection('users').doc(newUid).set({
                 email: email,
                 name: name,
-                role: 'viewer', 
+                role: 'viewer', // Papel padrão
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 approvedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
+            // 3. Atualiza o status da solicitação
             await this.db.collection("requests").doc(requestId).update({ 
                 status: 'approved', 
                 authUid: newUid,
                 approvedAt: firebase.firestore.FieldValue.serverTimestamp() 
             });
 
+            // 4. Limpeza: Desloga e deleta o app secundário para não pesar a memória
             await secondaryAuth.signOut();
             await secondaryApp.delete();
 
             alert(`Sucesso! Usuário criado.\nEmail: ${email}\nSenha: ${SENHA_PADRAO}\n\nEnvie estes dados ao usuário.`);
             
+            // Recarrega as listas
             this.loadRegistrationRequests();
             this.loadUserManagementData();
 
@@ -1043,6 +1206,7 @@ class AgriculturalDashboard {
                 alert(`Erro ao criar usuário: ${error.message}`);
             }
             
+            // Tenta limpar o app secundário se deu erro no meio
             try {
                 const app = firebase.app("SecondaryApp");
                 if(app) await app.delete();
@@ -1062,20 +1226,27 @@ class AgriculturalDashboard {
             alert(`Erro ao recusar solicitação: ${error.message}`);
         }
     }
+    
+    // =================== 🟥 LÓGICA DE PERMISSÕES DE ABAS (RBAC) 🟥 ===================
 
     canAccessTab(tabId) {
         if (!this.currentUserRole) return false;
 
+        // Admin sempre tem acesso
         if (this.currentUserRole === 'admin') return true;
         
         if (tabId === 'tab-gerenciar') {
              return this.currentUserRole === 'admin' || this.currentUserRole === 'editor';
         }
 
+        // 🔥 CORREÇÃO: Verifica se o usuário tem permissões customizadas (se sim, usa elas)
         if (this.currentUserCustomPermissions && Array.isArray(this.currentUserCustomPermissions)) {
+            // Se o usuário tem lista personalizada, verifica se o tabId está nela
+            // Mas 'tab-gerenciar' continua restrito a admin/editor acima
             return this.currentUserCustomPermissions.includes(tabId);
         }
 
+        // Fallback: Verifica as permissões padrão do papel
         return this.permissions[this.currentUserRole] && this.permissions[this.currentUserRole].includes(tabId);
     }
     
@@ -1117,6 +1288,10 @@ class AgriculturalDashboard {
             `;
         }).join('');
 
+        // 3. Define a aba inicial com base no acesso permitido (CORREÇÃO DO ERRO DE ACESSO)
+        // OBS: A chamada real de showTab acontece no handleAuthStateChange
+        
+        // No mobile, define o menu como "ativo" para a transição
         if (window.innerWidth <= 768) {
             tabsNavContainer.classList.add('active');
         }
@@ -1227,6 +1402,9 @@ class AgriculturalDashboard {
         }
     }
 
+    // =================== 🟥 FUNÇÕES PRINCIPAIS E MOBILE UI 🟥 ===================
+    
+    // 🔥 NOVO: Alterna o Menu Off-Canvas para Mobile
     toggleMenu(forceClose = false) {
         const menuContainer = document.getElementById('tabs-nav-container');
         const backdrop = document.getElementById('menu-backdrop');
@@ -1235,6 +1413,7 @@ class AgriculturalDashboard {
         if (!menuContainer || !backdrop) return;
 
         if (!isMobile) {
+            // Em desktop, garante que o menu e o backdrop estão fechados/escondidos
             menuContainer.classList.remove('open');
             backdrop.classList.remove('active');
             document.body.style.overflowY = 'auto'; 
@@ -1242,17 +1421,21 @@ class AgriculturalDashboard {
         }
 
         if (forceClose || menuContainer.classList.contains('open')) {
+            // Fecha o menu
             menuContainer.classList.remove('open');
             backdrop.classList.remove('active');
-            backdrop.style.display = 'none'; 
+            backdrop.style.display = 'none'; // Força o display do backdrop
             document.body.style.overflowY = 'auto'; 
+            // Garante que o body não fique com a classe no-scroll
             document.body.classList.remove('no-scroll'); 
 
         } else {
+            // Abre o menu
             menuContainer.classList.add('open');
             backdrop.classList.add('active');
-            backdrop.style.display = 'block'; 
-            document.body.style.overflowY = 'hidden'; 
+            backdrop.style.display = 'block'; // Força o display do backdrop
+            document.body.style.overflowY = 'hidden'; // Impede a rolagem do fundo
+            // Adiciona a classe no-scroll no body para evitar scroll duplo
             document.body.classList.add('no-scroll');
         }
     }
@@ -1296,6 +1479,8 @@ class AgriculturalDashboard {
     }
     
     initializeCarousel() {
+        const totalSlides = 3; 
+
         this.stopCarousel(); 
         this.carouselInterval = setInterval(() => {
             this.navigateCarousel(1); 
@@ -1311,6 +1496,7 @@ class AgriculturalDashboard {
         }
     }
     
+    // 🔥 CORREÇÃO: Função de navegação do carrossel para os botões do HTML
     navigateCarousel(direction) {
         const slides = document.querySelectorAll('.carousel-slide');
         if (slides.length === 0) return;
@@ -1324,7 +1510,7 @@ class AgriculturalDashboard {
         }
 
         this.showSlide(newIndex);
-        this.initializeCarousel();
+        this.initializeCarousel(); // Reseta o timer do carrossel
     }
 
     showSlide(index) {
@@ -1420,8 +1606,7 @@ class AgriculturalDashboard {
         
         this.visualizer.updateDashboard(this.analysisResult);
         
-        this.updateAcmSafraDisplay();
-        this._fixInterfaceLabels(); 
+        this.updateAcmSafraDisplay(); // 🔥 ATUALIZA O ACUMULADO
         
         this.hideLoadingAnimation();
         
@@ -1534,9 +1719,11 @@ class AgriculturalDashboard {
         }
     }
     
+    // --- CORREÇÃO TEXTO ATUALIZAÇÃO ---
+    // Agora aponta para o novo ID exclusivo 'refreshStatusText'
     updateNextRefreshDisplay(targetTime) {
         const targetTimeStr = targetTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        const displayEl = document.getElementById('refreshStatusText'); 
+        const displayEl = document.getElementById('refreshStatusText'); // Alvo correto
 
         if (displayEl) {
             displayEl.innerHTML = `Próxima atualização: ${targetTimeStr} 🔄️`;
@@ -1556,8 +1743,8 @@ class AgriculturalDashboard {
         await this._yieldControl(); 
         this.visualizer.updateDashboard(this.analysisResult);
         
+        // 🔥 ATUALIZA O ACUMULADO SAFRA APÓS O DASHBOARD
         this.updateAcmSafraDisplay();
-        this._fixInterfaceLabels();
 
         this.showAnalyticsSection(true);
         if (this.canAccessTab('tab-moagem')) {
@@ -1569,6 +1756,7 @@ class AgriculturalDashboard {
         this.initializeCarousel();
     }
     
+    // 🔥 FUNÇÃO PARA PROCESSAR E EXIBIR DADOS DO ACMSAFRA
     updateAcmSafraDisplay() {
         if (!this.acmSafraData || this.acmSafraData.length === 0) return;
 
@@ -1579,11 +1767,14 @@ class AgriculturalDashboard {
             const keys = Object.keys(row);
             keys.forEach(key => {
                 const cleanKey = key.toUpperCase().normalize("NFD").replace(/[^A-Z]/g, '');
+                // Procura especificamente 'PESOLIQUIDO' (normalizado)
                 if (cleanKey.includes('PESOLIQUIDO')) {
-                    let rawVal = String(row[key]).trim();
-                    if (rawVal.includes(',')) {
+                    // Remove pontos de milhar e troca vírgula por ponto
+                    let rawVal = String(row[key]);
+                    if (rawVal.includes(',') || rawVal.includes('.')) {
                         rawVal = rawVal.replace(/\./g, '').replace(',', '.');
                     }
+                    
                     const val = parseFloat(rawVal);
                     if (!isNaN(val) && val > 0) {
                         totalAcumulado += val;
@@ -1595,6 +1786,7 @@ class AgriculturalDashboard {
 
         if (encontrou) {
             const elPeso = document.getElementById('acumuladoSafra');
+            
             if (elPeso) {
                 elPeso.textContent = (typeof Utils !== 'undefined' ? Utils.formatNumber(totalAcumulado) : totalAcumulado.toLocaleString('pt-BR', {minimumFractionDigits: 2})) + ' ton';
             }
@@ -1602,13 +1794,18 @@ class AgriculturalDashboard {
     }
 
     async fetchFilesFromCloud() {
+        const SHEET_ID_PRODUCAO = "1jefysQxtcwSg5fGM-F1BSfAPljyatKwz9OBCRIOg_bo";
+        const SHEET_ID_METAS = "1RWjssOEZmmLQwxzFNCrQpLlPvw1bZqT1kEAVcXp6g90";
+        const SHEET_ID_POTENCIAL = "1qxhVvQAfVtE8P4EDdwBb-m3ShlWLfFq_YoToJkFKZh4";
+        const SHEET_ID_ACMSAFRA = "1VEXjvegAtWrAAlCxMQkdG3qFNOX0F8LR3JDIFivBEPk"; 
+        
         const cacheBuster = Date.now(); 
 
         const googleSheetsUrls = {
-            'Producao.xlsx': `https://docs.google.com/spreadsheets/d/e/2PACX-1vTxQGupaac6UXLCR1CHPP6B5goadSCpYlhX1tN5DHHHdXpS9hgFYMbgVXrmbrYP-jcoirOQ0N4oi5ze/pub?output=csv&t=${cacheBuster}`,
-            'Metas.xlsx': `https://docs.google.com/spreadsheets/d/e/2PACX-1vQNEyAUSGlaGXiM2ph5B8ti0OEIBhbtTjE3qOcWhmtJAAatW3G6_HFkFu94oZApjofbDWyL3s7YSAVm/pub?output=csv&t=${cacheBuster}`,
-            'Potencial.xlsx': `https://docs.google.com/spreadsheets/d/e/2PACX-1vRO00gvJ9bi5lAsVOvNO2E4jXPSyDzVnjCOAqFeG9mB_KAD8BtyGmPMd8bQIANyo_Fj_Ve3mGgqgejI/pub?output=csv&t=${cacheBuster}`,
-            'AcmSafra.xlsx': `https://docs.google.com/spreadsheets/d/e/2PACX-1vQHEqli7vcRkApksm7zj7wZAMYG6vWxkc3OaTVyCXZpnUOEsYhzErGYFSOwbkeHNrxAjaoF-GrNY1h7/pub?output=csv&t=${cacheBuster}`
+            'Producao.xlsx': `https://docs.google.com/spreadsheets/d/${SHEET_ID_PRODUCAO}/export?format=csv&gid=0&t=${cacheBuster}`,
+            'Metas.xlsx': `https://docs.google.com/spreadsheets/d/${SHEET_ID_METAS}/export?format=csv&gid=0&t=${cacheBuster}`,
+            'Potencial.xlsx': `https://docs.google.com/spreadsheets/d/${SHEET_ID_POTENCIAL}/export?format=csv&gid=0&t=${cacheBuster}`,
+            'AcmSafra.xlsx': `https://docs.google.com/spreadsheets/d/${SHEET_ID_ACMSAFRA}/export?format=csv&gid=0&t=${cacheBuster}`
         };
 
         let results = [];
@@ -1618,25 +1815,40 @@ class AgriculturalDashboard {
         for (const [name, url] of Object.entries(googleSheetsUrls)) {
             try {
                 this.showLoadingAnimation();
+                
                 const response = await fetch(url);
+                
                 let csvText;
                 if (!response.ok) {
-                   throw new Error(`Falha no download - Status HTTP: ${response.status}`);
+                    const gvizUrl = url.replace('/export?format=csv&gid=0', '/gviz/tq?tqx=out:csv&gid=0');
+                    const gvizResponse = await fetch(gvizUrl);
+                    
+                    if (!gvizResponse.ok) {
+                        throw new Error(`Falha no download - Status HTTP: ${response.status} ou ${gvizResponse.status}`);
+                    }
+                    csvText = await gvizResponse.text();
                 } else {
                     csvText = await response.text(); 
                 }
 
+                // 🔥 LÓGICA ESPECIAL PARA ACMSAFRA
                 if (name.includes('AcmSafra')) {
                     if (typeof XLSX !== 'undefined') {
+                        // Se o CSV vier como string, converte. Se for blob, usa readAsBinaryString
+                        // Aqui assumimos que csvText é string CSV
                         const wb = XLSX.read(csvText, { type: 'string' });
                         const sheet = wb.Sheets[wb.SheetNames[0]];
                         const json = XLSX.utils.sheet_to_json(sheet);
                         this.acmSafraData = json; 
-                        // 🔥 REMOVIDO PARA EVITAR SOMA DUPLA: this.metaData = this.metaData.concat(json);
+                        
+                        // Também adiciona aos metadados gerais
+                        this.metaData = this.metaData.concat(json);
                     }
                 } else {
                     const result = await this.processor.processCSV(csvText, name);
+                    
                     if (result && Array.isArray(result.data) && result.data.length > 0) {
+                        
                         if (result.type === 'PRODUCTION') {
                             this.data = this.data.concat(result.data); 
                         } else if (result.type === 'POTENTIAL') {
@@ -1644,17 +1856,19 @@ class AgriculturalDashboard {
                         } else if (result.type === 'META') {
                             this.metaData = this.metaData.concat(result.data); 
                         }
+                        
                         results.push(result);
                         successCount++;
                     } else {
                          missingFiles.push(name + ' (Vazio/Inválido)');
                     }
                 }
+
             } catch (error) {
-                console.error(`Erro ao baixar ${name}:`, error);
                 missingFiles.push(name);
             }
         }
+
         return { successCount, results, missingFiles };
     }
 
@@ -1672,7 +1886,7 @@ class AgriculturalDashboard {
         this.data = [];
         this.potentialData = [];
         this.metaData = []; 
-        this.acmSafraData = []; 
+        this.acmSafraData = []; // Limpa dados antigos
         
         this.clearResults(); 
         this.stopCarousel(); 
@@ -1690,6 +1904,7 @@ class AgriculturalDashboard {
                 if (file.name.startsWith('.')) continue; 
                 if (!file.name.toLowerCase().match(/\.(xlsx|xls|csv)$/)) continue;
                 
+                // 🔥 Upload Manual de AcmSafra
                 if (file.name.includes('AcmSafra')) {
                     const reader = new FileReader();
                     reader.onload = (evt) => {
@@ -1697,8 +1912,8 @@ class AgriculturalDashboard {
                         const sheet = wb.Sheets[wb.SheetNames[0]];
                         const json = XLSX.utils.sheet_to_json(sheet);
                         this.acmSafraData = json;
-                        // 🔥 REMOVIDO: this.metaData = this.metaData.concat(json);
-                        this.updateAcmSafraDisplay();
+                        this.metaData = this.metaData.concat(json);
+                        this.updateAcmSafraDisplay(); // Atualiza UI imediatamente
                     };
                     reader.readAsBinaryString(file);
                     continue; 
@@ -1776,7 +1991,82 @@ class AgriculturalDashboard {
         }
     }
     
-    // 🔥 CORREÇÃO: Listener com preventDefault para evitar refresh no Enter
+    async startLoadingProcess() {
+        this.showLoadingAnimation();
+        
+        const refreshStartTime = new Date();
+        
+        this.data = [];
+        this.potentialData = [];
+        this.metaData = [];
+        this.acmSafraData = [];
+        this.clearResults();
+        this.stopCarousel();
+        
+        let cloudMissingFiles = [];
+        const fileInfoElement = document.getElementById('fileInfo');
+        
+        const cloudResult = await this.fetchFilesFromCloud();
+        
+        cloudMissingFiles = cloudResult.missingFiles;
+
+        if (this.data.length === 0 && this.potentialData.length === 0 && this.metaData.length === 0 && this.acmSafraData.length === 0) {
+            this.hideLoadingAnimation();
+            this.showAnalyticsSection(false);
+            
+            let missingFilesString = cloudMissingFiles.join(', ');
+            let errorMessage = `Falha na automação. Arquivos ausentes: ${missingFilesString}. Por favor, use a aba 'Gerenciar' para o upload manual.`;
+            
+            this.showError(errorMessage); 
+            return;
+        }
+
+        if(fileInfoElement) {
+            
+            let msg = [];
+            let missingFilesList = cloudMissingFiles;
+            
+            const essentialFiles = {
+                'Produção': this.data.length > 0,
+                'Potencial': this.potentialData.length > 0,
+                'Metas': this.metaData.length > 0,
+                'AcmSafra': this.acmSafraData.length > 0
+            };
+            
+            if (essentialFiles.Produção) msg.push(`Produção`);
+            if (essentialFiles.Potencial) msg.push(`Potencial`);
+            if (essentialFiles.Metas) msg.push(`Metas`);
+            if (essentialFiles.AcmSafra) msg.push(`AcmSafra`);
+
+            let finalMessage = `Arquivos carregados: ${msg.join(' + ')}.`;
+            let statusColor = 'var(--success)';
+            if (missingFilesList.length > 0) {
+                finalMessage = `Carregados: ${msg.join(' + ')}.`;
+            }
+            
+            finalMessage += ` (Via Google Sheets)`;
+
+            fileInfoElement.textContent = finalMessage;
+            fileInfoElement.style.color = statusColor;
+        }
+
+        const now = new Date();
+        let targetTime = new Date(now);
+        
+        if (now.getMinutes() < 30) {
+            targetTime.setMinutes(30);
+        } else {
+            targetTime.setHours(now.getHours() + 1);
+            targetTime.setMinutes(0);
+        }
+        targetTime.setSeconds(0);
+        targetTime.setMilliseconds(0);
+
+        await this.processDataAsync(this.data, this.potentialData, this.metaData, targetTime); 
+
+        this.hideLoadingAnimation();
+    }
+    
     initializeEventListeners() {
         const fileInput = document.getElementById('fileInput');
         if (fileInput) {
@@ -1785,6 +2075,7 @@ class AgriculturalDashboard {
 
         const dropzoneCard = document.getElementById('dropzoneCard'); 
         if (dropzoneCard) {
+            
             ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                 dropzoneCard.addEventListener(eventName, (e) => {
                     e.preventDefault();
@@ -1839,32 +2130,12 @@ class AgriculturalDashboard {
         
         const metaMoagemInput = document.getElementById('metaMoagemInput');
         if (metaMoagemInput) {
-            // 🔥 CORREÇÃO REFRESH
-            metaMoagemInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault(); 
-                    e.target.blur(); // Tira o foco para disparar o change
-                }
-            });
-            metaMoagemInput.addEventListener('change', (e) => {
-                e.preventDefault();
-                this.saveMeta(e.target.value, 'metaMoagem');
-            });
+            metaMoagemInput.addEventListener('change', (e) => this.saveMeta(e.target.value, 'metaMoagem'));
         }
         
         const metaRotacaoInput = document.getElementById('metaRotacaoInput');
         if (metaRotacaoInput) {
-            // 🔥 CORREÇÃO REFRESH
-            metaRotacaoInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault(); 
-                    e.target.blur();
-                }
-            });
-            metaRotacaoInput.addEventListener('change', (e) => {
-                e.preventDefault();
-                this.saveMeta(e.target.value, 'metaRotacao');
-            });
+            metaRotacaoInput.addEventListener('change', (e) => this.saveMeta(e.target.value, 'metaRotacao'));
         }
         
         const logoutBtn = document.getElementById('logout-btn');
@@ -1877,16 +2148,19 @@ class AgriculturalDashboard {
             themeToggle.addEventListener('click', () => this.toggleTheme());
         }
 
+        // 🟥 Botão de Menu Mobile
         const menuToggleBtn = document.getElementById('menu-toggle-btn');
         if (menuToggleBtn) {
             menuToggleBtn.addEventListener('click', () => this.toggleMenu());
         }
         
+        // 🟥 Backdrop do Menu Mobile
         const menuBackdrop = document.getElementById('menu-backdrop');
         if (menuBackdrop) {
             menuBackdrop.addEventListener('click', () => this.toggleMenu(true));
         }
 
+        // 🟥 Listeners para troca de formulário Login/Cadastro
         const showSignupLink = document.getElementById('show-signup');
         const showLoginLink = document.getElementById('show-login');
         const loginForm = document.getElementById('login-form');
@@ -1909,6 +2183,7 @@ class AgriculturalDashboard {
             });
         }
         
+        // 🟥 Listeners para submissão dos formulários
         if (loginForm) {
             loginForm.addEventListener('submit', (e) => this.handleLogin(e));
         }
@@ -1916,27 +2191,32 @@ class AgriculturalDashboard {
             signupForm.addEventListener('submit', (e) => this.handleSignup(e));
         }
         
+        // 🟥 Listener para o modal de troca de senha
         const updatePasswordForm = document.getElementById('update-password-form');
         if (updatePasswordForm) {
             updatePasswordForm.addEventListener('submit', (e) => this.updatePassword(e));
         }
         
+        // 🟥 Listener para link de redefinição de senha
         const forgotPasswordLink = document.getElementById('forgot-password-link');
         if (forgotPasswordLink) {
              forgotPasswordLink.addEventListener('click', (e) => this.handleForgotPassword(e));
         }
 
+        // 🟥 Listener para fechar modal (mantido)
         document.getElementById('user-settings-modal').addEventListener('click', (e) => {
              if (e.target.id === 'user-settings-modal') {
                  this.closeModal('user-settings-modal');
              }
         });
 
+        // 🟥 Listener para form admin de usuário (NOVO)
         const adminUserForm = document.getElementById('admin-user-form');
         if (adminUserForm) {
             adminUserForm.addEventListener('submit', (e) => this.saveAdminUser(e));
         }
         
+        // 🟥 Navegação de sub-abas (Gerenciamento de Usuários)
         document.querySelectorAll('#tab-usuarios .sub-tabs-nav button').forEach(button => {
              const onclickAttr = button.getAttribute('onclick');
              if (onclickAttr && onclickAttr.includes('showSubTab')) {
@@ -1948,16 +2228,21 @@ class AgriculturalDashboard {
              }
          });
          
+        // 🟥 Listener de redimensionamento da janela (para desligar/ligar o menu mobile)
         window.addEventListener('resize', () => {
             if (window.innerWidth > 768) {
+                // Desliga o modo mobile ao voltar para desktop
                 this.toggleMenu(true);
             }
         });
         
+        // 🟥 Botões do carrossel (CORRIGIDO)
         const carouselNavBtns = document.querySelectorAll('.carousel-nav');
         if (carouselNavBtns) {
              carouselNavBtns.forEach(btn => {
+                 // Remove o listener de evento inline no HTML
                  btn.removeAttribute('onclick');
+                 
                  btn.addEventListener('click', (e) => {
                      e.preventDefault();
                      e.stopPropagation();
@@ -2142,7 +2427,9 @@ class AgriculturalDashboard {
             return; 
         }
         
+        // 🔥 NOVO: Fechar menu mobile ao selecionar uma aba
         if (window.innerWidth <= 768) {
+            // Usa a lógica do mobileOptimizer
             if (window.mobileOptimizer) {
                  window.mobileOptimizer.closeMobileMenu();
             } else {
@@ -2201,6 +2488,7 @@ class AgriculturalDashboard {
         document.documentElement.setAttribute('data-theme', savedTheme);
         const icon = document.getElementById('theme-icon');
         if (icon) {
+             // Garante que o ícone é visível em qualquer tema
             icon.className = savedTheme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
         }
     }
@@ -2277,7 +2565,7 @@ class AgriculturalDashboard {
         this.animationFrameId = requestAnimationFrame(animate); 
     }
 
-    // =================== 📸 CAPTURA DE TELA ===================
+    // =================== 📸 CAPTURA DE TELA (CORREÇÃO DE PELÍCULA BRANCA - LIVE TOGGLE) ===================
 
     async captureScreenshot() {
         const activeTab = document.querySelector('.tab-pane.active');
@@ -2290,14 +2578,18 @@ class AgriculturalDashboard {
         const originalBtnText = exportBtn ? exportBtn.innerHTML : '';
         if (exportBtn) exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processando...';
 
+        // 1. PREPARAÇÃO DO DOM REAL
         const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-        const bgColor = isDark ? '#050A14' : '#F5F7FA'; 
+        const bgColor = isDark ? '#050A14' : '#F5F7FA'; // Cor sólida para o fundo
 
+        // Desliga efeitos de partículas para evitar ruído
         const particles = document.getElementById('particles-js');
         if(particles) particles.style.display = 'none';
 
+        // 🔥 O PULO DO GATO: Adiciona a classe que "nuked" todos os filtros
         document.body.classList.add('snapshot-mode');
         
+        // Força uma pequena espera para o navegador repintar (remove o blur da tela)
         await new Promise(resolve => setTimeout(resolve, 300));
 
         try {
@@ -2338,6 +2630,7 @@ class AgriculturalDashboard {
             console.error("Erro no snapshot:", error);
             alert("Erro ao capturar tela: " + error.message);
         } finally {
+            // 2. RESTAURAÇÃO (Liga tudo de volta)
             document.body.classList.remove('snapshot-mode');
             
             if(particles) particles.style.display = 'block';
