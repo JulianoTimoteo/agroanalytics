@@ -1,4 +1,4 @@
-// app.js - Orquestrador Principal (VERSÃO FINAL COMPLETA - SEM COMPACTAÇÃO)
+// app.js - Orquestrador Principal (VERSÃO FINAL COMPLETA - SEM ERROS DE LOADING)
 class AgriculturalDashboard {
     constructor() {
         // 1. Definição da Configuração do Firebase
@@ -1071,8 +1071,6 @@ class AgriculturalDashboard {
         `;
     }
     
-    // =================== 🟥 LÓGICA DE SOLICITAÇÕES ===================
-    
     async loadRegistrationRequests() {
         const container = document.getElementById('registration-requests-container');
         if (!container || !this.db) return;
@@ -1568,7 +1566,7 @@ class AgriculturalDashboard {
         this.visualizer.updateDashboard(this.analysisResult);
         
         this.updateAcmSafraDisplay();
-        this._fixInterfaceLabels();
+        this._fixInterfaceLabels(); // 🔥 APLICA CORREÇÃO DE LABEL
         
         this.hideLoadingAnimation();
         
@@ -1703,8 +1701,8 @@ class AgriculturalDashboard {
         await this._yieldControl(); 
         this.visualizer.updateDashboard(this.analysisResult);
         
-        this.updateAcmSafraDisplay();
-        this._fixInterfaceLabels();
+        this.updateAcmSafraDisplay(); // Atualiza o valor corrigido
+        this._fixInterfaceLabels();   // 🔥 ATUALIZA O TEXTO "VIAGENS"
 
         this.showAnalyticsSection(true);
         if (this.canAccessTab('tab-moagem')) {
@@ -1716,6 +1714,7 @@ class AgriculturalDashboard {
         this.initializeCarousel();
     }
     
+    // 🔥 CORREÇÃO LÓGICA DO VALOR ACUMULADO
     updateAcmSafraDisplay() {
         if (!this.acmSafraData || this.acmSafraData.length === 0) return;
 
@@ -1728,9 +1727,13 @@ class AgriculturalDashboard {
                 const cleanKey = key.toUpperCase().normalize("NFD").replace(/[^A-Z]/g, '');
                 if (cleanKey.includes('PESOLIQUIDO')) {
                     let rawVal = String(row[key]).trim();
+                    
+                    // Lógica de parsing robusta para evitar o erro de trilhões
+                    // Se tiver vírgula, assumimos formato BR (1.000,00) -> remove pontos de milhar
                     if (rawVal.includes(',')) {
                         rawVal = rawVal.replace(/\./g, '').replace(',', '.');
                     }
+                    // Se NÃO tiver vírgula e tiver ponto, assume formato padrão JS (1000.00) -> não faz nada
                     
                     const val = parseFloat(rawVal);
                     if (!isNaN(val) && val > 0) {
@@ -1749,12 +1752,10 @@ class AgriculturalDashboard {
         }
     }
 
-    // 🔥 NOVA FUNÇÃO FETCH: Usa os links PÚBLICOS (pub?output=csv)
+    // 🔥 NOVA FUNÇÃO FETCH: Usa os links PÚBLICOS
     async fetchFilesFromCloud() {
-        // Cache Buster para evitar dados antigos
         const cacheBuster = Date.now(); 
 
-        // LINKS DIRETOS fornecidos pelo usuário
         const googleSheetsUrls = {
             'Producao.xlsx': `https://docs.google.com/spreadsheets/d/e/2PACX-1vTxQGupaac6UXLCR1CHPP6B5goadSCpYlhX1tN5DHHHdXpS9hgFYMbgVXrmbrYP-jcoirOQ0N4oi5ze/pub?output=csv&t=${cacheBuster}`,
             'Metas.xlsx': `https://docs.google.com/spreadsheets/d/e/2PACX-1vQNEyAUSGlaGXiM2ph5B8ti0OEIBhbtTjE3qOcWhmtJAAatW3G6_HFkFu94oZApjofbDWyL3s7YSAVm/pub?output=csv&t=${cacheBuster}`,
@@ -1770,7 +1771,6 @@ class AgriculturalDashboard {
             try {
                 this.showLoadingAnimation();
                 
-                // Fetch direto (CORS não deve bloquear links pub?output=csv)
                 const response = await fetch(url);
                 
                 let csvText;
@@ -1780,20 +1780,15 @@ class AgriculturalDashboard {
                     csvText = await response.text(); 
                 }
 
-                // 🔥 LÓGICA ESPECIAL PARA ACMSAFRA
                 if (name.includes('AcmSafra')) {
                     if (typeof XLSX !== 'undefined') {
-                        // Lê o CSV como string e converte para JSON
                         const wb = XLSX.read(csvText, { type: 'string' });
                         const sheet = wb.Sheets[wb.SheetNames[0]];
                         const json = XLSX.utils.sheet_to_json(sheet);
                         this.acmSafraData = json; 
-                        
-                        // REMOVIDO PARA EVITAR DUPLICAÇÃO DE METAS
-                        // this.metaData = this.metaData.concat(json);
+                        // 🔥 REMOVIDO PARA EVITAR SOMA DUPLA: this.metaData = this.metaData.concat(json);
                     }
                 } else {
-                    // Processador padrão para Produção, Metas e Potencial
                     const result = await this.processor.processCSV(csvText, name);
                     
                     if (result && Array.isArray(result.data) && result.data.length > 0) {
@@ -1861,7 +1856,7 @@ class AgriculturalDashboard {
                         const sheet = wb.Sheets[wb.SheetNames[0]];
                         const json = XLSX.utils.sheet_to_json(sheet);
                         this.acmSafraData = json;
-                        // REMOVIDO PARA EVITAR DUPLICAÇÃO
+                        // 🔥 REMOVIDO PARA EVITAR DUPLICAÇÃO
                         // this.metaData = this.metaData.concat(json);
                         this.updateAcmSafraDisplay();
                     };
@@ -2079,24 +2074,31 @@ class AgriculturalDashboard {
         
         const metaMoagemInput = document.getElementById('metaMoagemInput');
         if (metaMoagemInput) {
+            // 🔥 CORREÇÃO: Previne recarregamento da página ao dar Enter
             metaMoagemInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
-                    e.preventDefault(); // Impede o envio de formulário
-                    e.target.blur(); 
+                    e.preventDefault();
+                    e.target.blur(); // Tira o foco para disparar o change
                 }
             });
-            metaMoagemInput.addEventListener('change', (e) => this.saveMeta(e.target.value, 'metaMoagem'));
+            metaMoagemInput.addEventListener('change', (e) => {
+                e.preventDefault();
+                this.saveMeta(e.target.value, 'metaMoagem');
+            });
         }
         
         const metaRotacaoInput = document.getElementById('metaRotacaoInput');
         if (metaRotacaoInput) {
             metaRotacaoInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
-                    e.preventDefault(); // Impede o envio de formulário
-                    e.target.blur(); 
+                    e.preventDefault();
+                    e.target.blur();
                 }
             });
-            metaRotacaoInput.addEventListener('change', (e) => this.saveMeta(e.target.value, 'metaRotacao'));
+            metaRotacaoInput.addEventListener('change', (e) => {
+                e.preventDefault();
+                this.saveMeta(e.target.value, 'metaRotacao');
+            });
         }
         
         const logoutBtn = document.getElementById('logout-btn');
