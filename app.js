@@ -1,7 +1,6 @@
-// app.js - Orquestrador Principal (CORRIGIDO: CÁLCULO ACUMULADO E LABEL VIAGENS)
+// app.js - VERSÃO FINAL (CORREÇÃO DE REFRESH E ISOLAMENTO SAFRA)
 class AgriculturalDashboard {
     constructor() {
-        // 1. Definição da Configuração do Firebase
         this.firebaseConfig = {
             apiKey: "AIzaSyADUuqh_THzGInTSytxzUFEwHV5LmwdvYc",
             authDomain: "agroanalytics-api.firebaseapp.com",
@@ -12,13 +11,11 @@ class AgriculturalDashboard {
             measurementId: "G-6TYZDXMJZ5"
         };
 
-        // Inicializa os módulos
         if (typeof IntelligentProcessor !== 'undefined') this.processor = new IntelligentProcessor(); 
         if (typeof DataVisualizer !== 'undefined') this.visualizer = new DataVisualizer();
         if (typeof DataValidator !== 'undefined') this.validator = new DataValidator();
         if (typeof DataAnalyzer !== 'undefined') this.analyzer = new DataAnalyzer();
         
-        // Estado da aplicação
         this.data = []; 
         this.potentialData = []; 
         this.metaData = []; 
@@ -28,34 +25,24 @@ class AgriculturalDashboard {
         this.isAnimatingParticles = true;
         this.animationFrameId = null; 
         
-        // Estado do Carrossel e Apresentação
         this.currentSlideIndex = 0;
         this.carouselInterval = null; 
         this.refreshIntervalId = null; 
         this.refreshTimeoutId = null; 
-        
-        // Variáveis de Controle de Apresentação
         this.presentationInterval = null;
         this.isPresentationActive = false;
 
-        // 🟥 AUTENTICAÇÃO E INICIALIZAÇÃO
         if (typeof firebase !== 'undefined') {
-            if (!firebase.apps.length) {
-                firebase.initializeApp(this.firebaseConfig);
-            } else {
-                firebase.app(); 
-            }
+            if (!firebase.apps.length) firebase.initializeApp(this.firebaseConfig);
+            else firebase.app(); 
             this.auth = firebase.auth();
             this.db = firebase.firestore();
-        } else {
-             console.error("Firebase não inicializado. Verifique o index.html.");
         }
 
         this.userList = [];
         this.currentUserRole = null;
         this.currentUserCustomPermissions = null;
         
-        // 🟥 RBAC: Permissões padrão
         this.permissions = {
             'admin': ['tab-gerenciar', 'tab-moagem', 'tab-alertas', 'tab-caminhao', 'tab-equipamento', 'tab-frentes', 'tab-metas', 'tab-horaria', 'tab-usuarios'],
             'editor': ['tab-gerenciar', 'tab-moagem', 'tab-alertas', 'tab-caminhao', 'tab-equipamento', 'tab-frentes', 'tab-metas', 'tab-horaria'],
@@ -63,18 +50,14 @@ class AgriculturalDashboard {
         };
         this.tabPermissions = {}; 
 
-        // Configuração
-        this._applyVisualFixes(); // 🔥 INJEÇÃO DE CSS DE CORREÇÃO
+        this._applyVisualFixes();
         this.initializeEventListeners();
         this.initializeParticles();
         this.loadTheme();
-
         this.loadMeta(); 
         this.initShiftTracker(); 
-
         this.clearResults(); 
         
-        // 🟥 PROTEÇÃO DE ROTA
         if (this.auth) {
             this.auth.onAuthStateChanged(this.handleAuthStateChange.bind(this));
         } else {
@@ -83,169 +66,44 @@ class AgriculturalDashboard {
         }
     }
 
-    // =================== 🔥 CORREÇÃO VISUAL CRÍTICA (CSS INJETADO) ===================
     _applyVisualFixes() {
         const style = document.createElement('style');
         style.innerHTML = `
-            /* ========== CORREÇÃO DE TOOLTIPS (ANTI-TREMEDEIRA) ========== */
-            .info-icon {
-                color: var(--primary, #00D4FF);
-                margin-left: 6px;
-                cursor: help;
-                font-size: 0.9em;
-                position: relative;
-                display: inline-block;
-                vertical-align: middle;
-                z-index: 1001;
-                text-decoration: none !important;
-                border-bottom: none !important;
-            }
-            
-            .info-icon:hover::after {
-                content: attr(title); 
-                position: absolute;
-                top: 150%; 
-                left: 50%;
-                transform: translateX(-50%);
-                background: #1e1e24; 
-                color: #ffffff;
-                padding: 10px 14px;
-                border-radius: 6px;
-                font-size: 13px;
-                font-weight: normal;
-                line-height: 1.4;
-                white-space: normal;
-                width: max-content;
-                min-width: 200px;
-                max-width: 280px;
-                pointer-events: none !important; 
-                z-index: 2147483647 !important; 
-                border: 1px solid var(--primary);
-                box-shadow: 0 10px 30px rgba(0,0,0,0.9);
-                text-align: center;
-                display: block !important;
-                opacity: 1 !important;
-                visibility: visible !important;
-                text-decoration: none !important;
-            }
-            
-            .info-icon:hover::before {
-                content: '';
-                position: absolute;
-                top: 135%; 
-                left: 50%;
-                transform: translateX(-50%);
-                border: 6px solid transparent;
-                border-bottom-color: var(--primary);
-                z-index: 2147483647 !important;
-                display: block !important;
-                pointer-events: none !important;
-            }
-
-            /* CORREÇÃO PARA GRÁFICOS */
-            .chart-container {
-                background: transparent !important;
-            }
-
-            /* ========== CORREÇÃO MODO APRESENTAÇÃO ========== */
-            [data-theme="light"] body.presentation-mode {
-                background-color: #FFFFFF !important;
-            }
-            [data-theme="dark"] body.presentation-mode {
-                background-color: #000000 !important;
-            }
-
-            /* ========== MODO SNAPSHOT (TOGGLE LIVE) ========== */
-            body.snapshot-mode {
-                background-color: #050A14 !important; /* Fundo Dark Padrão */
-            }
-            
-            [data-theme="light"] body.snapshot-mode {
-                background-color: #F5F7FA !important; /* Fundo Light Padrão */
-            }
-
-            body.snapshot-mode * {
-                backdrop-filter: none !important;
-                -webkit-backdrop-filter: none !important;
-                box-shadow: none !important;
-                text-shadow: none !important;
-                transition: none !important; 
-            }
-
-            /* Força Cards Sólidos (Dark) */
-            body.snapshot-mode .glass-card,
-            body.snapshot-mode .analytics-card,
-            body.snapshot-mode .hover-zoom-card,
-            body.snapshot-mode .stat-card-mini,
-            body.snapshot-mode .front-card,
-            body.snapshot-mode .alert-card,
-            body.snapshot-mode .potential-card,
-            body.snapshot-mode .top-list-item,
-            body.snapshot-mode .upload-card-compact {
-                background-color: #1e1e24 !important;
-                background-image: none !important;
-                border: 1px solid #444 !important;
-                color: #ffffff !important;
-                opacity: 1 !important;
-                transform: none !important; 
-            }
-
-            /* Força Cards Sólidos (Light) */
-            [data-theme="light"] body.snapshot-mode .glass-card,
-            [data-theme="light"] body.snapshot-mode .analytics-card,
-            [data-theme="light"] body.snapshot-mode .hover-zoom-card,
-            [data-theme="light"] body.snapshot-mode .stat-card-mini,
-            [data-theme="light"] body.snapshot-mode .front-card,
-            [data-theme="light"] body.snapshot-mode .alert-card,
-            [data-theme="light"] body.snapshot-mode .potential-card,
-            [data-theme="light"] body.snapshot-mode .top-list-item {
-                background-color: #ffffff !important;
-                border: 1px solid #ccc !important;
-                color: #000000 !important;
-            }
-
-            body.snapshot-mode .header-controls,
-            body.snapshot-mode .btn-cssbuttons,
-            body.snapshot-mode #particles-js,
-            body.snapshot-mode .menu-toggle-btn {
-                opacity: 0 !important;
-                pointer-events: none !important;
-            }
+            .info-icon { color: var(--primary, #00D4FF); margin-left: 6px; cursor: help; font-size: 0.9em; position: relative; display: inline-block; vertical-align: middle; z-index: 1001; }
+            .info-icon:hover::after { content: attr(title); position: absolute; top: 150%; left: 50%; transform: translateX(-50%); background: #1e1e24; color: #ffffff; padding: 10px 14px; border-radius: 6px; font-size: 13px; font-weight: normal; width: max-content; min-width: 200px; max-width: 280px; z-index: 2147483647 !important; border: 1px solid var(--primary); box-shadow: 0 10px 30px rgba(0,0,0,0.9); text-align: center; display: block !important; opacity: 1 !important; visibility: visible !important; }
+            .info-icon:hover::before { content: ''; position: absolute; top: 135%; left: 50%; transform: translateX(-50%); border: 6px solid transparent; border-bottom-color: var(--primary); z-index: 2147483647 !important; display: block !important; }
+            .chart-container { background: transparent !important; }
+            [data-theme="light"] body.presentation-mode { background-color: #FFFFFF !important; }
+            [data-theme="dark"] body.presentation-mode { background-color: #000000 !important; }
+            body.snapshot-mode { background-color: #050A14 !important; }
+            [data-theme="light"] body.snapshot-mode { background-color: #F5F7FA !important; }
+            body.snapshot-mode * { backdrop-filter: none !important; box-shadow: none !important; transition: none !important; }
+            body.snapshot-mode .glass-card, body.snapshot-mode .analytics-card { background-color: #1e1e24 !important; border: 1px solid #444 !important; color: #ffffff !important; opacity: 1 !important; }
+            [data-theme="light"] body.snapshot-mode .glass-card { background-color: #ffffff !important; border: 1px solid #ccc !important; color: #000000 !important; }
+            body.snapshot-mode .header-controls, body.snapshot-mode .btn-cssbuttons, body.snapshot-mode #particles-js, body.snapshot-mode .menu-toggle-btn { opacity: 0 !important; pointer-events: none !important; }
         `;
         document.head.appendChild(style);
     }
     
-    // =================== 🟥 FUNÇÃO DE CORREÇÃO DE TEXTO DA INTERFACE ===================
     _fixInterfaceLabels() {
-        // Esta função procura o card que contém a contagem de viagens e corrige o texto "Frota" para "Viagens"
-        // Ela deve ser chamada sempre que o dashboard for renderizado
         setTimeout(() => {
             const labels = document.querySelectorAll('.stat-label, .card-title, h3, h4, span, div');
             labels.forEach(el => {
-                // Se encontrar o texto exato "Frota" em um contexto de contador (geralmente abaixo de um número)
                 if (el.textContent.trim() === 'Frota') {
-                    // Verifica se os irmãos ou contexto indicam que é o contador de viagens (ex: vizinho de "Própria"/"Terceiros")
-                    // Ou simplesmente força a troca se for o card principal
                     const parentText = el.parentElement ? el.parentElement.textContent : '';
                     if (parentText.includes('Pró') || parentText.includes('Terc')) {
                          el.textContent = 'Viagens';
                     }
                 }
-                
-                // Correção específica para o texto de contagem total se estiver concatenado
                 if (el.innerHTML.includes('Frota') && el.innerHTML.includes('Pró')) {
                     el.innerHTML = el.innerHTML.replace('Frota', 'Viagens');
                 }
             });
-            
             // Tenta buscar pelo ID se existir no HTML padrão
             const labelTotal = document.getElementById('label-total-frota'); // ID hipotético
             if (labelTotal) labelTotal.textContent = 'Viagens';
-            
-        }, 500); // Pequeno delay para garantir que o DOM foi montado
+        }, 500);
     }
-
-    // =================== 🟥 MODO APRESENTAÇÃO ===================
 
     togglePresentation() {
         if (this.isPresentationActive) {
@@ -317,8 +175,6 @@ class AgriculturalDashboard {
         
         this.showTab('tab-gerenciar');
     }
-
-    // =================== 🟥 GESTÃO DE USUÁRIO ===================
 
     openUserModal(userId = null) {
         let modal = document.getElementById('admin-user-modal');
@@ -459,8 +315,6 @@ class AgriculturalDashboard {
         }
     }
 
-    // =================== 🟥 LÓGICA DE AUTENTICAÇÃO ===================
-    
     async handleAuthStateChange(user) {
         const loginScreen = document.getElementById('login-screen');
         const mainDashboard = document.getElementById('main-dashboard');
@@ -637,8 +491,6 @@ class AgriculturalDashboard {
             modal.classList.remove('visible');
         }
     }
-
-    // =================== 🟥 FUNÇÕES DE DADOS E LAYOUT ===================
 
     async fixUserProfile(user) {
         try {
@@ -1078,8 +930,6 @@ class AgriculturalDashboard {
         `;
     }
     
-    // =================== 🟥 LÓGICA DE SOLICITAÇÕES ===================
-    
     async loadRegistrationRequests() {
         const container = document.getElementById('registration-requests-container');
         if (!container || !this.db) return;
@@ -1212,8 +1062,6 @@ class AgriculturalDashboard {
             alert(`Erro ao recusar solicitação: ${error.message}`);
         }
     }
-    
-    // =================== 🟥 PERMISSÕES DE ABAS (RBAC) ===================
 
     canAccessTab(tabId) {
         if (!this.currentUserRole) return false;
@@ -1379,8 +1227,6 @@ class AgriculturalDashboard {
         }
     }
 
-    // =================== 🟥 FUNÇÕES PRINCIPAIS E MOBILE UI ===================
-    
     toggleMenu(forceClose = false) {
         const menuContainer = document.getElementById('tabs-nav-container');
         const backdrop = document.getElementById('menu-backdrop');
@@ -1575,7 +1421,7 @@ class AgriculturalDashboard {
         this.visualizer.updateDashboard(this.analysisResult);
         
         this.updateAcmSafraDisplay();
-        this._fixInterfaceLabels(); // 🔥 APLICA CORREÇÃO DE LABEL
+        this._fixInterfaceLabels(); 
         
         this.hideLoadingAnimation();
         
@@ -1710,8 +1556,8 @@ class AgriculturalDashboard {
         await this._yieldControl(); 
         this.visualizer.updateDashboard(this.analysisResult);
         
-        this.updateAcmSafraDisplay(); // Atualiza o valor corrigido
-        this._fixInterfaceLabels();   // 🔥 ATUALIZA O TEXTO "VIAGENS"
+        this.updateAcmSafraDisplay();
+        this._fixInterfaceLabels();
 
         this.showAnalyticsSection(true);
         if (this.canAccessTab('tab-moagem')) {
@@ -1723,7 +1569,6 @@ class AgriculturalDashboard {
         this.initializeCarousel();
     }
     
-    // 🔥 CORREÇÃO LÓGICA DO VALOR ACUMULADO
     updateAcmSafraDisplay() {
         if (!this.acmSafraData || this.acmSafraData.length === 0) return;
 
@@ -1736,14 +1581,9 @@ class AgriculturalDashboard {
                 const cleanKey = key.toUpperCase().normalize("NFD").replace(/[^A-Z]/g, '');
                 if (cleanKey.includes('PESOLIQUIDO')) {
                     let rawVal = String(row[key]).trim();
-                    
-                    // Lógica de parsing robusta para evitar o erro de trilhões
-                    // Se tiver vírgula, assumimos formato BR (1.000,00) -> remove pontos de milhar
                     if (rawVal.includes(',')) {
                         rawVal = rawVal.replace(/\./g, '').replace(',', '.');
                     }
-                    // Se NÃO tiver vírgula e tiver ponto, assume formato padrão JS (1000.00) -> não faz nada
-                    
                     const val = parseFloat(rawVal);
                     if (!isNaN(val) && val > 0) {
                         totalAcumulado += val;
@@ -1761,7 +1601,6 @@ class AgriculturalDashboard {
         }
     }
 
-    // 🔥 NOVA FUNÇÃO FETCH: Usa os links PÚBLICOS
     async fetchFilesFromCloud() {
         const cacheBuster = Date.now(); 
 
@@ -1779,9 +1618,7 @@ class AgriculturalDashboard {
         for (const [name, url] of Object.entries(googleSheetsUrls)) {
             try {
                 this.showLoadingAnimation();
-                
                 const response = await fetch(url);
-                
                 let csvText;
                 if (!response.ok) {
                    throw new Error(`Falha no download - Status HTTP: ${response.status}`);
@@ -1795,13 +1632,11 @@ class AgriculturalDashboard {
                         const sheet = wb.Sheets[wb.SheetNames[0]];
                         const json = XLSX.utils.sheet_to_json(sheet);
                         this.acmSafraData = json; 
-                        this.metaData = this.metaData.concat(json);
+                        // 🔥 REMOVIDO PARA EVITAR SOMA DUPLA: this.metaData = this.metaData.concat(json);
                     }
                 } else {
                     const result = await this.processor.processCSV(csvText, name);
-                    
                     if (result && Array.isArray(result.data) && result.data.length > 0) {
-                        
                         if (result.type === 'PRODUCTION') {
                             this.data = this.data.concat(result.data); 
                         } else if (result.type === 'POTENTIAL') {
@@ -1809,20 +1644,17 @@ class AgriculturalDashboard {
                         } else if (result.type === 'META') {
                             this.metaData = this.metaData.concat(result.data); 
                         }
-                        
                         results.push(result);
                         successCount++;
                     } else {
                          missingFiles.push(name + ' (Vazio/Inválido)');
                     }
                 }
-
             } catch (error) {
                 console.error(`Erro ao baixar ${name}:`, error);
                 missingFiles.push(name);
             }
         }
-
         return { successCount, results, missingFiles };
     }
 
@@ -1865,7 +1697,7 @@ class AgriculturalDashboard {
                         const sheet = wb.Sheets[wb.SheetNames[0]];
                         const json = XLSX.utils.sheet_to_json(sheet);
                         this.acmSafraData = json;
-                        this.metaData = this.metaData.concat(json);
+                        // 🔥 REMOVIDO: this.metaData = this.metaData.concat(json);
                         this.updateAcmSafraDisplay();
                     };
                     reader.readAsBinaryString(file);
@@ -1944,79 +1776,7 @@ class AgriculturalDashboard {
         }
     }
     
-    async startLoadingProcess() {
-        this.showLoadingAnimation();
-        
-        this.data = [];
-        this.potentialData = [];
-        this.metaData = [];
-        this.acmSafraData = [];
-        this.clearResults();
-        this.stopCarousel();
-        
-        let cloudMissingFiles = [];
-        const fileInfoElement = document.getElementById('fileInfo');
-        
-        const cloudResult = await this.fetchFilesFromCloud();
-        
-        cloudMissingFiles = cloudResult.missingFiles;
-
-        if (this.data.length === 0 && this.potentialData.length === 0 && this.metaData.length === 0 && this.acmSafraData.length === 0) {
-            this.hideLoadingAnimation();
-            this.showAnalyticsSection(false);
-            
-            let missingFilesString = cloudMissingFiles.join(', ');
-            let errorMessage = `Falha na automação. Arquivos ausentes: ${missingFilesString}. Por favor, use a aba 'Gerenciar' para o upload manual.`;
-            
-            this.showError(errorMessage); 
-            return;
-        }
-
-        if(fileInfoElement) {
-            let msg = [];
-            let missingFilesList = cloudMissingFiles;
-            
-            const essentialFiles = {
-                'Produção': this.data.length > 0,
-                'Potencial': this.potentialData.length > 0,
-                'Metas': this.metaData.length > 0,
-                'AcmSafra': this.acmSafraData.length > 0
-            };
-            
-            if (essentialFiles.Produção) msg.push(`Produção`);
-            if (essentialFiles.Potencial) msg.push(`Potencial`);
-            if (essentialFiles.Metas) msg.push(`Metas`);
-            if (essentialFiles.AcmSafra) msg.push(`AcmSafra`);
-
-            let finalMessage = `Arquivos carregados: ${msg.join(' + ')}.`;
-            let statusColor = 'var(--success)';
-            if (missingFilesList.length > 0) {
-                finalMessage = `Carregados: ${msg.join(' + ')}.`;
-            }
-            
-            finalMessage += ` (Via Google Sheets)`;
-
-            fileInfoElement.textContent = finalMessage;
-            fileInfoElement.style.color = statusColor;
-        }
-
-        const now = new Date();
-        let targetTime = new Date(now);
-        
-        if (now.getMinutes() < 30) {
-            targetTime.setMinutes(30);
-        } else {
-            targetTime.setHours(now.getHours() + 1);
-            targetTime.setMinutes(0);
-        }
-        targetTime.setSeconds(0);
-        targetTime.setMilliseconds(0);
-
-        await this.processDataAsync(this.data, this.potentialData, this.metaData, targetTime); 
-
-        this.hideLoadingAnimation();
-    }
-    
+    // 🔥 CORREÇÃO: Listener com preventDefault para evitar refresh no Enter
     initializeEventListeners() {
         const fileInput = document.getElementById('fileInput');
         if (fileInput) {
@@ -2079,12 +1839,32 @@ class AgriculturalDashboard {
         
         const metaMoagemInput = document.getElementById('metaMoagemInput');
         if (metaMoagemInput) {
-            metaMoagemInput.addEventListener('change', (e) => this.saveMeta(e.target.value, 'metaMoagem'));
+            // 🔥 CORREÇÃO REFRESH
+            metaMoagemInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); 
+                    e.target.blur(); // Tira o foco para disparar o change
+                }
+            });
+            metaMoagemInput.addEventListener('change', (e) => {
+                e.preventDefault();
+                this.saveMeta(e.target.value, 'metaMoagem');
+            });
         }
         
         const metaRotacaoInput = document.getElementById('metaRotacaoInput');
         if (metaRotacaoInput) {
-            metaRotacaoInput.addEventListener('change', (e) => this.saveMeta(e.target.value, 'metaRotacao'));
+            // 🔥 CORREÇÃO REFRESH
+            metaRotacaoInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); 
+                    e.target.blur();
+                }
+            });
+            metaRotacaoInput.addEventListener('change', (e) => {
+                e.preventDefault();
+                this.saveMeta(e.target.value, 'metaRotacao');
+            });
         }
         
         const logoutBtn = document.getElementById('logout-btn');
