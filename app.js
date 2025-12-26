@@ -1071,6 +1071,8 @@ class AgriculturalDashboard {
         `;
     }
     
+    // =================== 🟥 LÓGICA DE SOLICITAÇÕES ===================
+    
     async loadRegistrationRequests() {
         const container = document.getElementById('registration-requests-container');
         if (!container || !this.db) return;
@@ -2077,8 +2079,8 @@ class AgriculturalDashboard {
             // 🔥 CORREÇÃO: Previne recarregamento da página ao dar Enter
             metaMoagemInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
-                    e.preventDefault();
-                    e.target.blur(); // Tira o foco para disparar o change
+                    e.preventDefault(); // Impede o envio de formulário
+                    e.target.blur(); 
                 }
             });
             metaMoagemInput.addEventListener('change', (e) => {
@@ -2091,8 +2093,8 @@ class AgriculturalDashboard {
         if (metaRotacaoInput) {
             metaRotacaoInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') {
-                    e.preventDefault();
-                    e.target.blur();
+                    e.preventDefault(); // Impede o envio de formulário
+                    e.target.blur(); 
                 }
             });
             metaRotacaoInput.addEventListener('change', (e) => {
