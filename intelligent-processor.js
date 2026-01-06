@@ -1,10 +1,10 @@
-// intelligent-processor.js - VERSÃO FINAL CORRIGIDA (SEM DADOS FANTASMAS)
+// intelligent-processor.js - VERSÃO FINAL CORRIGIDA (V.2026 - FIX 430K ERROR)
 class IntelligentProcessor {
     constructor() {
         this.columnMappings = {
             'production': {
-                'viagem': ['VIAGEM', 'N VIAGEM', 'NUMERO VIAGEM', 'ID_VIAGEM'],
-                'frota': ['FROTA MOTRIZ', 'FROTA', 'MOTRIZ', 'CAMINHAO', 'PREFIXO'],
+                'viagem': ['VIAGEM', 'N VIAGEM', 'NUMERO VIAGEM'],
+                'frota': ['FROTA MOTRIZ', 'FROTA', 'MOTRIZ', 'CAMINHAO'],
                 'equipamento': ['EQUIPAMENTO', 'COLHEDORA', 'CARREG COLHED', 'CARREG COLHED 1', 'CARREG./COLHED. 1'],
                 'equipamento2': ['CARREG COLHED 2', 'CARREG./COLHED. 2'], 
                 'equipamento3': ['CARREG COLHED 3', 'CARREG./COLHED. 3'], 
@@ -18,19 +18,19 @@ class IntelligentProcessor {
                 'transbordo': ['TRANSBORDO', 'TRAT TRANSBORDO', 'TRAT TRANSBORDO 1', 'TRAT. TRANSBORDO 1'],
                 'transbordo2': ['TRAT TRANSBORDO 2', 'TRAT. TRANSBORDO 2'], 
                 'transbordo3': ['TRAT TRANSBORDO 3', 'TRAT. TRANSBORDO 3'],
-                'peso': ['PESO LIQUIDO', 'PESO FINAL', 'PESO LÍQUIDO', 'LIQUIDO'], 
-                'pesoBruto': ['PESO BRUTO', 'BRUTO'],
-                'pesoTara': ['PESO TARA', 'TARA'],
-                'dia_balanca': ['DIA BALANCA', 'DATA ENTRADA', 'DATA/HORA ENTRADA', 'DATA'], 
-                'data_saida': ['DATA/HORA SAÍDA', 'DATA/HORA SAIDA', 'DATA SAIDA', 'DATA/HORA SAÍDA\n', 'SAIDA'],
+                'peso': ['PESO LIQUIDO', 'PESO FINAL', 'PESO LÍQUIDO'], 
+                'pesoBruto': ['PESO BRUTO'],
+                'pesoTara': ['PESO TARA'],
+                'dia_balanca': ['DIA BALANCA', 'DATA ENTRADA', 'DATA/HORA ENTRADA'], 
+                'data_saida': ['DATA/HORA SAÍDA', 'DATA/HORA SAIDA', 'DATA SAIDA', 'DATA/HORA SAÍDA\n'],
                 'hora_saida': ['HORA SAÍDA', 'HORA SAIDA', 'HORA'],
-                'frente': ['COD FRENTE', 'FRENTE', 'FRENTE COLHEITA'], 
+                'frente': ['COD FRENTE', 'FRENTE'], 
                 'cod_fazenda': ['COD FAZENDA', 'COD.FAZENDA', 'FAZENDA'], 
                 'desc_fazenda': ['DESC FAZENDA', 'DESC.FAZENDA', 'NOME FAZENDA', 'FAZENDA NOME'],
                 'variedade': ['VARIEDADE'],
                 'analisado': ['ANALISADO'],
                 'liberacao': ['LIBERAÇÃO', 'LIB', 'COD LIBERACAO'], 
-                'tipoProprietarioFa': ['TIPO PROPRIETARIO F A', 'TIPO PROPRIETARIO (F.A.)', 'TIPO PROPRIETARIO', 'PROPRIETARIO', 'TIPO PROPRIEDADE', 'TIPO', 'PROP'], 
+                'tipoProprietarioFa': ['TIPO PROPRIETARIO F A', 'TIPO PROPRIETARIO (F.A.)', 'TIPO PROPRIETARIO', 'PROPRIETARIO', 'TIPO PROPRIEDADE'], 
                 'qtdViagem': ['QTD VIAGEM', 'QUANTIDADE VIAGEM'],
                 'distancia': ['DIST MEDIA', 'DISTANCIA', 'KM', 'RAIO MEDIO'],
                 'status_frota': ['STATUS', 'FASE', 'FASE OPERACIONAL', 'STATUS CAMINHAO', 'SITUACAO ATUAL'] 
@@ -81,7 +81,7 @@ class IntelligentProcessor {
                 'pesoLiquido': ['PESO LIQUIDO', 'PESOLIQUIDO', 'LIQUIDO', 'PESO LÍQUIDO', 'TONELADAS'],
                 'pesoBruto': ['PESO BRUTO', 'PESOBRUTO', 'BRUTO'],
                 'pesoTara': ['PESO TARA', 'PESOTARA', 'TARA'],
-                'qtdViagem': ['QTD VIAGEM', 'QTDVIAGEM', 'QUANTIDADE DE VIAGENS', 'VIAGENS', 'N VIAGENS'],
+                'qtdViagem': ['QTD VIAGEM', 'QTDVIAGEM', 'QUANTIDADE DE VIAGENS', 'VIAGENS'],
                 'distMedia': ['DIST MEDIA', 'DISTANCIA MEDIA', 'DIST. MEDIA']
             }
         };
@@ -104,59 +104,60 @@ class IntelligentProcessor {
         return `${data}${hora}${String(item.frota).replace(/\W/g, '')}`.toUpperCase();
     }
 
-    // Função ROBUSTA para extrair APENAS a hora HH:MM de qualquer formato
-    _forceExtractTime(value) {
-        if (value === null || value === undefined || value === '') return null;
-
-        // 1. Se for um objeto Date
-        if (value instanceof Date && !isNaN(value.getTime())) {
-            // Ajusta fuso se necessário, mas pega a hora bruta
-            return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
-        }
-        
-        // 2. Se for número (fração de dia Excel, ex: 0.5 = 12:00)
-        if (typeof value === 'number') {
-            let fraction = value % 1; 
-            const total_seconds = Math.floor(86400 * fraction);
-            const hours = Math.floor(total_seconds / 3600);
-            const minutes = Math.floor((total_seconds % 3600) / 60);
-            return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-        }
-
+    _formatExcelTime(value) {
+        if (value instanceof Date) return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
         const strValue = String(value).trim();
-
-        // 3. Procura padrão HH:MM:SS ou HH:MM
-        const timeMatch = strValue.match(/(\d{1,2}):(\d{2})/);
-        if (timeMatch) {
-            let h = parseInt(timeMatch[1]);
-            let m = parseInt(timeMatch[2]);
-            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-        }
-        
-        // 4. Se for apenas um número inteiro string "14" -> "14:00"
-        if (/^\d{1,2}$/.test(strValue)) {
-            let h = parseInt(strValue);
-            if (h >= 0 && h <= 23) return `${String(h).padStart(2, '0')}:00`;
-        }
-
-        return null;
+        const hourMatch = strValue.match(/(\d{1,2}:\d{1,2})/);
+        if (hourMatch) return hourMatch[1];
+        const intValue = parseInt(strValue);
+        if (!isNaN(intValue) && intValue >= 0 && intValue < 24) return `${String(intValue).padStart(2, '0')}:00`;
+        return strValue; 
     }
 
     async processFile(dataOrFile, fileName) { 
         if (dataOrFile instanceof ArrayBuffer) {
+            const data = dataOrFile; 
             try {
-                const workbook = XLSX.read(dataOrFile, { type: 'array' });
+                const workbook = XLSX.read(data, { type: 'array' });
                 const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                 const rawMatrix = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null });
-                if (!rawMatrix || rawMatrix.length === 0) return { type: 'UNKNOWN', fileName, data: [] };
                 
+                if (!rawMatrix || rawMatrix.length === 0) {
+                    return { type: 'UNKNOWN', fileName, data: [] };
+                }
+
                 const fileType = this.identifyFileTypeIntelligently(rawMatrix, fileName);
                 
-                return this.dispatchProcess(fileType, worksheet, fileName);
+                if (fileType.type === 'PRODUCTION') {
+                    
+                    const ultimaSaida = this.getUltimaDataHoraSaida(
+                        worksheet,
+                        fileType.headerRow
+                    );
+
+                    return {
+                        type: 'PRODUCTION',
+                        fileName,
+                        data: this.processProductionData(worksheet, fileType.headerRow),
+                        ultimaPesagem: ultimaSaida
+                            ? `${ultimaSaida.dateStr} às ${ultimaSaida.timeStr}`
+                            : null
+                    };
+
+                } else if (fileType.type === 'POTENTIAL') {
+                    return { type: 'POTENTIAL', fileName, data: this.processPotentialData(worksheet, fileType.headerRow) };
+                } else if (fileType.type === 'META') {
+                    return { type: 'META', fileName: fileName, data: this.processMetaData(worksheet, fileType.headerRow) };
+                } else if (fileType.type === 'ACMSAFRA') { 
+                    return { type: 'ACMSAFRA', fileName: fileName, data: this.processAcmSafraData(worksheet, fileType.headerRow) };
+                } else {
+                    return { type: 'UNKNOWN', fileName, data: [] };
+                }
             } catch (error) {
-                console.error(`Erro ArrayBuffer ${fileName}:`, error);
+                console.error(`Erro ao processar ArrayBuffer de ${fileName}:`, error);
                 throw error;
             }
+            
         } else {
             const file = dataOrFile;
             return new Promise((resolve, reject) => {
@@ -167,13 +168,41 @@ class IntelligentProcessor {
                         const workbook = XLSX.read(data, { type: 'binary' }); 
                         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                         const rawMatrix = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null });
+                        
                         if (!rawMatrix || rawMatrix.length === 0) {
                             resolve({ type: 'UNKNOWN', fileName: file.name, data: [] });
                             return;
                         }
+
                         const fileType = this.identifyFileTypeIntelligently(rawMatrix, file.name);
-                        resolve(this.dispatchProcess(fileType, worksheet, file.name));
+                        
+                        if (fileType.type === 'PRODUCTION') {
+                            
+                             const ultimaSaida = this.getUltimaDataHoraSaida(
+                                worksheet,
+                                fileType.headerRow
+                            );
+                            
+                            resolve({ 
+                                type: 'PRODUCTION', 
+                                fileName: file.name, 
+                                data: this.processProductionData(worksheet, fileType.headerRow),
+                                ultimaPesagem: ultimaSaida
+                                    ? `${ultimaSaida.dateStr} às ${ultimaSaida.timeStr}`
+                                    : null
+                            });
+
+                        } else if (fileType.type === 'POTENTIAL') {
+                            resolve({ type: 'POTENTIAL', fileName: file.name, data: this.processPotentialData(worksheet, fileType.headerRow) });
+                        } else if (fileType.type === 'META') {
+                            resolve({ type: 'META', fileName: file.name, data: this.processMetaData(worksheet, fileType.headerRow) });
+                        } else if (fileType.type === 'ACMSAFRA') { 
+                            resolve({ type: 'ACMSAFRA', fileName: file.name, data: this.processAcmSafraData(worksheet, fileType.headerRow) });
+                        } else {
+                            resolve({ type: 'UNKNOWN', fileName: file.name, data: [] });
+                        }
                     } catch (error) {
+                        console.error(`Erro:`, error);
                         reject(error);
                     }
                 };
@@ -185,103 +214,154 @@ class IntelligentProcessor {
 
     async processCSV(csvText, fileName) {
         if (!csvText) return { type: 'UNKNOWN', fileName, data: [] };
+
         try {
-            const workbook = XLSX.read(csvText, { type: 'string', raw: false, cellDates: false });
+            const workbook = XLSX.read(csvText, { type: 'string', raw: false, cellDates: true });
             const sheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[sheetName];
             const rawMatrix = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null });
+
             const fileType = this.identifyFileTypeIntelligently(rawMatrix, fileName);
-            return this.dispatchProcess(fileType, worksheet, fileName);
+
+            if (fileType.type === 'PRODUCTION') {
+                
+                const ultimaSaida = this.getUltimaDataHoraSaida(
+                    worksheet,
+                    fileType.headerRow
+                );
+                
+                return { 
+                    type: 'PRODUCTION', 
+                    fileName, 
+                    data: this.processProductionData(worksheet, fileType.headerRow),
+                    ultimaPesagem: ultimaSaida
+                        ? `${ultimaSaida.dateStr} às ${ultimaSaida.timeStr}`
+                        : null
+                };
+
+            } else if (fileType.type === 'POTENTIAL') {
+                const processedData = this.processPotentialData(worksheet, fileType.headerRow);
+                return { type: 'POTENTIAL', fileName, data: processedData };
+            } else if (fileType.type === 'META') {
+                const processedData = this.processMetaData(worksheet, fileType.headerRow);
+                return { type: 'META', fileName, data: processedData };
+            } else if (fileType.type === 'ACMSAFRA') { 
+                const processedData = this.processAcmSafraData(worksheet, fileType.headerRow);
+                return { type: 'ACMSAFRA', fileName, data: processedData };
+            }
+
+            return { type: 'UNKNOWN', fileName, data: [] };
+
         } catch (error) {
-            console.error(`Erro CSV ${fileName}:`, error);
+            console.error(`Erro no processamento CSV para ${fileName}:`, error);
             return { type: 'UNKNOWN', fileName, data: [] };
         }
     }
-    
-    dispatchProcess(fileType, worksheet, fileName) {
-        if (fileType.type === 'PRODUCTION') {
-            const ultimaSaida = this.getUltimaDataHoraSaida(worksheet, fileType.headerRow);
-            return {
-                type: 'PRODUCTION',
-                fileName,
-                data: this.processProductionData(worksheet, fileType.headerRow),
-                ultimaPesagem: ultimaSaida ? `${ultimaSaida.dateStr} às ${ultimaSaida.timeStr}` : null
-            };
-        } else if (fileType.type === 'POTENTIAL') {
-            return { type: 'POTENTIAL', fileName, data: this.processPotentialData(worksheet, fileType.headerRow) };
-        } else if (fileType.type === 'META') {
-            return { type: 'META', fileName, data: this.processMetaData(worksheet, fileType.headerRow) };
-        } else if (fileType.type === 'ACMSAFRA') {
-            return { type: 'ACMSAFRA', fileName, data: this.processAcmSafraData(worksheet, fileType.headerRow) };
-        }
-        return { type: 'UNKNOWN', fileName, data: [] };
-    }
+
 
     identifyFileTypeIntelligently(matrix, fileName) {
         const fileNameUpper = fileName.toUpperCase();
         
-        // Identificação por Nome de Arquivo (Prioridade Alta)
-        if (fileNameUpper.includes('ACM') || fileNameUpper.includes('SAFRA')) return { type: 'ACMSAFRA', headerRow: 0 };
-        if (fileNameUpper.includes('METAS') || fileNameUpper.includes('META')) return { type: 'META', headerRow: 0 };
-        if (fileNameUpper.includes('POTENCIAL')) return { type: 'POTENTIAL', headerRow: 0 };
+        // Identificação do Acumulado Safra
+        if (fileNameUpper.includes('ACM') || fileNameUpper.includes('SAFRA')) {
+            return { type: 'ACMSAFRA', headerRow: 0 };
+        }
 
-        // Identificação por Conteúdo (Prioridade Baixa)
+        if (fileNameUpper.includes('METAS') || fileNameUpper.includes('META')) return { type: 'META', headerRow: 0 };
+
         for (let i = 0; i < Math.min(matrix.length, 20); i++) {
             const row = matrix[i];
             if (!row || !Array.isArray(row)) continue;
             const rowString = row.join(' ').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s{2,}/g, ' ');
             
             if (rowString.includes('DISP COLHEDORA') || rowString.includes('ROTACAO DA MOENDA')) return { type: 'POTENTIAL', headerRow: i };
+            if (rowString.includes('CARREG') || rowString.includes('FROTA MOTRIZ') || rowString.includes('PESO LIQUIDO')) return { type: 'PRODUCTION', headerRow: i };
             if (rowString.includes('TMD') || rowString.includes('COLHEITABILIDADE')) return { type: 'META', headerRow: i };
-            
-            // Cuidado para não confundir Safra com Produção
-            if (rowString.includes('PESO LIQUIDO') && (rowString.includes('CARREG') || rowString.includes('FROTA MOTRIZ'))) {
-                 return { type: 'PRODUCTION', headerRow: i };
-            }
-            // Se tiver QTD VIAGEM e DIST MEDIA mas não tiver CARREG/MOTRIZ, é Safra
-            if (rowString.includes('QTD VIAGEM') && rowString.includes('DIST MEDIA') && !rowString.includes('FROTA MOTRIZ')) {
-                return { type: 'ACMSAFRA', headerRow: i };
-            }
         }
         
+        if (fileNameUpper.includes('POTENCIAL')) return { type: 'POTENTIAL', headerRow: 0 };
         if (fileNameUpper.includes('PRODU') || fileNameUpper.includes('BALANCA')) return { type: 'PRODUCTION', headerRow: 0 };
         return { type: 'UNKNOWN', headerRow: 0 };
     }
     
+    // Processador AcmSafra - CORRIGIDO PARA IGNORAR TOTAIS E FORÇAR NÚMEROS
     processAcmSafraData(worksheet, headerRow) {
         const structuredData = XLSX.utils.sheet_to_json(worksheet, { range: headerRow, defval: null, raw: false });
-        return structuredData.map(row => {
+        const cleanData = [];
+
+        structuredData.forEach(row => {
             const normalized = {};
             const rawNormalized = this.normalizeRowKeys(row);
+            
+            // CORREÇÃO CRÍTICA: Verificar se a linha é um "Total"
+            // Se qualquer valor da linha contiver "TOTAL" ou "GERAL", ignoramos.
+            const isTotalRow = Object.values(rawNormalized).some(val => 
+                String(val).toUpperCase().includes('TOTAL') || 
+                String(val).toUpperCase().includes('GERAL') ||
+                String(val).toUpperCase().includes('SOMA')
+            );
+
+            if (isTotalRow) return; // Pula esta iteração, não adiciona ao array final
+
             Object.keys(rawNormalized).forEach(key => {
                 const value = rawNormalized[key];
                 let mappedKey = key; 
+                
                 for (const standardKey in this.columnMappings.acmSafra) {
-                    if (this.columnMappings.acmSafra[standardKey].some(pattern => key.includes(pattern.replace(/\s+/g, '')))) {
+                    if (this.columnMappings.acmSafra[standardKey].some(pattern => 
+                        key.includes(pattern.replace(/\s+/g, '')))) {
                         mappedKey = standardKey;
                         break;
                     }
                 }
-                normalized[mappedKey] = value;
+                
+                // CORREÇÃO: Forçar conversão para número nas colunas críticas
+                if (['pesoLiquido', 'pesoBruto', 'pesoTara', 'qtdViagem', 'distMedia'].includes(mappedKey)) {
+                    normalized[mappedKey] = this.parseNumber(value);
+                } else {
+                    normalized[mappedKey] = value;
+                }
             });
-            return normalized;
+            
+            // Só adiciona se tiver pelo menos um peso ou viagem válido
+            if (normalized.pesoLiquido > 0 || normalized.qtdViagem > 0) {
+                cleanData.push(normalized);
+            }
         });
+        
+        return cleanData;
     }
 
     getUltimaDataHoraSaida(worksheet, headerRow) {
-        const rows = XLSX.utils.sheet_to_json(worksheet, { range: headerRow, defval: null, raw: false });
+        const rows = XLSX.utils.sheet_to_json(worksheet, {
+            range: headerRow,
+            defval: null,
+            raw: false
+        });
+
         let ultimaData = null; 
+
         for (const row of rows) {
             for (const key of Object.keys(row)) {
-                const cleanKey = key.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, " ").replace(/\s+/g, " ").trim();
+                const cleanKey = key
+                    .toUpperCase()
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .replace(/[^A-Z0-9]/g, " ")
+                    .replace(/\s+/g, " ")
+                    .trim();
+
                 if (cleanKey.includes("DATA HORA SAIDA")) { 
                     const parsed = this.parseDateTime(row[key]);
                     if (parsed.fullDate) {
-                        if (!ultimaData || parsed.fullDate.getTime() > ultimaData.fullDate.getTime()) ultimaData = parsed; 
+                        if (!ultimaData || parsed.fullDate.getTime() > ultimaData.fullDate.getTime()) {
+                            ultimaData = parsed; 
+                        }
                     }
                 }
             }
         }
+
         return ultimaData;
     }
 
@@ -296,7 +376,11 @@ class IntelligentProcessor {
             
             const normalizedRow = this.normalizeRowKeys(row);
             
-            // 1. Coleta de Dados Básicos
+            // Verificação Preliminar de Totais
+            if (Object.values(normalizedRow).some(v => String(v).toUpperCase().includes('TOTAL') && isNaN(this.parseNumber(v)))) {
+                isAggregationRow = true;
+            }
+            
             Object.keys(normalizedRow).forEach(key => {
                  const value = normalizedRow[key];
                  if (value === null || value === undefined || value === '') return;
@@ -304,7 +388,9 @@ class IntelligentProcessor {
                  
                  if (this.matchesPattern(cleanKey, this.columnMappings.production.viagem)) {
                      if (!cleanKey.includes('QTD') && !cleanKey.includes('DIST') && !String(value).toUpperCase().includes('TOTAL')) {
-                         if (!item.viagem) item.viagem = String(value).trim();
+                         if (item.viagem === undefined || item.viagem === null || item.viagem === '') {
+                             item.viagem = String(value).trim();
+                         }
                      }
                  } else if (this.matchesPattern(cleanKey, this.columnMappings.production.frota)) {
                      item.frota = String(value).trim();
@@ -313,12 +399,9 @@ class IntelligentProcessor {
                  }
             });
 
-            // 2. Coleta de Dados Detalhados
             Object.keys(normalizedRow).forEach(key => {
                 const value = normalizedRow[key];
                 if (value === null || value === undefined || value === '') return;
-                
-                if (String(value).toUpperCase().includes('TOTAL') && isNaN(value)) isAggregationRow = true;
                 
                 const cleanKey = key.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
 
@@ -335,7 +418,7 @@ class IntelligentProcessor {
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.transbordo)) this._addToList(item.transbordos, value);
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.transbordo2)) this._addToList(item.transbordos, value);
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.transbordo3)) this._addToList(item.transbordos, value);
-                else if (this.matchesPattern(cleanKey, this.columnMappings.production.peso)) item.peso = this.parseNumber(value);
+                else if (this.matchesPattern(cleanKey, this.columnMappings.production.peso)) item.peso = this.parseNumber(String(value).replace(/,/g, '.'));
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.tipoProprietarioFa)) item.tipoProprietarioFa = String(value).trim();
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.liberacao)) item.liberacao = String(value).trim();
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.variedade)) item.variedade = String(value).trim();
@@ -346,35 +429,39 @@ class IntelligentProcessor {
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.qtdViagem)) item.qtdViagem = this.parseNumber(value);
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.distancia)) item.distancia = this.parseNumber(value);
 
-                // DATA/HORA
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.data_saida)) {
                     const dt = this.parseDateTime(value);
-                    if (dt.fullDate) dataSaidaData = dt;
-                    else {
-                        const forcedTime = this._forceExtractTime(value);
-                        if (forcedTime) horaSaidaStr = forcedTime;
-                        if (dt.dateStr) diaBalancaData = dt;
+                    if (dt.fullDate) {
+                        dataSaidaData = dt;
+                    } else {
+                        if (dt.timeStr) horaSaidaStr = dt.timeStr;
+                        if (dt.dateStr) diaBalancaData = dt; 
                     }
                 }
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.hora_saida)) {
-                    const forcedTime = this._forceExtractTime(value);
-                    if (forcedTime) horaSaidaStr = forcedTime;
+                    const dt = this.parseDateTime(value);
+                    if (dt.timeStr) horaSaidaStr = dt.timeStr;
                 }
                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.dia_balanca)) {
                     const dt = this.parseDateTime(value);
-                    if (dt.fullDate) diaBalancaData = dt;
+                    if (dt.fullDate) {
+                        diaBalancaData = dt;
+                    }
                 }
             });
 
-            // 3. CONSOLIDAÇÃO DE DATAS E HORAS
-            
-            // Caso ideal: Temos data completa de saída
             if (dataSaidaData && dataSaidaData.fullDate) {
                 item.timestamp = dataSaidaData.fullDate;
                 item.data = dataSaidaData.dateStr;
                 item.hora = dataSaidaData.timeStr;
+            } else if (dataSaidaData && dataSaidaData.dateStr && horaSaidaStr) {
+                const dt = this.parseDateTime(`${dataSaidaData.dateStr} ${horaSaidaStr}`);
+                if (dt.fullDate) {
+                    item.timestamp = dt.fullDate;
+                    item.data = dt.dateStr;
+                    item.hora = dt.timeStr;
+                }
             } 
-            // Caso comum: Temos Data separada da Hora (string)
             else if (diaBalancaData && diaBalancaData.dateStr && horaSaidaStr) {
                 const dt = this.parseDateTime(`${diaBalancaData.dateStr} ${horaSaidaStr}`);
                 if (dt.fullDate) {
@@ -382,13 +469,11 @@ class IntelligentProcessor {
                     item.data = dt.dateStr;
                     item.hora = dt.timeStr;
                 }
-            } 
-            // Fallback: Se temos apenas HORA, mas sem data válida, IGNORAMOS para não sujar a previsão 24h
-            // Se o usuário reclama de previsão errada (430k), é porque estamos assumindo "hoje" para dados velhos ou sem data.
+            }
             else if (horaSaidaStr) {
-                 // item.timestamp = new Date(); // REMOVIDO PARA EVITAR DADOS FANTASMAS
-                 // item.data = ...
-                 item.hora = horaSaidaStr; // Mantemos a hora para gráficos puramente horários, mas sem data, não entra na projeção temporal correta
+                 item.timestamp = null; 
+                 item.data = null; 
+                 item.hora = horaSaidaStr;
             }
 
             [1, 2, 3].forEach(idx => {
@@ -404,6 +489,7 @@ class IntelligentProcessor {
             if (item.transbordos.length) item.transbordo = item.transbordos[0];
             
             const isFechamentoViagem = item.qtdViagem && Math.abs(item.qtdViagem - 1) < 0.05;
+            
             if (isAggregationRow && !isFechamentoViagem) return;
             if (item.peso <= 0) return;
 
@@ -413,40 +499,114 @@ class IntelligentProcessor {
             } else if (!finalViagemId || (typeof finalViagemId === 'string' && finalViagemId.length < 3)) {
                 finalViagemId = this.generateViagemId(item);
             }
+            
             if (!finalViagemId || String(finalViagemId).toUpperCase().includes('TOTAL')) return;
+
             item.idViagem = finalViagemId;
             
-            // 🔥 FILTRO FINAL: Só aceita se tiver DATA válida OU se tiver hora válida.
-            // Se não tiver nem data nem hora, é lixo.
-            if (item.timestamp || item.hora) {
-                processedData.push(item);
-            }
+            processedData.push(item);
         });
 
         return processedData;
     }
     
+    mapProductionColumns(headerRowData) {
+        const columnMap = {};
+        headerRowData.forEach(originalKey => {
+            if (!originalKey) return;
+            const cleanKey = originalKey.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+            
+            for (const standardKey in this.columnMappings.production) {
+                if (this.columnMappings.production[standardKey].some(pattern => cleanKey.includes(pattern.toUpperCase()))) {
+                    columnMap[originalKey] = standardKey; 
+                    break;
+                }
+            }
+        });
+        return columnMap;
+    }
+
     processMetaData(worksheet, headerRow) {
         const structuredData = XLSX.utils.sheet_to_json(worksheet, { range: headerRow, defval: null, raw: false }); 
         const processedData = [];
-        structuredData.forEach((row) => {
+        
+        structuredData.forEach((row, index) => {
             const item = {}, normalizedRow = this.normalizeRowKeys(row);
             let isMetaRow = false;
+            
             Object.keys(normalizedRow).forEach(key => {
                 const value = normalizedRow[key];
-                if (!value) return;
-                const cleanKey = key.toUpperCase().normalize("NFD").replace(/[^A-Z0-9]/g, ' ').trim();
+                if (value === null || value === undefined || value === '') return;
+                
+                const cleanKey = key.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+                
+                if (cleanKey === 'F A' || cleanKey === 'FA' || cleanKey === 'F.A') {
+                    item['cod_fazenda'] = String(value).trim();
+                    isMetaRow = true;
+                    return;
+                }
+                
+                if (cleanKey.includes('DESCRICAO FAZENDA') || 
+                    cleanKey.includes('DESC FAZENDA') || 
+                    (cleanKey.includes('FAZENDA') && cleanKey.includes('DESC'))) {
+                    item['desc_fazenda'] = String(value).trim();
+                    isMetaRow = true;
+                    return;
+                }
+                
+                if (cleanKey === 'FAZENDA') {
+                    if (String(value).match(/^\d+$/)) {
+                        item['cod_fazenda'] = String(value).trim();
+                    } else {
+                        item['desc_fazenda'] = String(value).trim();
+                    }
+                    isMetaRow = true;
+                    return;
+                }
+            });
+
+            Object.keys(normalizedRow).forEach(key => {
+                const value = normalizedRow[key];
+                if (value === null || value === undefined || value === '') return;
+                
+                const cleanKey = key.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
+                
+                if (cleanKey === 'F A' || cleanKey === 'FA' || cleanKey === 'F.A' || 
+                    cleanKey.includes('DESCRICAO FAZENDA') || cleanKey.includes('DESC FAZENDA') ||
+                    cleanKey === 'FAZENDA') {
+                    return;
+                }
                 
                 Object.keys(this.columnMappings.meta).forEach(standardKey => {
                     if (this.matchesPattern(cleanKey, this.columnMappings.meta[standardKey])) {
                         isMetaRow = true;
                         const numericFields = ['raio', 'tmd', 'cd', 'potencial', 'meta', 'atr', 'vel', 'tc', 'tch', 'ton_hora', 'cm_hora', 'tempo_carre_min', 'cam', 'ciclo', 'viagens', 'tempo'];
+                        
+                        if ((standardKey === 'cod_fazenda' && item['cod_fazenda']) ||
+                            (standardKey === 'desc_fazenda' && item['desc_fazenda'])) {
+                            return;
+                        }
+                        
                         item[standardKey] = numericFields.includes(standardKey) ? this.parseNumber(value) : String(value).trim();
                     }
                 });
             });
+            
+            if (!item['cod_fazenda'] && item['desc_fazenda']) {
+                const descValue = item['desc_fazenda'];
+                const codMatch = descValue.match(/\d+/);
+                if (codMatch) {
+                    item['cod_fazenda'] = codMatch[0];
+                }
+            }
+            
+            if (!item['desc_fazenda'] && item['cod_fazenda']) {
+                item['desc_fazenda'] = `FAZENDA ${item['cod_fazenda']}`;
+            }
+            
             if (item.frente && isMetaRow) processedData.push(item);
         });
+        
         return processedData;
     }
     
@@ -454,25 +614,33 @@ class IntelligentProcessor {
         const structuredData = XLSX.utils.sheet_to_json(worksheet, { range: headerRow, defval: null, raw: false, cellDates: true });
         return structuredData.map(row => {
             const item = {};
-            let hasHour = false;
+            let isPotentialRow = false;
             Object.keys(row).forEach(key => {
                 const value = row[key];
                 if (value == null || value === '') return;
                 const mappedKey = this.findPotentialKey(key);
+                
                 if (mappedKey === 'hora') {
-                    const horaString = this._forceExtractTime(value);
-                    if (horaString) { item['HORA'] = horaString; item[mappedKey] = horaString; hasHour = true; }
+                    const horaString = this._formatExcelTime(value);
+                    item['HORA'] = horaString;
+                    item[mappedKey] = horaString; 
+                    isPotentialRow = true;
                 } else if (mappedKey) {
-                    item[mappedKey] = this.parseNumber(value);
+                    const numValue = this.parseNumber(value);
+                    item[mappedKey] = numValue;
+                    const csvKey = this.findCSVKeyForPotential(mappedKey);
+                    if (csvKey) item[csvKey] = numValue;
+                    isPotentialRow = true;
                 }
             });
             
-            ['Caminhões  Ida', 'Caminhões  Campo', 'Caminhões  Volta', 'Caminhões  Descarga', 'Caminhões  PARADO', 'CARRETAS CARREGADAS', 'POTENCIAL', 'Caminhões Fila externa'].forEach(exactKey => {
-                let value = row[exactKey] || row[exactKey.replace(/\s{2,}/g, ' ')];
+            ['Caminhões  Ida', 'Caminhões  Campo', 'Caminhões  Volta', 'Caminhões  Descarga', 'Caminhões  PARADO', 'CARRETAS CARREGADAS', 'POTENCIAL', 'Caminhões Fila externa'].forEach(exactKey => {
+                let value = row[exactKey]; 
+                if (!value) value = row[exactKey.replace(/\s{2,}/g, ' ')];
                 if (value != null && value !== '') item[exactKey] = this.parseNumber(value);
             });
 
-            return hasHour ? item : null;
+            return Object.keys(item).length && item['HORA'] ? item : null;
         }).filter(i => i); 
     }
     
@@ -487,10 +655,28 @@ class IntelligentProcessor {
         return null;
     }
     
-    // Métodos Auxiliares e Parsers
+    findCSVKeyForPotential(internalKey) {
+        const map = {
+            'dispColhedora': 'DISP COLHEDORA',
+            'dispTransbordo': 'DISP TRANSBORDO',
+            'dispCaminhoes': 'DISP CAMINHÕES',
+            'rotacaoMoenda': 'ROTAÇÃO DA MOENDA',
+            'potencial': 'POTENCIAL',
+            'caminhõesIda': 'Caminhões  Ida',
+            'caminhõesCampo': 'Caminhões  Campo',
+            'caminhõesVolta': 'Caminhões  Volta',
+            'caminhõesDescarga': 'Caminhões  Descarga',
+            'caminhõesParados': 'Caminhões  PARADO',
+            'filaExterna': 'Caminhões Fila externa',
+            'carretasCarregadas': 'CARRETAS CARREGADAS'
+        };
+        return map[internalKey] || null;
+    }
+
     matchesPattern(key, patterns) {
         return patterns.some(pattern => key.toUpperCase().includes(pattern.toUpperCase()));
     }
+
     normalizeRowKeys(row) {
         const normalized = {};
         Object.keys(row).forEach(key => {
@@ -499,60 +685,110 @@ class IntelligentProcessor {
         });
         return normalized;
     }
+
     parseNumber(value) {
         if (typeof value === 'number') return value;
-        if (value === undefined || value === null || value === '') return 0;
-        let str = String(value).trim();
-        if (str.includes(',')) str = str.replace(/\./g, '').replace(',', '.');
-        const num = parseFloat(str);
-        return isNaN(num) ? 0 : num;
+        if (typeof value === 'string') {
+            // Suporte para formatos BR (1.000,00) se necessário, mas mantendo compatibilidade com padrão americano
+            let cleanVal = value.trim();
+            if (cleanVal.includes(',') && !cleanVal.includes('.')) {
+                cleanVal = cleanVal.replace(',', '.');
+            }
+            return parseFloat(cleanVal) || 0;
+        }
+        return 0;
     }
+
     parseDateTime(val) {
         let dateObj = null, dateStr = '', timeStr = '';
+        
+        // 1. CASO: Valor Numérico do Excel (CORREÇÃO DE FUSO HORÁRIO)
         if (typeof val === 'number' && val > 1) { 
             const excelEpochMs = (val - 25569) * 86400 * 1000;
             const compensationMs = 3 * 3600 * 1000; 
             dateObj = new Date(excelEpochMs + compensationMs); 
+
+            if (!isNaN(dateObj.getTime())) {
+                const d = dateObj.getDate();
+                const m = dateObj.getMonth() + 1;
+                const y = dateObj.getFullYear();
+                const h = dateObj.getHours();
+                const min = dateObj.getMinutes();
+                
+                dateStr = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+                timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+            }
         } 
+        
+        // 2. CASO: String (CSV/Planilha)
         if (!dateObj && typeof val === 'string') {
             const trimmedVal = val.trim();
+            
+            // Caso 2a: Apenas Hora
             const timeOnlyMatch = trimmedVal.match(/^(\d{1,2}:\d{1,2})(?::\d{1,2})?$/);
             if (timeOnlyMatch) {
                 timeStr = timeOnlyMatch[1];
                 return { fullDate: null, dateStr: '', timeStr: timeStr };
             }
-            const dateTimeMatch = trimmedVal.match(/(\d{1,4})[-\/](\d{1,2})[-\/](\d{1,4})[\sT]+(\d{1,2}):(\d{1,2})/);
+
+            // Caso 2b: Data e Hora completa
+            const dateTimeMatch = trimmedVal.match(/(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})\s+(\d{1,2}:\d{1,2})(?::\d{1,2})?/);
             if (dateTimeMatch) {
-                const parts = [parseInt(dateTimeMatch[1]), parseInt(dateTimeMatch[2]), parseInt(dateTimeMatch[3])];
-                let y, m, d;
-                if (parts[0] > 31) { y = parts[0]; m = parts[1]; d = parts[2]; } 
-                else { d = parts[0]; m = parts[1]; y = parts[2]; }
-                if (m > 12) { const temp = d; d = m; m = temp; }
+                let dateParts = dateTimeMatch[1].split(/[-\/-]/).map(Number);
+                if (dateParts[0] > 31) dateParts.reverse(); 
+                
+                let y = dateParts[2];
                 if (y < 100) y += 2000;
-                const h = parseInt(dateTimeMatch[4]);
-                const min = parseInt(dateTimeMatch[5]);
+                
+                const [d, m] = dateParts;
+                const [h, min] = dateTimeMatch[2].split(':').map(Number);
+                
                 dateObj = new Date(y, m - 1, d, h, min);
-            } else {
-                 const csvDateTimeMatch = trimmedVal.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})[\sT]+(\d{1,2}):(\d{1,2}):(\d{1,2})/);
-                 if (csvDateTimeMatch) {
-                     const parts = csvDateTimeMatch.slice(1).map(Number);
-                     const [y, m, d, h, min, s] = parts;
-                     dateObj = new Date(y, m - 1, d, h, min, s);
-                 }
+                
+                if (!isNaN(dateObj.getTime())) {
+                    dateStr = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+                    timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+                }
+            }
+            // Caso 2c: Data e Hora completa CSV/SQL
+            else {
+                const csvDateTimeMatch = trimmedVal.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})\s+(\d{1,2}):(\d{1,2}):(\d{1,2})/);
+                if (csvDateTimeMatch) {
+                    const parts = csvDateTimeMatch.slice(1).map(Number);
+                    if (parts.length === 6) {
+                        const [y, m, d, h, min, s] = parts;
+                        dateObj = new Date(y, m - 1, d, h, min, s); 
+                        if (!isNaN(dateObj.getTime())) {
+                            dateStr = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+                            timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+                        }
+                    }
+                }
+            }
+            
+            // Caso 2d: Apenas data
+            if (!dateObj) {
+                const dateOnlyMatch = trimmedVal.match(/^(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})$/);
+                if (dateOnlyMatch) {
+                    let dateParts = dateOnlyMatch[1].split(/[-\/-]/).map(Number);
+                    if (dateParts[0] > 31) dateParts.reverse();
+                    
+                    let y = dateParts[2];
+                    if (y < 100) y += 2000;
+                    
+                    const [d, m] = dateParts;
+                    dateObj = new Date(y, m - 1, d, 0, 0, 0);
+                    
+                    if (!isNaN(dateObj.getTime())) {
+                        dateStr = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+                        timeStr = '00:00';
+                    }
+                }
             }
         }
-        if (dateObj && !isNaN(dateObj.getTime())) {
-            if (dateObj.getFullYear() < 2020) dateObj.setFullYear(new Date().getFullYear());
-            const d = dateObj.getDate();
-            const m = dateObj.getMonth() + 1;
-            const y = dateObj.getFullYear();
-            const h = dateObj.getHours();
-            const min = dateObj.getMinutes();
-            dateStr = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
-            timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-            return { fullDate: dateObj, dateStr, timeStr };
-        }
-        return { fullDate: null, dateStr: '', timeStr: '' };
+        
+        return dateObj && !isNaN(dateObj.getTime()) ? { fullDate: dateObj, dateStr, timeStr } : { fullDate: null, dateStr: dateStr || '', timeStr: timeStr || '' };
     }
 }
+
 if (typeof window !== 'undefined') window.IntelligentProcessor = IntelligentProcessor;
