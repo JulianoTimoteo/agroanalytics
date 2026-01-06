@@ -1,4 +1,4 @@
-// intelligent-processor.js - VERSÃO BLINDADA (V.2026 - FIX 430K & METAS)
+// intelligent-processor.js - VERSÃO CORRIGIDA FINAL (Anti-430k + Metas + Identificação Robusta)
 class IntelligentProcessor {
     constructor() {
         this.columnMappings = {
@@ -104,33 +104,32 @@ class IntelligentProcessor {
         return `${data}${hora}${String(item.frota).replace(/\W/g, '')}`.toUpperCase();
     }
 
-    // Função ROBUSTA para extrair APENAS a hora HH:MM de qualquer formato
-    _forceExtractTime(value) {
+    // 🔥 CORREÇÃO: Extração de hora SEGURA (não tenta converter qualquer número)
+    _extractTimeFromValue(value) {
         if (value === null || value === undefined || value === '') return null;
 
+        // Caso 1: Objeto Date válido
         if (value instanceof Date && !isNaN(value.getTime())) {
             return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
         }
         
-        if (typeof value === 'number') {
-            let fraction = value % 1; 
-            const total_seconds = Math.floor(86400 * fraction);
+        // Caso 2: Número decimal do Excel (0 a 1 = fração do dia)
+        if (typeof value === 'number' && value >= 0 && value < 1) {
+            const total_seconds = Math.floor(86400 * value);
             const hours = Math.floor(total_seconds / 3600);
             const minutes = Math.floor((total_seconds % 3600) / 60);
             return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
         }
 
+        // Caso 3: String com formato de hora
         const strValue = String(value).trim();
         const timeMatch = strValue.match(/(\d{1,2}):(\d{2})/);
         if (timeMatch) {
             let h = parseInt(timeMatch[1]);
             let m = parseInt(timeMatch[2]);
-            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-        }
-        
-        if (/^\d{1,2}$/.test(strValue)) {
-            let h = parseInt(strValue);
-            if (h >= 0 && h <= 23) return `${String(h).padStart(2, '0')}:00`;
+            if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+                return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+            }
         }
 
         return null;
@@ -145,7 +144,6 @@ class IntelligentProcessor {
                 if (!rawMatrix || rawMatrix.length === 0) return { type: 'UNKNOWN', fileName, data: [] };
                 
                 const fileType = this.identifyFileTypeIntelligently(rawMatrix, fileName);
-                
                 return this.dispatchProcess(fileType, worksheet, fileName);
             } catch (error) {
                 console.error(`Erro ArrayBuffer ${fileName}:`, error);
@@ -220,20 +218,30 @@ class IntelligentProcessor {
         if (fileNameUpper.includes('POTENCIAL')) return { type: 'POTENTIAL', headerRow: 0 };
         if (fileNameUpper.includes('PRODU') || fileNameUpper.includes('BALANCA')) return { type: 'PRODUCTION', headerRow: 0 };
 
-        // Identificação por Conteúdo (Para pastas do Drive que não tem nome padrão)
+        // 🔥 Identificação por Conteúdo (MAIS FLEXÍVEL)
         for (let i = 0; i < Math.min(matrix.length, 20); i++) {
             const row = matrix[i];
             if (!row || !Array.isArray(row)) continue;
             const rowString = row.join(' ').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s{2,}/g, ' ');
             
-            if (rowString.includes('DISP COLHEDORA') || rowString.includes('ROTACAO DA MOENDA')) return { type: 'POTENTIAL', headerRow: i };
-            if (rowString.includes('TMD') || rowString.includes('COLHEITABILIDADE')) return { type: 'META', headerRow: i };
+            // Potencial: palavras-chave específicas
+            if (rowString.includes('DISP COLHEDORA') || rowString.includes('ROTACAO') && rowString.includes('MOENDA')) {
+                return { type: 'POTENTIAL', headerRow: i };
+            }
             
-            // Cuidado para não confundir Safra com Produção
-            if (rowString.includes('PESO LIQUIDO') && (rowString.includes('CARREG') || rowString.includes('FROTA MOTRIZ'))) {
+            // Meta: palavras-chave específicas
+            if ((rowString.includes('TMD') && rowString.includes('COLHEITABILIDADE')) || 
+                (rowString.includes('POTENCIAL') && rowString.includes('META') && rowString.includes('ATR'))) {
+                return { type: 'META', headerRow: i };
+            }
+            
+            // Produção: cuidado para não confundir com Safra
+            if (rowString.includes('PESO LIQUIDO') && (rowString.includes('CARREG') || rowString.includes('FROTA MOTRIZ') || rowString.includes('EQUIPAMENTO'))) {
                  return { type: 'PRODUCTION', headerRow: i };
             }
-            if (rowString.includes('QTD VIAGEM') && rowString.includes('DIST MEDIA') && !rowString.includes('FROTA MOTRIZ')) {
+            
+            // AcmSafra: tem peso mas NÃO tem equipamento/frota
+            if (rowString.includes('QTD VIAGEM') && rowString.includes('DIST MEDIA') && !rowString.includes('FROTA MOTRIZ') && !rowString.includes('EQUIPAMENTO')) {
                 return { type: 'ACMSAFRA', headerRow: i };
             }
         }
@@ -247,7 +255,7 @@ class IntelligentProcessor {
             const normalized = {};
             const rawNormalized = this.normalizeRowKeys(row);
             
-            // FILTRO DE TOTAIS NA SAFRA
+            // 🔥 FILTRO: Remove linhas de TOTAL
             const values = Object.values(rawNormalized).map(v => String(v).toUpperCase());
             if (values.some(v => v.includes('TOTAL') || v.includes('GERAL') || v.includes('SOMA'))) return null;
 
@@ -272,7 +280,7 @@ class IntelligentProcessor {
         for (const row of rows) {
             for (const key of Object.keys(row)) {
                 const cleanKey = key.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, " ").replace(/\s+/g, " ").trim();
-                if (cleanKey.includes("DATA HORA SAIDA")) { 
+                if (cleanKey.includes("DATA HORA SAIDA") || cleanKey.includes("DATA SAIDA")) { 
                     const parsed = this.parseDateTime(row[key]);
                     if (parsed.fullDate) {
                         if (!ultimaData || parsed.fullDate.getTime() > ultimaData.fullDate.getTime()) ultimaData = parsed; 
@@ -338,13 +346,13 @@ class IntelligentProcessor {
                      const dt = this.parseDateTime(value);
                      if (dt.fullDate) dataSaidaData = dt;
                      else {
-                         const forcedTime = this._forceExtractTime(value);
+                         const forcedTime = this._extractTimeFromValue(value);
                          if (forcedTime) horaSaidaStr = forcedTime;
                          if (dt.dateStr) diaBalancaData = dt;
                      }
                  }
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.hora_saida)) {
-                     const forcedTime = this._forceExtractTime(value);
+                     const forcedTime = this._extractTimeFromValue(value);
                      if (forcedTime) horaSaidaStr = forcedTime;
                  }
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.dia_balanca)) {
@@ -353,11 +361,21 @@ class IntelligentProcessor {
                  }
             });
 
-            // 2. FILTRAGEM DE SEGURANÇA (SANITY CHECK)
-            // Se tiver "Total" em qualquer lugar crítico, ou Peso > 200 ton, ou QtdViagem > 5, DESCARTA.
-            if (['TOTAL', 'GERAL', 'SOMA'].some(bad => String(item.frota || '').toUpperCase().includes(bad) || String(item.viagem || '').toUpperCase().includes(bad))) return;
-            if (item.peso > 200) return; // NENHUM CAMINHÃO LEVA 200 TONELADAS. ISSO É SOMA.
-            if (item.qtdViagem > 5) return; // NENHUMA LINHA DEVE TER 5 VIAGENS SOZINHA.
+            // 🔥 2. FILTROS CRÍTICOS ANTI-430K
+            // Filtra palavras "Total" em campos críticos
+            if (['TOTAL', 'GERAL', 'SOMA'].some(bad => 
+                String(item.frota || '').toUpperCase().includes(bad) || 
+                String(item.viagem || '').toUpperCase().includes(bad)
+            )) return;
+            
+            // Filtra pesos impossíveis (caminhão não leva 200+ toneladas)
+            if (item.peso > 200) return;
+            
+            // Filtra quantidade de viagens impossíveis (nenhuma linha individual tem 5+ viagens)
+            if (item.qtdViagem > 5) return;
+            
+            // Filtra linhas sem peso válido
+            if (!item.peso || item.peso <= 0) return;
 
             // 3. Consolidação Data/Hora
             if (dataSaidaData && dataSaidaData.fullDate) {
@@ -375,6 +393,7 @@ class IntelligentProcessor {
                  item.hora = horaSaidaStr; 
             }
 
+            // 4. Operadores
             [1, 2, 3].forEach(idx => {
                 if (opData[idx].c) {
                     let fullOp = String(opData[idx].c).trim();
@@ -387,6 +406,7 @@ class IntelligentProcessor {
             if (item.operadores.length) item.operador = item.operadores[0];
             if (item.transbordos.length) item.transbordo = item.transbordos[0];
             
+            // 5. ID da Viagem
             let finalViagemId = item.viagem;
             if (!finalViagemId || (typeof finalViagemId === 'string' && finalViagemId.length < 3)) {
                 finalViagemId = this.generateViagemId(item);
@@ -394,6 +414,7 @@ class IntelligentProcessor {
             if (!finalViagemId) return;
             item.idViagem = finalViagemId;
             
+            // 6. Adiciona apenas se tiver timestamp válido OU pelo menos hora
             if (item.timestamp || item.hora) {
                 processedData.push(item);
             }
@@ -408,6 +429,8 @@ class IntelligentProcessor {
         structuredData.forEach((row) => {
             const item = {}, normalizedRow = this.normalizeRowKeys(row);
             let isMetaRow = false;
+            
+            // 🔥 CORREÇÃO: Aceita linhas com FRENTE **OU** FAZENDA
             Object.keys(normalizedRow).forEach(key => {
                 const value = normalizedRow[key];
                 if (!value) return;
@@ -421,8 +444,11 @@ class IntelligentProcessor {
                     }
                 });
             });
-            // ACEITA SE TIVER FRENTE **OU** FAZENDA (CORREÇÃO PARA ARQUIVOS SEM COLUNA 'FRENTE')
-            if ((item.frente || item.cod_fazenda || item.desc_fazenda) && isMetaRow) processedData.push(item);
+            
+            // Aceita se tiver FRENTE **OU** qualquer dado de FAZENDA
+            if ((item.frente || item.cod_fazenda || item.desc_fazenda) && isMetaRow) {
+                processedData.push(item);
+            }
         });
         return processedData;
     }
@@ -437,14 +463,15 @@ class IntelligentProcessor {
                 if (value == null || value === '') return;
                 const mappedKey = this.findPotentialKey(key);
                 if (mappedKey === 'hora') {
-                    const horaString = this._forceExtractTime(value);
+                    const horaString = this._extractTimeFromValue(value);
                     if (horaString) { item['HORA'] = horaString; item[mappedKey] = horaString; hasHour = true; }
                 } else if (mappedKey) {
                     item[mappedKey] = this.parseNumber(value);
                 }
             });
             
-            ['Caminhões  Ida', 'Caminhões  Campo', 'Caminhões  Volta', 'Caminhões  Descarga', 'Caminhões  PARADO', 'CARRETAS CARREGADAS', 'POTENCIAL', 'Caminhões Fila externa'].forEach(exactKey => {
+            // Preserva nomes de colunas exatas para compatibilidade
+            ['Caminhões  Ida', 'Caminhões  Campo', 'Caminhões  Volta', 'Caminhões  Descarga', 'Caminhões  PARADO', 'CARRETAS CARREGADAS', 'POTENCIAL', 'Caminhões Fila externa'].forEach(exactKey => {
                 let value = row[exactKey] || row[exactKey.replace(/\s{2,}/g, ' ')];
                 if (value != null && value !== '') item[exactKey] = this.parseNumber(value);
             });
@@ -467,6 +494,7 @@ class IntelligentProcessor {
     matchesPattern(key, patterns) {
         return patterns.some(pattern => key.toUpperCase().includes(pattern.toUpperCase()));
     }
+    
     normalizeRowKeys(row) {
         const normalized = {};
         Object.keys(row).forEach(key => {
@@ -475,6 +503,7 @@ class IntelligentProcessor {
         });
         return normalized;
     }
+    
     parseNumber(value) {
         if (typeof value === 'number') return value;
         if (value === undefined || value === null || value === '') return 0;
@@ -483,20 +512,29 @@ class IntelligentProcessor {
         const num = parseFloat(str);
         return isNaN(num) ? 0 : num;
     }
+    
     parseDateTime(val) {
         let dateObj = null, dateStr = '', timeStr = '';
+        
+        // Caso 1: Número do Excel
         if (typeof val === 'number' && val > 1) { 
             const excelEpochMs = (val - 25569) * 86400 * 1000;
             const compensationMs = 3 * 3600 * 1000; 
             dateObj = new Date(excelEpochMs + compensationMs); 
         } 
+        
+        // Caso 2: String
         if (!dateObj && typeof val === 'string') {
             const trimmedVal = val.trim();
-            const timeOnlyMatch = trimmedVal.match(/^(\d{1,2}:\d{1,2})(?::\d{1,2})?$/);
+            
+            // Apenas hora
+            const timeOnlyMatch = trimmedVal.match(/^(\d{1,2}:\d{2})(?::\d{2})?$/);
             if (timeOnlyMatch) {
                 timeStr = timeOnlyMatch[1];
                 return { fullDate: null, dateStr: '', timeStr: timeStr };
             }
+
+            // Data e hora (DD/MM/YYYY HH:MM)
             const dateTimeMatch = trimmedVal.match(/(\d{1,4})[-\/](\d{1,2})[-\/](\d{1,4})[\sT]+(\d{1,2}):(\d{1,2})/);
             if (dateTimeMatch) {
                 const parts = [parseInt(dateTimeMatch[1]), parseInt(dateTimeMatch[2]), parseInt(dateTimeMatch[3])];
@@ -509,16 +547,17 @@ class IntelligentProcessor {
                 const min = parseInt(dateTimeMatch[5]);
                 dateObj = new Date(y, m - 1, d, h, min);
             } else {
-                 const csvDateTimeMatch = trimmedVal.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})[\sT]+(\d{1,2}):(\d{1,2}):(\d{1,2})/);
-                 if (csvDateTimeMatch) {
-                     const parts = csvDateTimeMatch.slice(1).map(Number);
-                     const [y, m, d, h, min, s] = parts;
-                     dateObj = new Date(y, m - 1, d, h, min, s);
-                 }
+                // CSV (YYYY-MM-DD HH:MM:SS)
+                const csvDateTimeMatch = trimmedVal.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})[\sT]+(\d{1,2}):(\d{1,2}):(\d{1,2})/);
+                if (csvDateTimeMatch) {
+                    const parts = csvDateTimeMatch.slice(1).map(Number);
+                    const [y, m, d, h, min, s] = parts;
+                    dateObj = new Date(y, m - 1, d, h, min, s);
+                }
             }
         }
+        
         if (dateObj && !isNaN(dateObj.getTime())) {
-            // REMOVIDO O BLOQUEIO DE ANO 2020 PARA EVITAR DATAS FANTASMAS
             const d = dateObj.getDate();
             const m = dateObj.getMonth() + 1;
             const y = dateObj.getFullYear();
@@ -531,4 +570,5 @@ class IntelligentProcessor {
         return { fullDate: null, dateStr: '', timeStr: '' };
     }
 }
+
 if (typeof window !== 'undefined') window.IntelligentProcessor = IntelligentProcessor;
