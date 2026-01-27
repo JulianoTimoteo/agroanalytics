@@ -1,54 +1,56 @@
-// intelligent-processor.js - VERSÃO BLINDADA (V.2026 - FIX 430K & METAS)
+// intelligent-processor.js - VERSÃO FINAL (CORREÇÃO MAPEAMENTO META)
 class IntelligentProcessor {
     constructor() {
         this.columnMappings = {
             'production': {
                 'viagem': ['VIAGEM', 'N VIAGEM', 'NUMERO VIAGEM', 'ID_VIAGEM'],
+                'carga': ['CARGA', 'N CARGA', 'ID_CARGA', 'TICKET', 'NRO_CARGA'],
                 'frota': ['FROTA MOTRIZ', 'FROTA', 'MOTRIZ', 'CAMINHAO', 'PREFIXO'],
-                'equipamento': ['EQUIPAMENTO', 'COLHEDORA', 'CARREG COLHED', 'CARREG COLHED 1', 'CARREG./COLHED. 1'],
+                'equipamento': ['EQUIPAMENTO', 'COLHEDORA', 'CARREG COLHED', 'CARREG COLHED 1', 'CARREG./COLHED. 1', 'TIPO CARGA'],
                 'equipamento2': ['CARREG COLHED 2', 'CARREG./COLHED. 2'], 
                 'equipamento3': ['CARREG COLHED 3', 'CARREG./COLHED. 3'], 
-                'op1_cod': ['COD OPER CARREG COLHED 1', 'COD.OPER.CARREG./COLHED. 1', 'COD OPERADOR 1'],
-                'op1_dsc': ['DSC OPER CARREG COLHED 1', 'DSC.OPER.CARREG./COLHED. 1', 'NOME OPERADOR 1', 'DSC OPER CARREG COLHED'],
-                'op2_cod': ['COD OPER CARREG COLHED 2', 'COD.OPER.CARREG./COLHED. 2', 'COD OPERADOR 2'],
-                'op2_dsc': ['DSC OPER CARREG COLHED 2', 'DSC.OPER.CARREG./COLHED. 2', 'NOME OPERADOR 2'],
-                'op3_cod': ['COD OPER CARREG COLHED 3', 'COD.OPER.CARREG./COLHED. 3', 'COD OPERADOR 3'],
-                'op3_dsc': ['DSC OPER CARREG COLHED 3', 'DSC.OPER.CARREG./COLHED. 3', 'NOME OPERADOR 3'],
-                'operador_generico': ['OPERADOR', 'COD OPERADOR', 'MOTORISTA'], 
+                'op1_cod': ['COD OPER CARREG COLHED 1', 'COD.OPER.CARREG./COLHED. 1', 'COD OPERADOR 1', 'COD OPER 1', 'COD. OPER. 1'],
+                'op1_dsc': ['DSC.OPER.CARREG./COLHED. 1', 'DSC OPER CARREG COLHED 1', 'NOME OPERADOR 1', 'DSC OPER 1', 'NOME OPER 1', 'MOTORISTA 1'],
+                'op2_cod': ['COD OPER CARREG COLHED 2', 'COD.OPER.CARREG./COLHED. 2', 'COD OPERADOR 2', 'COD OPER 2'],
+                'op2_dsc': ['DSC.OPER.CARREG./COLHED. 2', 'DSC OPER CARREG COLHED 2', 'NOME OPERADOR 2', 'DSC OPER 2', 'NOME OPER 2', 'MOTORISTA 2'],
+                'op3_cod': ['COD OPER CARREG COLHED 3', 'COD.OPER.CARREG./COLHED. 3', 'COD OPERADOR 3', 'COD OPER 3'],
+                'op3_dsc': ['DSC.OPER.CARREG./COLHED. 3', 'DSC OPER CARREG COLHED 3', 'NOME OPERADOR 3', 'DSC OPER 3', 'NOME OPER 3', 'MOTORISTA 3'],
+                'operador_generico': ['OPERADOR', 'COD OPERADOR', 'MOTORISTA', 'COD.MOTORISTA'], 
                 'transbordo': ['TRANSBORDO', 'TRAT TRANSBORDO', 'TRAT TRANSBORDO 1', 'TRAT. TRANSBORDO 1'],
                 'transbordo2': ['TRAT TRANSBORDO 2', 'TRAT. TRANSBORDO 2'], 
                 'transbordo3': ['TRAT TRANSBORDO 3', 'TRAT. TRANSBORDO 3'],
                 'peso': ['PESO LIQUIDO', 'PESO FINAL', 'PESO LÍQUIDO', 'LIQUIDO'], 
                 'pesoBruto': ['PESO BRUTO', 'BRUTO'],
                 'pesoTara': ['PESO TARA', 'TARA'],
-                'dia_balanca': ['DIA BALANCA', 'DATA ENTRADA', 'DATA/HORA ENTRADA', 'DATA'], 
-                'data_saida': ['DATA/HORA SAÍDA', 'DATA/HORA SAIDA', 'DATA SAIDA', 'DATA/HORA SAÍDA\n', 'SAIDA'],
-                'hora_saida': ['HORA SAÍDA', 'HORA SAIDA', 'HORA'],
+                'dia_balanca': ['DIA BALANCA', 'DATA ENTRADA', 'DATA/HORA ENTRADA', 'DATA', 'DATA CLEAN'], 
+                'data_saida': ['DATA/HORA SAÍDA', 'DATA/HORA SAIDA', 'DATA SAIDA', 'DATA/HORA SAÍDA\n', 'SAIDA', 'DATA CLEAN', 'DATA_CLEAN'],
+                'hora_saida': ['HORA SAÍDA', 'HORA SAIDA', 'HORA', 'HORA CLEAN', 'HORA_CLEAN'],
                 'frente': ['COD FRENTE', 'FRENTE', 'FRENTE COLHEITA'], 
                 'cod_fazenda': ['COD FAZENDA', 'COD.FAZENDA', 'FAZENDA'], 
                 'desc_fazenda': ['DESC FAZENDA', 'DESC.FAZENDA', 'NOME FAZENDA', 'FAZENDA NOME'],
                 'variedade': ['VARIEDADE'],
                 'analisado': ['ANALISADO'],
                 'liberacao': ['LIBERAÇÃO', 'LIB', 'COD LIBERACAO'], 
-                'tipoProprietarioFa': ['TIPO PROPRIETARIO F A', 'TIPO PROPRIETARIO (F.A.)', 'TIPO PROPRIETARIO', 'PROPRIETARIO', 'TIPO PROPRIEDADE', 'TIPO', 'PROP'], 
+                'tipoProprietarioFa': ['TIPO PROPRIETARIO F A', 'TIPO PROPRIETARIO (F.A.)', 'TIPO PROPRIETARIO', 'PROPRIETARIO', 'DSC TIPO PROPRIEDADE', 'TIPO PROPRIEDADE'], 
                 'qtdViagem': ['QTD VIAGEM', 'QUANTIDADE VIAGEM'],
                 'distancia': ['DIST MEDIA', 'DISTANCIA', 'KM', 'RAIO MEDIO'],
-                'status_frota': ['STATUS', 'FASE', 'FASE OPERACIONAL', 'STATUS CAMINHAO', 'SITUACAO ATUAL'] 
+                'status_frota': ['STATUS', 'FASE', 'FASE OPERACIONAL', 'STATUS CAMINHAO', 'SITUACAO ATUAL'],
+                'tipoFrota': ['DSC. TIPO PROP. FROTA', 'TIPO PROPRIETARIO FROTA', 'PROPRIETARIO FROTA', 'TIPO FROTA']
             },
             'potential': {
-                'hora': ['HORA', 'HORA FIXA', 'HORA ESCALAR'],
-                'dispColhedora': ['DISP COLHEDORA', 'DISPONIBILIDADE COLHEDORA'],
-                'dispTransbordo': ['DISP TRANSBORDO', 'DISPONIBILIDADE TRANSBORDO'],
-                'dispCaminhoes': ['DISP CAMINHOES', 'DISPONIBILIDADE CAMINHOES'],
-                'potencial': ['POTENCIAL', 'CAPACIDADE'],
-                'caminhoesParados': ['CAMINHOES PARADO', 'PARADO'],
-                'caminhoesIda': ['CAMINHOES IDA'],
-                'caminhoesCampo': ['CAMINHOES CAMPO'],
-                'caminhoesVolta': ['CAMINHOES VOLTA'],
-                'caminhoesDescarga': ['CAMINHOES DESCARGA'],
-                'filaExterna': ['CAMINHOES FILA EXTERNA', 'FILA EXTERNA', 'CAMINHAO FILA EXTERNA'],
-                'carretasCarregadas': ['CARRETAS CARREGADAS'],
-                'rotacaoMoenda': ['ROTACAO DA MOENDA', 'ROTACAO MOENDA', 'RPM MOENDA', 'MOENDA']
+                'hora': ['HORA', 'HORA FIXA', 'HORA ESCALAR', 'HORA CLEAN', 'HORA_CLEAN'],
+                'dispColhedora': ['DISP COLHEDORA', 'DISPONIBILIDADE COLHEDORA', 'DISP COLH', 'COLH DISP'],
+                'dispTransbordo': ['DISP TRANSBORDO', 'DISPONIBILIDADE TRANSBORDO', 'DISP TRANSB'],
+                'dispCaminhoes': ['DISP CAMINHOES', 'DISPONIBILIDADE CAMINHOES', 'DISP CAM'],
+                'potencial': ['POTENCIAL', 'CAPACIDADE', 'TONELADAS POTENCIAL'],
+                'caminhoesParados': ['CAMINHOES PARADO', 'PARADO', 'PARADOS'],
+                'caminhoesIda': ['CAMINHOES IDA', 'IDA'],
+                'caminhoesCampo': ['CAMINHOES CAMPO', 'CAMPO'],
+                'caminhoesVolta': ['CAMINHOES VOLTA', 'VOLTA'],
+                'caminhoesDescarga': ['CAMINHOES DESCARGA', 'DESCARGA'],
+                'filaExterna': ['CAMINHOES FILA EXTERNA', 'FILA EXTERNA', 'FILA'],
+                'carretasCarregadas': ['CARRETAS CARREGADAS', 'CARRETAS'],
+                'rotacaoMoenda': ['ROTACAO DA MOENDA', 'ROTACAO MOENDA', 'RPM MOENDA', 'MOENDA', 'RPM']
             },
             'meta': { 
                 'frente': ['FRENTE', 'COD FRENTE'], 
@@ -60,7 +62,8 @@ class IntelligentProcessor {
                 'tmd': ['TMD'],
                 'cd': ['CD'],
                 'potencial': ['POTENCIAL'], 
-                'meta': ['META'],
+                // 🔥 MELHORIA: Mais variações para encontrar a Meta Diária
+                'meta': ['META', 'META DIARIA', 'META (T)', 'META_DIA', 'PLANEJAMENTO', 'TOTAL A COLHER'],
                 'atr': ['ATR'],
                 'maturador': ['MATURADOR', 'MAT'],
                 'possivel_reforma': ['POSSIVEL REFORMA', 'POSSIVEL REFORMA', 'REFORMA'],
@@ -82,11 +85,18 @@ class IntelligentProcessor {
                 'pesoBruto': ['PESO BRUTO', 'PESOBRUTO', 'BRUTO'],
                 'pesoTara': ['PESO TARA', 'PESOTARA', 'TARA'],
                 'qtdViagem': ['QTD VIAGEM', 'QTDVIAGEM', 'QUANTIDADE DE VIAGENS', 'VIAGENS', 'N VIAGENS'],
-                'distMedia': ['DIST MEDIA', 'DISTANCIA MEDIA', 'DIST. MEDIA']
+                'distMedia': ['DIST MEDIA', 'DISTANCIA MEDIA', 'DIST. MEDIA', 'DIST MÉDIA']
             }
         };
     }
     
+    _cleanTimeString(val) {
+        if (!val) return null;
+        const str = String(val).trim();
+        const match = str.match(/(\d{1,2}:\d{1,2})/); 
+        return match ? match[1] : null;
+    }
+
     _addToList(list, value) {
         if (value !== null && value !== undefined && value !== '' && String(value).toUpperCase() !== 'TOTAL' && String(value) !== '0') {
             const trimmedValue = String(value).trim();
@@ -104,14 +114,11 @@ class IntelligentProcessor {
         return `${data}${hora}${String(item.frota).replace(/\W/g, '')}`.toUpperCase();
     }
 
-    // Função ROBUSTA para extrair APENAS a hora HH:MM de qualquer formato
     _forceExtractTime(value) {
         if (value === null || value === undefined || value === '') return null;
-
         if (value instanceof Date && !isNaN(value.getTime())) {
             return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}`;
         }
-        
         if (typeof value === 'number') {
             let fraction = value % 1; 
             const total_seconds = Math.floor(86400 * fraction);
@@ -119,7 +126,6 @@ class IntelligentProcessor {
             const minutes = Math.floor((total_seconds % 3600) / 60);
             return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
         }
-
         const strValue = String(value).trim();
         const timeMatch = strValue.match(/(\d{1,2}):(\d{2})/);
         if (timeMatch) {
@@ -127,12 +133,10 @@ class IntelligentProcessor {
             let m = parseInt(timeMatch[2]);
             return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
         }
-        
         if (/^\d{1,2}$/.test(strValue)) {
             let h = parseInt(strValue);
             if (h >= 0 && h <= 23) return `${String(h).padStart(2, '0')}:00`;
         }
-
         return null;
     }
 
@@ -143,9 +147,7 @@ class IntelligentProcessor {
                 const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                 const rawMatrix = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null });
                 if (!rawMatrix || rawMatrix.length === 0) return { type: 'UNKNOWN', fileName, data: [] };
-                
                 const fileType = this.identifyFileTypeIntelligently(rawMatrix, fileName);
-                
                 return this.dispatchProcess(fileType, worksheet, fileName);
             } catch (error) {
                 console.error(`Erro ArrayBuffer ${fileName}:`, error);
@@ -213,29 +215,20 @@ class IntelligentProcessor {
 
     identifyFileTypeIntelligently(matrix, fileName) {
         const fileNameUpper = fileName.toUpperCase();
-        
-        // Identificação por Nome de Arquivo (Prioridade Alta)
+        if (fileNameUpper.includes('POTENCIAL')) return { type: 'POTENTIAL', headerRow: 0 };
         if (fileNameUpper.includes('ACM') || fileNameUpper.includes('SAFRA')) return { type: 'ACMSAFRA', headerRow: 0 };
         if (fileNameUpper.includes('METAS') || fileNameUpper.includes('META')) return { type: 'META', headerRow: 0 };
-        if (fileNameUpper.includes('POTENCIAL')) return { type: 'POTENTIAL', headerRow: 0 };
         if (fileNameUpper.includes('PRODU') || fileNameUpper.includes('BALANCA')) return { type: 'PRODUCTION', headerRow: 0 };
 
-        // Identificação por Conteúdo (Para pastas do Drive que não tem nome padrão)
         for (let i = 0; i < Math.min(matrix.length, 20); i++) {
             const row = matrix[i];
             if (!row || !Array.isArray(row)) continue;
             const rowString = row.join(' ').toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s{2,}/g, ' ');
             
-            if (rowString.includes('DISP COLHEDORA') || rowString.includes('ROTACAO DA MOENDA')) return { type: 'POTENTIAL', headerRow: i };
+            if (rowString.includes('DISP COLH') || rowString.includes('MOENDA') || rowString.includes('POTENCIAL') || rowString.includes('RPM')) return { type: 'POTENTIAL', headerRow: i };
             if (rowString.includes('TMD') || rowString.includes('COLHEITABILIDADE')) return { type: 'META', headerRow: i };
-            
-            // Cuidado para não confundir Safra com Produção
-            if (rowString.includes('PESO LIQUIDO') && (rowString.includes('CARREG') || rowString.includes('FROTA MOTRIZ'))) {
-                 return { type: 'PRODUCTION', headerRow: i };
-            }
-            if (rowString.includes('QTD VIAGEM') && rowString.includes('DIST MEDIA') && !rowString.includes('FROTA MOTRIZ')) {
-                return { type: 'ACMSAFRA', headerRow: i };
-            }
+            if (rowString.includes('PESO LIQUIDO') && (rowString.includes('CARREG') || rowString.includes('FROTA MOTRIZ'))) return { type: 'PRODUCTION', headerRow: i };
+            if ((rowString.includes('QTD VIAGEM') || rowString.includes('DIST MEDIA')) && rowString.includes('PESO LIQUIDO')) return { type: 'ACMSAFRA', headerRow: i };
         }
         
         return { type: 'UNKNOWN', headerRow: 0 };
@@ -246,8 +239,6 @@ class IntelligentProcessor {
         return structuredData.map(row => {
             const normalized = {};
             const rawNormalized = this.normalizeRowKeys(row);
-            
-            // FILTRO DE TOTAIS NA SAFRA
             const values = Object.values(rawNormalized).map(v => String(v).toUpperCase());
             if (values.some(v => v.includes('TOTAL') || v.includes('GERAL') || v.includes('SOMA'))) return null;
 
@@ -255,12 +246,16 @@ class IntelligentProcessor {
                 const value = rawNormalized[key];
                 let mappedKey = key; 
                 for (const standardKey in this.columnMappings.acmSafra) {
-                    if (this.columnMappings.acmSafra[standardKey].some(pattern => key.includes(pattern.replace(/\s+/g, '')))) {
+                    if (this.matchesPattern(key, this.columnMappings.acmSafra[standardKey])) {
                         mappedKey = standardKey;
                         break;
                     }
                 }
-                normalized[mappedKey] = value;
+                if (['pesoLiquido', 'pesoBruto', 'pesoTara', 'qtdViagem', 'distMedia'].includes(mappedKey)) {
+                    normalized[mappedKey] = this.parseNumber(value);
+                } else {
+                    normalized[mappedKey] = value;
+                }
             });
             return normalized;
         }).filter(item => item !== null);
@@ -272,7 +267,7 @@ class IntelligentProcessor {
         for (const row of rows) {
             for (const key of Object.keys(row)) {
                 const cleanKey = key.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, " ").replace(/\s+/g, " ").trim();
-                if (cleanKey.includes("DATA HORA SAIDA")) { 
+                if (cleanKey.includes("DATA HORA SAIDA") || cleanKey.includes("DATA CLEAN")) { 
                     const parsed = this.parseDateTime(row[key]);
                     if (parsed.fullDate) {
                         if (!ultimaData || parsed.fullDate.getTime() > ultimaData.fullDate.getTime()) ultimaData = parsed; 
@@ -294,32 +289,35 @@ class IntelligentProcessor {
             
             const normalizedRow = this.normalizeRowKeys(row);
             
-            // 1. Coleta de Dados
             Object.keys(normalizedRow).forEach(key => {
                  const value = normalizedRow[key];
                  if (value === null || value === undefined || value === '') return;
-                 const cleanKey = key.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, ' ').trim().replace(/\s+/g, ' ');
+                 const cleanKey = key.toUpperCase()
+                    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                    .replace(/[^A-Z0-9]/g, ' ')
+                    .trim().replace(/\s+/g, ' ');
                  
-                 // Dados Principais
                  if (this.matchesPattern(cleanKey, this.columnMappings.production.viagem)) {
                      if (!cleanKey.includes('QTD') && !cleanKey.includes('DIST') && !String(value).toUpperCase().includes('TOTAL')) {
                          if (!item.viagem) item.viagem = String(value).trim();
                      }
-                 } else if (this.matchesPattern(cleanKey, this.columnMappings.production.frota)) item.frota = String(value).trim();
+                 } 
+                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.carga)) item.carga = String(value).trim();
+                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.frota)) item.frota = String(value).trim();
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.frente)) item.frente = String(value).trim();
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.peso)) item.peso = this.parseNumber(value);
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.qtdViagem)) item.qtdViagem = this.parseNumber(value);
-                 
-                 // Listas e Detalhes
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.equipamento)) this._addToList(item.equipamentos, value);
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.equipamento2)) this._addToList(item.equipamentos, value);
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.equipamento3)) this._addToList(item.equipamentos, value);
+                 
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.op1_cod)) opData[1].c = value;
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.op1_dsc)) opData[1].d = value;
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.op2_cod)) opData[2].c = value;
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.op2_dsc)) opData[2].d = value;
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.op3_cod)) opData[3].c = value;
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.op3_dsc)) opData[3].d = value;
+                 
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.operador_generico) && !opData[1].c) opData[1].c = value;
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.transbordo)) this._addToList(item.transbordos, value);
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.transbordo2)) this._addToList(item.transbordos, value);
@@ -332,15 +330,15 @@ class IntelligentProcessor {
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.desc_fazenda)) item.descFazenda = String(value).trim();
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.status_frota)) item.statusFrota = String(value).trim().toUpperCase();
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.distancia)) item.distancia = this.parseNumber(value);
+                 else if (this.matchesPattern(cleanKey, this.columnMappings.production.tipoFrota)) item.tipoFrota = String(value).trim();
 
-                 // Datas
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.data_saida)) {
                      const dt = this.parseDateTime(value);
                      if (dt.fullDate) dataSaidaData = dt;
                      else {
                          const forcedTime = this._forceExtractTime(value);
                          if (forcedTime) horaSaidaStr = forcedTime;
-                         if (dt.dateStr) diaBalancaData = dt;
+                         if (dt.dateStr && !dataSaidaData) dataSaidaData = dt; 
                      }
                  }
                  else if (this.matchesPattern(cleanKey, this.columnMappings.production.hora_saida)) {
@@ -353,13 +351,10 @@ class IntelligentProcessor {
                  }
             });
 
-            // 2. FILTRAGEM DE SEGURANÇA (SANITY CHECK)
-            // Se tiver "Total" em qualquer lugar crítico, ou Peso > 200 ton, ou QtdViagem > 5, DESCARTA.
             if (['TOTAL', 'GERAL', 'SOMA'].some(bad => String(item.frota || '').toUpperCase().includes(bad) || String(item.viagem || '').toUpperCase().includes(bad))) return;
-            if (item.peso > 200) return; // NENHUM CAMINHÃO LEVA 200 TONELADAS. ISSO É SOMA.
-            if (item.qtdViagem > 5) return; // NENHUMA LINHA DEVE TER 5 VIAGENS SOZINHA.
+            if (item.peso > 200) return; 
+            if (item.qtdViagem > 5) return; 
 
-            // 3. Consolidação Data/Hora
             if (dataSaidaData && dataSaidaData.fullDate) {
                 item.timestamp = dataSaidaData.fullDate;
                 item.data = dataSaidaData.dateStr;
@@ -411,17 +406,23 @@ class IntelligentProcessor {
             Object.keys(normalizedRow).forEach(key => {
                 const value = normalizedRow[key];
                 if (!value) return;
-                const cleanKey = key.toUpperCase().normalize("NFD").replace(/[^A-Z0-9]/g, ' ').trim();
+                const cleanKey = key.toUpperCase()
+                    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                    .replace(/[^A-Z0-9]/g, ' ')
+                    .trim().replace(/\s+/g, ' ');
                 
                 Object.keys(this.columnMappings.meta).forEach(standardKey => {
                     if (this.matchesPattern(cleanKey, this.columnMappings.meta[standardKey])) {
                         isMetaRow = true;
                         const numericFields = ['raio', 'tmd', 'cd', 'potencial', 'meta', 'atr', 'vel', 'tc', 'tch', 'ton_hora', 'cm_hora', 'tempo_carre_min', 'cam', 'ciclo', 'viagens', 'tempo'];
-                        item[standardKey] = numericFields.includes(standardKey) ? this.parseNumber(value) : String(value).trim();
+                        if (!['cod_fazenda', 'desc_fazenda'].includes(standardKey)) {
+                            item[standardKey] = numericFields.includes(standardKey) ? this.parseNumber(value) : String(value).trim();
+                        } else {
+                            item[standardKey] = String(value).trim();
+                        }
                     }
                 });
             });
-            // ACEITA SE TIVER FRENTE **OU** FAZENDA (CORREÇÃO PARA ARQUIVOS SEM COLUNA 'FRENTE')
             if ((item.frente || item.cod_fazenda || item.desc_fazenda) && isMetaRow) processedData.push(item);
         });
         return processedData;
@@ -443,43 +444,58 @@ class IntelligentProcessor {
                     item[mappedKey] = this.parseNumber(value);
                 }
             });
-            
-            ['Caminhões  Ida', 'Caminhões  Campo', 'Caminhões  Volta', 'Caminhões  Descarga', 'Caminhões  PARADO', 'CARRETAS CARREGADAS', 'POTENCIAL', 'Caminhões Fila externa'].forEach(exactKey => {
+            ['Caminhões  Ida', 'Caminhões  Campo', 'Caminhões  Volta', 'Caminhões  Descarga', 'Caminhões  PARADO', 'CARRETAS CARREGADAS', 'POTENCIAL', 'Caminhões Fila externa'].forEach(exactKey => {
                 let value = row[exactKey] || row[exactKey.replace(/\s{2,}/g, ' ')];
                 if (value != null && value !== '') item[exactKey] = this.parseNumber(value);
             });
-
             return hasHour ? item : null;
         }).filter(i => i); 
     }
     
     findPotentialKey(originalKey) {
-        const cleanKey = originalKey.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, ' ').trim().replace(/\s+/g, ' ');
+        const cleanKey = originalKey.toUpperCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^A-Z0-9]/g, ' ')
+            .trim().replace(/\s+/g, ' ');
+            
         for (const standardKey in this.columnMappings.potential) {
-            if (this.columnMappings.potential[standardKey].some(pattern => {
-                const patUpper = pattern.toUpperCase().replace(/[^A-Z0-9]/g, ' ').trim().replace(/\s+/g, ' ');
-                return cleanKey === patUpper || cleanKey.includes(patUpper);
-            })) return standardKey;
+            if (this.matchesPattern(cleanKey, this.columnMappings.potential[standardKey])) {
+                return standardKey;
+            }
         }
         return null;
     }
     
     matchesPattern(key, patterns) {
-        return patterns.some(pattern => key.toUpperCase().includes(pattern.toUpperCase()));
+        if (!patterns || !Array.isArray(patterns)) return false;
+        const normalizedKey = key.toUpperCase()
+            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+            .replace(/[^A-Z0-9]/g, ' ')
+            .trim().replace(/\s+/g, ' ');
+
+        return patterns.some(pattern => {
+            const cleanPattern = pattern.toUpperCase()
+                .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                .replace(/[^A-Z0-9]/g, ' ')
+                .trim().replace(/\s+/g, ' ');
+            return normalizedKey.includes(cleanPattern);
+        });
     }
+
     normalizeRowKeys(row) {
         const normalized = {};
         Object.keys(row).forEach(key => {
-            const cleanKey = key.trim().toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Z0-9]/g, ' ').replace(/\s+/g, ' ').trim();
-            normalized[cleanKey] = row[key];
+            normalized[key] = row[key]; 
         });
         return normalized;
     }
+    
     parseNumber(value) {
         if (typeof value === 'number') return value;
         if (value === undefined || value === null || value === '') return 0;
-        let str = String(value).trim();
-        if (str.includes(',')) str = str.replace(/\./g, '').replace(',', '.');
+        let str = String(value).trim().replace(/\s/g, '');
+        if (str.includes(',') && str.includes('.')) str = str.replace(/\./g, '').replace(',', '.');
+        else if (str.includes(',')) str = str.replace(',', '.');
         const num = parseFloat(str);
         return isNaN(num) ? 0 : num;
     }
@@ -518,7 +534,6 @@ class IntelligentProcessor {
             }
         }
         if (dateObj && !isNaN(dateObj.getTime())) {
-            // REMOVIDO O BLOQUEIO DE ANO 2020 PARA EVITAR DATAS FANTASMAS
             const d = dateObj.getDate();
             const m = dateObj.getMonth() + 1;
             const y = dateObj.getFullYear();

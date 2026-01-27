@@ -77,6 +77,41 @@ class VisualizerGrid {
                 densidadeColor = colors.danger;
             }
             // --- FIM LÓGICA DE COR PARA DENSIDADE ---
+
+            // --- LÓGICA DA BARRA DE PROGRESSO (NOVO) ---
+            const metaTotal = frente.potencialTotal || 0;
+            let progressHTML = '';
+
+            if (metaTotal > 0) {
+                const percent = (frente.pesoTotal / metaTotal) * 100;
+                const percentDisplay = percent.toFixed(1);
+                const width = Math.min(percent, 100); // Trava visualmente em 100%
+                
+                // Cores Dinâmicas: Vermelho -> Amarelo -> Azul -> Verde
+                let barColor = '#FF2E63'; // Vermelho (< 30%)
+                if (percent >= 98) barColor = '#40800c'; // Verde (Concluído)
+                else if (percent >= 70) barColor = '#00D4FF'; // Azul (Reta final)
+                else if (percent >= 30) barColor = '#FFB800'; // Amarelo (Meio termo)
+
+                progressHTML = `
+                    <div class="front-progress-container" style="margin-top: 12px; margin-bottom: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.8em; color: var(--text-secondary); margin-bottom: 4px;">
+                            <span>Progresso Colheita</span>
+                            <span style="color: ${barColor}; font-weight: bold;">${percentDisplay}%</span>
+                        </div>
+                        <div style="width: 100%; background: rgba(255, 255, 255, 0.1); height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div style="width: ${width}%; background-color: ${barColor}; height: 100%; transition: width 0.5s ease;"></div>
+                        </div>
+                        <div style="text-align: right; font-size: 0.75em; color: var(--text-secondary); margin-top: 2px;">
+                            Meta: ${typeof Utils !== 'undefined' ? Utils.formatNumber(metaTotal) : metaTotal.toLocaleString()} t
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Se não tiver meta definida, mostra apenas um separador sutil
+                progressHTML = `<div style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.05);"></div>`;
+            }
+            // ---------------------------------------------
             
             const statsHTML = `
                 <span style="font-size: 1.1em; font-weight: 700; color: ${frente.status === 'critical' ? colors.danger : colors.success};">
@@ -122,8 +157,8 @@ class VisualizerGrid {
                     <div style="text-align: left; margin-top: 0.5rem; font-size: 0.9rem; color: var(--text); line-height: 1.6;">
                         ${statsHTML}
                     </div>
-                    
-                    ${harvesterDetailHTML} 
+
+                    ${progressHTML} ${harvesterDetailHTML} 
                 </div>
             `;
             grid.appendChild(card);

@@ -1,6 +1,5 @@
-// dataanalyzer.js - VERSÃO FINAL (INTEGRAÇÃO ACUMULADO SAFRA)
+// dataanalyzer.js - VERSÃO FINAL CORRIGIDA (CÁLCULO DA META CORRETO)
 
-// Encapsulamento para evitar o erro "Identifier 'DataAnalyzer' has already been declared"
 if (typeof DataAnalyzer === 'undefined') {
     class DataAnalyzer {
         // --- CONSTANTES DE NEGÓCIO ---
@@ -11,14 +10,10 @@ if (typeof DataAnalyzer === 'undefined') {
 
         constructor() {
             // Inicializa Submódulos de Análise
-            // Assume que as classes dos submódulos já foram carregadas globalmente (window.DataAnalyzerKPIs, etc.)
-            this.kpisModule = new DataAnalyzerKPIs(this);
-            this.rankingsModule = new DataAnalyzerRankings(this);
-            this.timeModule = new DataAnalyzerTime(this);
+            if (typeof DataAnalyzerKPIs !== 'undefined') this.kpisModule = new DataAnalyzerKPIs(this);
+            if (typeof DataAnalyzerRankings !== 'undefined') this.rankingsModule = new DataAnalyzerRankings(this);
+            if (typeof DataAnalyzerTime !== 'undefined') this.timeModule = new DataAnalyzerTime(this);
         }
-
-        // ... isPropria, isTerceiro, _isValidHarvesterCode, _extractEquipments, isAggregationRow, _getFrontMetadata ...
-        // (Copying these helper methods exactly as they were in the file provided in Turn 28 prompt)
 
         /**
          * Verifica se um registro pertence ao contexto 'Própria'.
@@ -313,7 +308,7 @@ if (typeof DataAnalyzer === 'undefined') {
                 totalPesoLiquido: 0,
                 taxaAnalise: 0,
                 distribuicaoFrota: { propria: 0, terceiros: 0 },
-                potentialData: this.timeModule.analyzePotential(potentialData),
+                potentialData: this.timeModule ? this.timeModule.analyzePotential(potentialData) : [],
                 topFrotasProprias: [],
                 topFrotasTerceiros: [],
                 topEquipamentosProprios: [],
@@ -347,8 +342,6 @@ if (typeof DataAnalyzer === 'undefined') {
             let lastTimestamp = null;
             let lastRow = null;
             
-            console.log(`[ANALYZER] Buscando última pesagem em ${data.length} registros...`);
-            
             data.forEach(row => {
                 if (this.isAggregationRow(row)) return;
                 
@@ -369,30 +362,23 @@ if (typeof DataAnalyzer === 'undefined') {
                 }
             });
             
-            if (lastTimestamp && lastRow) {
-                const dateStr = lastTimestamp.toLocaleDateString('pt-BR');
-                const timeStr = lastTimestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                console.log(`[ANALYZER] ✅ Última pesagem encontrada: ${dateStr} às ${timeStr}`);
-            } else {
-                console.warn('[ANALYZER] ⚠️ Nenhum timestamp válido encontrado nos dados.');
-            }
-
             return lastTimestamp;
         }
 
-
         /**
          * Função Principal de Análise - ORQUESTRADOR
+         * CORREÇÃO AQUI: Adicionado acmSafraData nos parâmetros
          */
-        analyzeAll(data, potentialData = [], metaData = [], validationResult = { anomalies: [] }) {
+        analyzeAll(data, potentialData = [], metaData = [], validationResult = { anomalies: [] }, acmSafraData = []) {
             if (!Array.isArray(data) || data.length === 0) {
                 const emptyAnalysis = this.getEmptyAnalysis(potentialData);
                 if (this.rankingsModule && this.rankingsModule.analyzeMetas) {
                     emptyAnalysis.metaData = this.rankingsModule.analyzeMetas(metaData); 
                 }
-                // Ainda precisamos calcular o acumulado mesmo sem dados de produção, caso o AcmSafra (metaData) exista
+                // Ainda precisamos calcular o acumulado mesmo sem dados de produção
                 if (this.kpisModule && this.kpisModule.calculateAcumuladoSafra) {
-                    emptyAnalysis.acumuladoSafra = this.kpisModule.calculateAcumuladoSafra(metaData);
+                    // CORREÇÃO: Passando null no primeiro arg para forçar uso do acmSafraData (2º arg)
+                    emptyAnalysis.acumuladoSafra = this.kpisModule.calculateAcumuladoSafra(null, acmSafraData);
                 }
                 return emptyAnalysis;
             }
@@ -417,8 +403,10 @@ if (typeof DataAnalyzer === 'undefined') {
             const ownerTypeData = this.kpisModule.analyzeOwnerType(data); 
             const lastTripAvgResult = this.kpisModule.calculateLastTripAverage(data);
             
-            // 🔥 CÁLCULO DO ACUMULADO SAFRA
-            const acumuladoSafra = this.kpisModule.calculateAcumuladoSafra(metaData);
+            // 🔥 CÁLCULO DO ACUMULADO SAFRA (CORRIGIDO)
+            // Agora passamos null no primeiro argumento e acmSafraData no segundo
+            // Isso faz com que a função calculateAcumuladoSafra use corretamente a planilha de acumulado
+            const acumuladoSafra = this.kpisModule.calculateAcumuladoSafra(null, acmSafraData);
 
             // --- DELEGAÇÃO PARA o MÓDULO DE TIME ---
             const projecaoMoagem = this.timeModule.calculateProjectionMoagem(data, totalPesoLiquido);
@@ -432,9 +420,6 @@ if (typeof DataAnalyzer === 'undefined') {
                 row.frota &&
                 !this.isAggregationRow(row)
             );
-            const topFrotasPropriasDist = this.rankingsModule.getTopFrota(filteredData, DataAnalyzer.FROTA_PROPRIA, true);
-            const topFrotasTerceirosDist = this.rankingsModule.getTopFrota(filteredData, DataAnalyzer.FROTA_TERCEIROS, true);
-            
             const topFrotasProprias = this.rankingsModule.getTopFrota(filteredData, DataAnalyzer.FROTA_PROPRIA, false);
             const topFrotasTerceiros = this.rankingsModule.getTopFrota(filteredData, DataAnalyzer.FROTA_TERCEIROS, false);
             
@@ -451,6 +436,21 @@ if (typeof DataAnalyzer === 'undefined') {
             // --- DELEGAÇÃO PARA o MÓDULO DE METAS ---
             const metaResult = this.rankingsModule.analyzeMetas(metaData, frentes);
 
+            // 🔥 MERGE CORRETO DA META (USANDO A COLUNA 'META' E NÃO 'POTENCIAL')
+            if (frentes && metaResult) {
+                frentes.forEach(f => {
+                    const meta = metaResult.get(String(f.codFrente));
+                    if (meta) {
+                        // CORREÇÃO: Usa 'meta.meta' (Soma da Coluna META) em vez de 'potencial_entrega_total'
+                        const rawMeta = meta.meta; 
+                        let metaVal = typeof rawMeta === 'number' ? rawMeta : parseFloat(rawMeta);
+                        f.potencialTotal = isNaN(metaVal) ? 0 : metaVal;
+                    } else {
+                        f.potencialTotal = 0;
+                    }
+                });
+            }
+
             return {
                 totalViagens: contagemViagens.total,
                 viagensProprias: contagemViagens.proprias,
@@ -463,10 +463,6 @@ if (typeof DataAnalyzer === 'undefined') {
 
                 topFrotasProprias,
                 topFrotasTerceiros,
-                
-                topFrotasPropriasDist,
-                topFrotasTerceirosDist,
-                
                 topEquipamentosProprios,
                 topEquipamentosTerceiros,
                 topTransbordos,
@@ -480,7 +476,6 @@ if (typeof DataAnalyzer === 'undefined') {
 
                 analise24h,
                 fleetHourly,
-                // harvestHourly, // Removed as unused
                 frentes,
                 equipmentDistribution,
                 projecaoMoagem,
@@ -489,7 +484,7 @@ if (typeof DataAnalyzer === 'undefined') {
                 lastExitTimestamp: lastExitTimestamp,
                 lastExitTimestampFormatted: lastExitTimestampFormatted,
                 
-                acumuladoSafra: acumuladoSafra, // 🔥 Campo Adicionado
+                acumuladoSafra: acumuladoSafra, // 🔥 Campo Adicionado e agora com valor correto
 
                 analyzeFrontHourly: (d) => this.timeModule.analyzeFrontHourlyComplete(d),
                 data: filteredData,

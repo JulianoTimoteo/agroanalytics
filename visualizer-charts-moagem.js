@@ -1,311 +1,352 @@
-// visualizer-charts-moagem.js - Gráficos Detalhados do Carrossel (Moagem, Potencial, Rotação)
-class VisualizerChartsMoagem {
-    
-    constructor(visualizer) {
-        this.visualizer = visualizer;
-        this.baseColors = visualizer.baseColors;
-    }
+// visualizer-charts-moagem.js - VERSÃO FINAL: POTENCIAL AZUL, ROTAÇÃO VERDE ESCURO, META/24 E LINHAS COM BOLINHAS
 
-    /**
-     * Auxiliar CRÍTICO: Ordena os dados no ciclo 06:00 - 05:59.
-     */
-    _sortAgroTime(labels, datasets) {
-        const getAgroOrder = (timeStr) => {
-            if (!timeStr) return 99;
-            const parts = timeStr.split(':');
-            const hour = parseInt(parts[0]);
-            
-            if (isNaN(hour)) return 99;
-            
-            // 06:00 -> 0, 07:00 -> 1, ..., 23:00 -> 17
-            if (hour >= 6 && hour <= 23) return hour - 6;
-            
-            // 00:00 -> 18, 01:00 -> 19, ..., 05:00 -> 23
-            if (hour >= 0 && hour <= 5) return hour + 18;
-            
-            return 99;
-        };
-
-        const combined = labels.map((label, index) => ({
-            label,
-            originalIndex: index,
-            order: getAgroOrder(label)
-        }));
-
-        combined.sort((a, b) => a.order - b.order);
-
-        const newLabels = combined.map(c => c.label);
-        const newDatasets = datasets.map(ds => {
-            const newData = combined.map(c => ds.data[c.originalIndex]);
-            return { ...ds, data: newData };
-        });
-
-        return { labels: newLabels, datasets: newDatasets };
-    }
-
-    /**
-     * Auxiliar: Processa dados de potencial bruto por hora, garantindo listas limpas.
-     */
-    _processPotentialByHour(rawData) {
-        const rawLabels = [];
-        const potencial = [];
-        const rotacao = [];
+if (typeof VisualizerChartsMoagem === 'undefined') {
+    class VisualizerChartsMoagem {
         
-        const HORA_KEY = 'HORA'; 
-        const POTENCIAL_KEY = 'POTENCIAL';
-        const ROTACAO_KEY = 'ROTAÇÃO DA MOENDA'; 
-
-        const uniqueHours = new Set();
-        
-        rawData.forEach(row => {
-            const hora = row[HORA_KEY];
-            if (hora && !uniqueHours.has(hora)) {
-                uniqueHours.add(hora);
-                rawLabels.push(hora);
-                potencial.push(row[POTENCIAL_KEY] || 0); 
-                rotacao.push(row[ROTACAO_KEY] || 0); 
-            }
-        });
-
-        // CRÍTICO: ORDENA AQUI ANTES DE CRIAR OS GRÁFICOS
-        const initialDatasets = [{ data: potencial, label: 'Potencial' }, { data: rotacao, label: 'Rotação' }];
-        const sortedData = this._sortAgroTime(rawLabels, initialDatasets);
-        
-        // Retorna as listas de dados já ordenadas (sem o campo label)
-        return { 
-            labels: sortedData.labels, 
-            potencial: sortedData.datasets[0].data, 
-            rotacao: sortedData.datasets[1].data 
-        };
-    }
-    
-    /**
-     * Auxiliar: Opções Comuns para Gráficos Horários (Base de Moagem)
-     */
-    _getHourlyChartOptions(config, title, suggestedMin = null, suggestedMax = null) {
-        const options = {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: { labels: { color: config.fontColor, boxWidth: 10 } },
-                tooltip: {
-                    mode: 'index',
-                    callbacks: {
-                        label: (context) => {
-                            const unit = context.dataset.label.includes('RPM') ? ' RPM' : ' t/h';
-                            const value = context.parsed ? context.parsed.y : 0;
-                            // Exibe o valor formatado com zero decimal
-                            return `${context.dataset.label}: ${Utils.formatNumber(value, 0)}${unit}`;
-                        }
-                    }
-                },
-                datalabels: {
-                    display: (context) => {
-                        const value = context.parsed ? context.parsed.y : 0;
-                        return context.dataset.type === 'bar' && value > 0;
-                    },
-                    color: config.labelColor,
-                    font: { weight: 'bold', size: 10 },
-                    anchor: 'end',
-                    align: 'top',
-                    formatter: (value, context) => {
-                        const val = context.parsed ? context.parsed.y : 0;
-                        // Exibe APENAS o valor inteiro formatado no datalabels
-                        return val > 0 ? Utils.formatNumber(val, 0) : '';
-                    }
-                }
-            },
-            scales: {
-                x: { 
-                    grid: { color: config.gridColor },
-                    ticks: { color: config.fontColor, maxTicksLimit: 15 } 
-                },
-                yPeso: { 
-                    type: 'linear',
-                    position: 'left',
-                    beginAtZero: true,
-                    grid: { color: config.gridColor },
-                    title: { display: true, text: title, color: config.fontColor, font: { weight: 'bold' } }, 
-                    ticks: { 
-                        color: config.fontColor,
-                        // CORREÇÃO: Usa Utils.formatNumber(v, 0) para formatar o tick sem decimais, mas com separador de milhar.
-                        callback: v => v > 0 ? Utils.formatNumber(v, 0) : ''
-                    }
-                }
-            },
-            categoryPercentage: 0.9,
-            barPercentage: 0.7,
-        };
-        
-        if (title.includes('RPM')) {
-             options.scales.yRPM = {
-                type: 'linear',
-                position: 'left', 
-                suggestedMin: suggestedMin || 800, 
-                suggestedMax: suggestedMax || 1300,
-                grid: { color: config.gridColor },
-                title: { display: true, text: title, color: config.fontColor, font: { weight: 'bold' } },
-                ticks: { 
-                    color: config.fontColor,
-                    callback: v => Math.round(v)
-                }
-             };
-             delete options.scales.yPeso; 
-        } else {
-             options.scales.yPeso.suggestedMin = suggestedMin;
-             options.scales.yPeso.suggestedMax = suggestedMax;
+        constructor(visualizer) {
+            this.visualizer = visualizer;
+            this.baseColors = visualizer.baseColors;
+            
+            // --- PALETA DE CORES DEFINIDA ---
+            this.COLOR_BLUE = '#2196F3';       // Potencial >= Meta (Azul)
+            this.COLOR_DARK_GREEN = '#006400'; // Rotação >= Meta (Verde Escuro)
+            this.COLOR_AGRO_GREEN = '#40800c'; // Moagem Real >= Meta (Verde Padrão)
+            this.COLOR_RED = '#FF2E63';        // Abaixo da Meta (Vermelho)
+            this.COLOR_META_LINE = '#FFB800';  // Cor da Linha de Meta (Amarelo/Laranja)
         }
 
-        return options;
-    }
+        /**
+         * Ordena horas no formato Agrícola (06:00 até 05:00 do dia seguinte)
+         */
+        _sortAgroHours(labels) {
+            return labels.sort((a, b) => {
+                const hA = parseInt(a.split(':')[0]);
+                const hB = parseInt(b.split(':')[0]);
+                
+                // Ajusta horas: 00-05 viram 24-29 para ficarem no final da fila
+                const adjA = hA < 6 ? hA + 24 : hA;
+                const adjB = hB < 6 ? hB + 24 : hB;
+                
+                return adjA - adjB;
+            });
+        }
 
-    /**
-     * Moagem (t/h) - Condição: Abaixo da Meta = VERMELHO, Acima/Igual = AZUL
-     */
-    createRealHourlyChart(labels, moagemReal, metaDinamica, config) {
-        const ctx = document.getElementById('realHourlyChart')?.getContext('2d');
-        if (!ctx) return;
-        if (this.visualizer.charts.realHourlyChart) this.visualizer.charts.realHourlyChart.destroy();
-        
-        const datasets = [
-            {
-                label: 'Real (t/h)',
-                data: moagemReal,
-                // Lógica de colorização condicional
-                backgroundColor: (context) => {
-                    const dataIndex = context.dataIndex;
-                    const value = context.dataset.data[dataIndex];
-                    const metaValue = metaDinamica[dataIndex]; 
-                    
-                    // Se o valor for abaixo da meta horária, usa VERMELHO
-                    if (value < metaValue) {
-                        return this.baseColors.danger;
-                    }
-                    // Caso contrário, usa AZUL (real_moagem_color)
-                    return this.baseColors.real_moagem_color;
-                },
+        /**
+         * Processa os dados brutos de potencial e rotação por hora
+         */
+        _processPotentialByHour(potentialData) {
+            if (!potentialData || potentialData.length === 0) return { labels: [], potencial: [], rotacao: [] };
+
+            const buckets = {}; 
+            
+            potentialData.forEach(row => {
+                if (!row.HORA && !row.hora) return;
+                
+                let hourKey = String(row.HORA || row.hora).trim();
+                // Garante formato HH:00
+                if (!hourKey.includes(':')) hourKey += ':00';
+                else hourKey = hourKey.split(':')[0] + ':00';
+                
+                if (hourKey.length === 4) hourKey = '0' + hourKey;
+
+                if (!buckets[hourKey]) {
+                    buckets[hourKey] = { 
+                        potencialSum: 0, 
+                        rotacaoSum: 0, 
+                        count: 0, 
+                        rotacaoCount: 0 
+                    };
+                }
+                
+                // Soma Potencial
+                const pot = parseFloat(row.POTENCIAL || row.CAPACIDADE || row['TONELADAS POTENCIAL'] || 0);
+                if (!isNaN(pot) && pot > 0) {
+                    buckets[hourKey].potencialSum += pot;
+                    buckets[hourKey].count++;
+                }
+
+                // Soma Rotação
+                const rotKey = Object.keys(row).find(k => k.toUpperCase().includes('ROTACAO') || k.toUpperCase().includes('RPM') || k.toUpperCase().includes('MOENDA'));
+                const rot = parseFloat(row[rotKey] || 0);
+                
+                if (!isNaN(rot) && rot > 0) {
+                    buckets[hourKey].rotacaoSum += rot;
+                    buckets[hourKey].rotacaoCount++;
+                }
+            });
+
+            // Ordena pelo turno agrícola
+            const labels = this._sortAgroHours(Object.keys(buckets));
+            
+            const potencial = labels.map(lbl => {
+                const b = buckets[lbl];
+                return b.count > 0 ? b.potencialSum / b.count : 0;
+            });
+            
+            const rotacao = labels.map(lbl => {
+                const b = buckets[lbl];
+                return b.rotacaoCount > 0 ? b.rotacaoSum / b.rotacaoCount : 0;
+            });
+
+            return { labels, potencial, rotacao };
+        }
+
+        /**
+         * Lógica de Cores: Compara valor da barra com a meta
+         */
+        _getColors(data, metaValue, colorAbove, colorBelow) {
+            return data.map(val => val >= metaValue ? colorAbove : colorBelow);
+        }
+
+        /**
+         * 📊 GRÁFICO 1: MOAGEM REAL (t/h)
+         * Meta: Dinâmica (vem do arquivo Metas)
+         * Cor: Verde Padrão vs Vermelho
+         */
+        createRealHourlyChart(labels, data, metaDataArray, theme) {
+            const ctx = document.getElementById('realHourlyChart');
+            if (!ctx) return;
+
+            // Cores baseadas na meta de cada hora
+            const barColors = data.map((val, i) => {
+                const meta = metaDataArray[i] || 0;
+                return val >= meta ? this.COLOR_AGRO_GREEN : this.COLOR_RED;
+            });
+
+            if (this.visualizer.charts['realHourlyChart']) {
+                this.visualizer.charts['realHourlyChart'].destroy();
+            }
+
+            this.visualizer.charts['realHourlyChart'] = new Chart(ctx, {
                 type: 'bar',
-                order: 2, 
-                yAxisID: 'yPeso',
-            },
-            {
-                label: 'Meta Horária',
-                data: metaDinamica,
-                borderColor: this.baseColors.meta_horaria_color,
-                backgroundColor: 'transparent',
-                borderWidth: 3,
-                type: 'line', 
-                fill: false, 
-                tension: 0, // MUDANÇA: Linha reta
-                pointRadius: 0, // MUDANÇA: Sem pontos
-                order: 1,
-                yAxisID: 'yPeso',
-            }
-        ];
-
-        this.visualizer.charts.realHourlyChart = new Chart(ctx, {
-            type: 'bar',
-            data: { labels: labels, datasets },
-            options: this._getHourlyChartOptions(config, 'Toneladas (t/h) / Meta', 0)
-        });
-    }
-
-    /**
-     * Potencial (t/h) - REMOVIDO: Meta Horária (sparseMeta)
-     */
-    createPotencialHourlyChart(labels, potencial, sparseMeta, config) {
-        const ctx = document.getElementById('potencialHourlyChart')?.getContext('2d');
-        if (!ctx) return;
-        if (this.visualizer.charts.potencialHourlyChart) this.visualizer.charts.potencialHourlyChart.destroy();
-        
-        const datasets = [
-            {
-                label: 'Potencial (t/h)',
-                data: potencial,
-                backgroundColor: this.baseColors.potencial_color, 
-                type: 'bar',
-                order: 2, 
-                yAxisID: 'yPeso',
-            },
-            {
-                label: 'Evolução Potencial',
-                data: potencial, 
-                borderColor: this.baseColors.success, 
-                backgroundColor: 'transparent',
-                borderWidth: 3,
-                type: 'line',
-                fill: false,
-                tension: 0.4, 
-                pointRadius: 4,
-                order: 1, 
-                yAxisID: 'yPeso',
-            }
-            // Meta Horária foi removida deste gráfico conforme solicitado.
-        ];
-
-        this.visualizer.charts.potencialHourlyChart = new Chart(ctx, {
-            type: 'bar',
-            data: { labels: labels, datasets },
-            // Sugerido um maximo para Potencial baseado nos seus dados (655)
-            options: this._getHourlyChartOptions(config, 'Potencial (t/h)', 0, 700) 
-        });
-    }
-
-    /**
-     * Rotação (RPM) - Condição: Abaixo da Meta = VERMELHO, Acima/Igual = LARANJA
-     */
-    createRotacaoHourlyChart(labels, rotacao, config) {
-        const ctx = document.getElementById('rotacaoHourlyChart')?.getContext('2d');
-        if (!ctx) return;
-        if (this.visualizer.charts.rotacaoHourlyChart) this.visualizer.charts.rotacaoHourlyChart.destroy();
-        
-        const rpmTarget = parseFloat(localStorage.getItem('metaRotacao') || 1100);
-        const metaLine = labels.map(() => rpmTarget);
-        
-        const datasets = [
-            {
-                label: 'Rotação (RPM)',
-                data: rotacao,
-                // Lógica de colorização condicional
-                backgroundColor: (context) => {
-                    const dataIndex = context.dataIndex;
-                    const value = context.dataset.data[dataIndex];
-                    const metaValue = metaLine[dataIndex];
-                    
-                    // Se o valor for abaixo da meta, usa VERMELHO
-                    if (value < metaValue) {
-                        return this.baseColors.danger;
-                    }
-                    // Caso contrário, usa LARANJA (rotacao_color)
-                    return this.baseColors.rotacao_color;
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Meta Dinâmica',
+                            data: metaDataArray,
+                            type: 'line',
+                            borderColor: this.COLOR_META_LINE,
+                            backgroundColor: this.COLOR_META_LINE,
+                            borderWidth: 2,
+                            pointRadius: 4,      // Bolinha
+                            pointHoverRadius: 6,
+                            borderDash: [5, 5],  // Tracejado
+                            order: 0,
+                            datalabels: { display: false }
+                        },
+                        {
+                            label: 'Realizado (t)',
+                            data: data,
+                            backgroundColor: barColors,
+                            borderRadius: 4,
+                            order: 1,
+                            datalabels: {
+                                color: theme.fontColor,
+                                anchor: 'end',
+                                align: 'top',
+                                font: { weight: 'bold' },
+                                formatter: Math.round
+                            }
+                        }
+                    ]
                 },
-                type: 'bar', 
-                order: 2, 
-                yAxisID: 'yRPM',
-            },
-            {
-                label: 'Meta Rotação',
-                data: metaLine,
-                borderColor: this.baseColors.meta_horaria_color,
-                backgroundColor: 'transparent',
-                borderWidth: 3,
-                type: 'line', 
-                fill: false, 
-                tension: 0, // MANTIDO: Linha reta
-                pointRadius: 0, // MANTIDO: Sem pontos
-                order: 1, 
-                yAxisID: 'yRPM',
-            }
-        ];
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true, labels: { color: theme.fontColor } },
+                        tooltip: {
+                            callbacks: {
+                                label: (c) => {
+                                    if (c.dataset.type === 'line') return `Meta: ${Math.round(c.raw)} t`;
+                                    const meta = metaDataArray[c.dataIndex] || 0;
+                                    const val = Math.round(c.raw);
+                                    const diff = val - meta;
+                                    const icon = diff >= 0 ? '✅' : '🔻';
+                                    return [`Real: ${val} t`, `Meta: ${Math.round(meta)} t`, `Dif: ${diff > 0 ? '+' : ''}${Math.round(diff)} t ${icon}`];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: theme.gridColor }, ticks: { color: theme.fontColor } },
+                        x: { grid: { display: false }, ticks: { color: theme.fontColor } }
+                    }
+                }
+            });
+        }
 
-        this.visualizer.charts.rotacaoHourlyChart = new Chart(ctx, {
-            type: 'bar', 
-            data: { labels: labels, datasets },
-             // Sugerido um maximo para Rotação baseado nos seus dados (1280)
-            options: this._getHourlyChartOptions(config, 'Rotação (RPM)', 800, 1300) 
-        });
+        /**
+         * 📊 GRÁFICO 2: POTENCIAL (t/h)
+         * Meta: (Moagem Dia / 24)
+         * Cor: Azul (>=) vs Vermelho (<)
+         */
+        createPotencialHourlyChart(labels, data, unusedMetaArray, theme) {
+            const ctx = document.getElementById('potencialHourlyChart');
+            if (!ctx) return;
+
+            // 1. Calcula Meta Fixa: Meta Moagem / 24
+            const metaMoagemDia = parseFloat(localStorage.getItem('metaMoagem') || '25000');
+            const metaHora = metaMoagemDia / 24;
+
+            // 2. Cores (Azul ou Vermelho)
+            const barColors = this._getColors(data, metaHora, this.COLOR_BLUE, this.COLOR_RED);
+            
+            // 3. Linha de Meta Constante
+            const metaLineData = new Array(data.length).fill(metaHora);
+
+            if (this.visualizer.charts['potencialHourlyChart']) {
+                this.visualizer.charts['potencialHourlyChart'].destroy();
+            }
+
+            this.visualizer.charts['potencialHourlyChart'] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: `Meta (${Math.round(metaHora)} t/h)`,
+                            data: metaLineData,
+                            type: 'line',
+                            borderColor: this.COLOR_META_LINE,
+                            backgroundColor: this.COLOR_META_LINE,
+                            borderWidth: 2,
+                            pointRadius: 4,      // Bolinha
+                            pointHoverRadius: 6,
+                            borderDash: [5, 5],  // Tracejado
+                            order: 0,
+                            datalabels: { display: false }
+                        },
+                        {
+                            label: 'Potencial (t)',
+                            data: data,
+                            backgroundColor: barColors,
+                            borderRadius: 4,
+                            order: 1,
+                            datalabels: {
+                                color: theme.fontColor,
+                                anchor: 'end',
+                                align: 'top',
+                                formatter: Math.round
+                            }
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: theme.fontColor } },
+                        tooltip: {
+                            callbacks: {
+                                label: (c) => {
+                                    if (c.dataset.type === 'line') return `Meta: ${Math.round(c.raw)} t`;
+                                    const val = Math.round(c.raw);
+                                    const diff = val - metaHora;
+                                    const icon = diff >= 0 ? '✅' : '🔻';
+                                    return [`Potencial: ${val} t`, `Meta: ${Math.round(metaHora)} t`, `Dif: ${diff > 0 ? '+' : ''}${Math.round(diff)} t ${icon}`];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: theme.gridColor }, ticks: { color: theme.fontColor } },
+                        x: { grid: { display: false }, ticks: { color: theme.fontColor } }
+                    }
+                }
+            });
+        }
+
+        /**
+         * 📊 GRÁFICO 3: ROTAÇÃO (RPM)
+         * Meta: Meta Rotação (Fixa)
+         * Cor: Verde Escuro (>=) vs Vermelho (<)
+         */
+        createRotacaoHourlyChart(labels, data, theme) {
+            const ctx = document.getElementById('rotacaoHourlyChart');
+            if (!ctx) return;
+
+            // 1. Busca Meta Fixa
+            const metaRotacao = parseFloat(localStorage.getItem('metaRotacao') || '1100');
+            
+            // 2. Cores (Verde Escuro ou Vermelho)
+            const barColors = this._getColors(data, metaRotacao, this.COLOR_DARK_GREEN, this.COLOR_RED);
+            
+            // 3. Linha de Meta Constante
+            const metaLineData = new Array(data.length).fill(metaRotacao);
+
+            // Ajuste de escala para não achatar o gráfico
+            const minVal = Math.min(...data.filter(v => v > 0), metaRotacao);
+            const suggestedMin = minVal > 500 ? minVal - 200 : 0;
+
+            if (this.visualizer.charts['rotacaoHourlyChart']) {
+                this.visualizer.charts['rotacaoHourlyChart'].destroy();
+            }
+
+            this.visualizer.charts['rotacaoHourlyChart'] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: `Meta (${metaRotacao} RPM)`,
+                            data: metaLineData,
+                            type: 'line',
+                            borderColor: this.COLOR_META_LINE,
+                            backgroundColor: this.COLOR_META_LINE,
+                            borderWidth: 2,
+                            pointRadius: 4,      // Bolinha
+                            pointHoverRadius: 6,
+                            borderDash: [5, 5],  // Tracejado
+                            order: 0,
+                            datalabels: { display: false }
+                        },
+                        {
+                            label: 'Rotação (RPM)',
+                            data: data,
+                            backgroundColor: barColors,
+                            borderRadius: 4,
+                            order: 1,
+                            datalabels: {
+                                color: theme.fontColor,
+                                anchor: 'end',
+                                align: 'top',
+                                formatter: Math.round
+                            }
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { labels: { color: theme.fontColor } },
+                        tooltip: {
+                            callbacks: {
+                                label: (c) => {
+                                    if (c.dataset.type === 'line') return `Meta: ${Math.round(c.raw)} RPM`;
+                                    const val = Math.round(c.raw);
+                                    const diff = val - metaRotacao;
+                                    const icon = diff >= 0 ? '✅' : '🔻';
+                                    return [`Rotação: ${val} RPM`, `Meta: ${Math.round(metaRotacao)} RPM`, `Dif: ${diff > 0 ? '+' : ''}${Math.round(diff)} RPM ${icon}`];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: false, 
+                            suggestedMin: suggestedMin,
+                            grid: { color: theme.gridColor }, 
+                            ticks: { color: theme.fontColor } 
+                        },
+                        x: { grid: { display: false }, ticks: { color: theme.fontColor } }
+                    }
+                }
+            });
+        }
     }
 
+    window.VisualizerChartsMoagem = VisualizerChartsMoagem;
 }
-window.VisualizerChartsMoagem = VisualizerChartsMoagem;

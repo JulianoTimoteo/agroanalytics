@@ -1,16 +1,20 @@
-// visualizer-kpis.js - Renderização de KPIs do Cabeçalho e Listas Top 5 (VERSÃO FINAL CORRIGIDA)
+// visualizer-kpis.js - VERSÃO FINAL: SEM REDUNDÂNCIA NO BADGE (LIMPEZA TOTAL)
 
 if (typeof VisualizerKPIs === 'undefined') {
     class VisualizerKPIs {
 
         constructor(visualizer) {
-            // Inicializa o módulo VisualizerMetas se existir
             if (typeof VisualizerMetas !== 'undefined') {
                 this.metasRenderer = new VisualizerMetas(visualizer);
             }
 
             this.visualizer = visualizer;
             this.baseColors = visualizer.baseColors;
+            
+            // Definição de Cores
+            this.COLOR_GREEN = '#40800c';
+            this.COLOR_RED = '#FF2E63';
+            this.COLOR_BLUE = '#2196F3';
         }
 
         _safeHTML(text) {
@@ -23,13 +27,10 @@ if (typeof VisualizerKPIs === 'undefined') {
                 .replace(/'/g, "&#039;");
         }
 
-        /**
-         * Atualiza os cards principais do topo (Acumulado Safra, Viagens, Análises)
-         */
         updateHeaderStats(analysis) {
             if (!analysis) return;
 
-            // 1. ATUALIZAÇÃO DO NOVO CARD: ACUMULADO SAFRA
+            // --- 1. ACUMULADO SAFRA ---
             const acumuladoSafra = analysis.acumuladoSafra || 0;
             const elAcumuladoSafra = document.getElementById('acumuladoSafra');
             
@@ -42,17 +43,29 @@ if (typeof VisualizerKPIs === 'undefined') {
                 
                 const card = document.getElementById('cardAcumuladoSafra');
                 if (card) {
-                    card.style.borderLeft = `4px solid ${this.baseColors.success}`;
+                    card.style.borderLeft = `4px solid ${this.COLOR_GREEN}`;
                 }
             }
 
-            // 2. ATUALIZAÇÃO DE VIAGENS
+            // --- 2. FROTA (VIAGENS) ---
             const totalViagens = analysis.totalViagens || 0;
             const viagensProprias = analysis.viagensProprias || 0;
             const viagensTerceiros = analysis.viagensTerceiros || 0;
 
             const elTotalViagens = document.getElementById('totalViagens');
-            if (elTotalViagens) elTotalViagens.textContent = totalViagens;
+            if (elTotalViagens) {
+                elTotalViagens.textContent = totalViagens;
+                
+                // Regra de Cor da Borda: Própria > Terceiros = Verde, senão Vermelho
+                const cardFrota = elTotalViagens.closest('.analytics-card');
+                if (cardFrota) {
+                    if (viagensProprias > viagensTerceiros) {
+                        cardFrota.style.borderLeft = `4px solid ${this.COLOR_GREEN}`;
+                    } else {
+                        cardFrota.style.borderLeft = `4px solid ${this.COLOR_RED}`;
+                    }
+                }
+            }
 
             const elViagensProprias = document.getElementById('viagensProprias');
             if (elViagensProprias) elViagensProprias.textContent = viagensProprias;
@@ -60,54 +73,41 @@ if (typeof VisualizerKPIs === 'undefined') {
             const elViagensTerceiros = document.getElementById('viagensTerceiros');
             if (elViagensTerceiros) elViagensTerceiros.textContent = viagensTerceiros;
 
-            // 3. ATUALIZAÇÃO DE TAXA DE ANÁLISE
+            // --- 3. TAXA DE ANÁLISE ---
             const taxaAnalise = analysis.taxaAnalise || 0;
             const elTaxaAnalise = document.getElementById('taxaAnalise');
             
+            // Regra de Cor: <31% Vermelho, 31-34% Azul, >34% Verde
+            let analiseColor = this.COLOR_RED;
+            if (taxaAnalise > 34) analiseColor = this.COLOR_GREEN;
+            else if (taxaAnalise >= 31) analiseColor = this.COLOR_BLUE;
+
             if (elTaxaAnalise) {
                 elTaxaAnalise.textContent = Math.round(taxaAnalise) + '%';
-                elTaxaAnalise.style.color = taxaAnalise < 30 ? this.baseColors.danger : this.baseColors.success;
+                elTaxaAnalise.style.color = analiseColor;
             }
             
             const analiseStat = document.getElementById('statAnalise');
             if(analiseStat) {
-                if (taxaAnalise >= 30) {
-                    analiseStat.style.borderLeft = `4px solid ${this.baseColors.success}`;
-                } else if (taxaAnalise >= 25) {
-                    analiseStat.style.borderLeft = `4px solid ${this.baseColors.warning}`;
-                } else {
-                    analiseStat.style.borderLeft = `4px solid ${this.baseColors.danger}`;
-                }
+                analiseStat.style.borderLeft = `4px solid ${analiseColor}`;
             }
         }
 
-        /**
-         * Atualiza todas as listas de "Top 5"
-         */
         updateTopLists(analysis) {
             if (!analysis) return;
 
-            // Top Frotas (Peso/Volume)
             this._populateRankingSimplified('topFrotasProprias', analysis.topFrotasProprias, 'toneladas', true);
             this._populateRankingSimplified('topFrotasTerceiros', analysis.topFrotasTerceiros, 'toneladas', true);
-            
-            // Colheita (Equipamentos)
             this._populateRankingSimplified('topEquipamentosProprios', analysis.topEquipamentosProprios, 'toneladas', false);
             this._populateRankingSimplified('topEquipamentosTerceiros', analysis.topEquipamentosTerceiros, 'toneladas', false);
-            
-            // Outros
             this._populateRankingSimplified('topTransbordos', analysis.topTransbordos, 'toneladas', false);
             this._populateOperadores('topOperadoresColheitaPropria', analysis.topOperadoresColheitaPropria);
             
-            // Metas
             if (this.metasRenderer && analysis.metaData) {
                 this.metasRenderer.updateMetasGrid(analysis.metaData);
             }
         }
 
-        /**
-         * Método central para renderizar listas de rankings simplificados
-         */
         _populateRankingSimplified(id, data, unitLabel, showDensity = false) {
             const list = document.getElementById(id); 
             if(!list) return;
@@ -128,23 +128,19 @@ if (typeof VisualizerKPIs === 'undefined') {
                 li.className = 'top-list-item'; 
                 li.style.borderLeft = `4px solid ${rankColor}`;
 
-                const peso = item.value || item.peso || 0; // Correção: aceita .value ou .peso
+                const peso = item.value || item.peso || 0;
                 const safeCodigo = this._safeHTML(item.name || item.codigo);
                 
                 let secondaryMetricHTML = '';
 
                 if (showDensity) {
-                    const densidadeDisplay = (item.distMedia || item.densidadeMedia || 0).toFixed(2); // distMedia é usado como densidade em alguns contextos do ranking module
                     const kmDisplay = (item.distMedia || 0).toFixed(1);
-                    
-                    // Ajuste conforme o que vem do DataAnalyzerRankings (lá usa distMedia)
                     secondaryMetricHTML = `
                         <div style="font-size:0.8em; font-weight: 500; color: var(--text-secondary); display: flex; flex-direction: column; align-items: flex-start;">
                             <span style="font-weight: 600;">Dist. Média: ${kmDisplay} km</span>
                         </div>
                     `;
                 } else {
-                    // Se tiver frente, mostra
                     if (item.frente) {
                          const safeFrente = this._safeHTML(item.frente);
                          secondaryMetricHTML = `<span class="text-secondary" style="font-size:0.8em; font-weight: 500;">Fr. ${safeFrente}</span>`;
@@ -166,9 +162,6 @@ if (typeof VisualizerKPIs === 'undefined') {
             });
         }
 
-        /**
-         * Método específico para operadores
-         */
         _populateOperadores(id, data) {
             const list = document.getElementById(id); 
             if(!list) return;
@@ -205,15 +198,71 @@ if (typeof VisualizerKPIs === 'undefined') {
             });
         }
         
-        /**
-         * Renderiza o gráfico de barra de distribuição PROPRIA vs FORNECEDOR.
-         */
         updateOwnerDistributionBar(analysis) {
-            const data = analysis.ownerTypeData || {};
             const container = document.getElementById('ownerDistributionBarContainer');
             
-            if (!container) return;
+            // Fallback: Se ownerTypeData estiver vazio, usa distribuicaoFrota
+            let data = analysis.ownerTypeData || {};
+            if (!data.total || data.total === 0) {
+                const distFrota = analysis.distribuicaoFrota || { propria: 0, terceiros: 0 };
+                const totalFrota = distFrota.propria + distFrota.terceiros;
+                if (totalFrota > 0) {
+                    data = {
+                        propria: distFrota.propria,
+                        fornecedor: distFrota.terceiros,
+                        total: totalFrota,
+                        propriaPercent: (distFrota.propria / totalFrota) * 100,
+                        fornecedorPercent: (distFrota.terceiros / totalFrota) * 100
+                    };
+                }
+            }
+            
+            // --- ATUALIZAÇÃO DA PROJEÇÃO (SEM REDUNDÂNCIA) ---
+            const forecastValue = (analysis.projecaoMoagem && analysis.projecaoMoagem.forecast) ? analysis.projecaoMoagem.forecast : 0;
+            const metaDiaria = parseFloat(localStorage.getItem('metaMoagem') || '25000');
+            const diff = forecastValue - metaDiaria;
+            const isAboveMeta = diff >= 0;
 
+            const elForecastVal = document.getElementById('moagemForecast');
+            const elStatusBadge = document.getElementById('moagemStatus');
+            
+            const activeColor = isAboveMeta ? this.COLOR_GREEN : this.COLOR_RED;
+            
+            // 1. Valor Principal da Previsão
+            if (elForecastVal) {
+                elForecastVal.textContent = (typeof Utils !== 'undefined' ? Utils.formatNumber(forecastValue) : forecastValue.toLocaleString()) + ' t';
+                elForecastVal.style.color = activeColor;
+            }
+            
+            // 2. Remover elemento de diferença (redundante)
+            const elDiff = document.getElementById('forecastDifferenceContainer');
+            if (elDiff) {
+                elDiff.style.display = 'none'; // Oculta completamente a linha redundante
+            }
+            
+            // 3. Badge (STATUS SIMPLES) - Limpa tudo antes de escrever
+            if (elStatusBadge) {
+                // 🔥 LIMPEZA CRÍTICA: Remove qualquer HTML antigo
+                elStatusBadge.innerHTML = '';
+                
+                if (isAboveMeta) {
+                     elStatusBadge.className = 'forecast-badge active';
+                     elStatusBadge.style.backgroundColor = 'rgba(64, 128, 12, 0.1)';
+                     elStatusBadge.style.color = this.COLOR_GREEN;
+                     elStatusBadge.style.border = `1px solid ${this.COLOR_GREEN}`;
+                     elStatusBadge.textContent = 'Bater a meta';
+                } else {
+                     elStatusBadge.className = 'forecast-badge danger';
+                     elStatusBadge.style.backgroundColor = 'rgba(255, 46, 99, 0.1)';
+                     elStatusBadge.style.color = this.COLOR_RED;
+                     elStatusBadge.style.border = `1px solid ${this.COLOR_RED}`;
+                     elStatusBadge.textContent = 'Abaixo da meta';
+                }
+            }
+            // --- FIM DA LÓGICA DE PROJEÇÃO ---
+            
+            if (!container) return;
+            
             const propriaTons = data.propria || 0;
             const fornecedorTons = data.fornecedor || 0;
             const total = data.total || 0;
@@ -221,7 +270,7 @@ if (typeof VisualizerKPIs === 'undefined') {
             const fornecedorPercent = data.fornecedorPercent || 0;
             
             if (total === 0) {
-                container.innerHTML = `<p style="font-size:0.85rem; color:var(--text-secondary); text-align:center;">Sem dados de Tipo Proprietário (F.A.).</p>`;
+                container.innerHTML = `<p style="font-size:0.85rem; color:var(--text-secondary); text-align:center;">Aguardando dados...</p>`;
                 return;
             }
 
@@ -246,20 +295,19 @@ if (typeof VisualizerKPIs === 'undefined') {
             
             container.innerHTML = html;
             
-            // Adiciona a barra de progresso do acumulado do dia
             const acumuladoDiaEl = document.getElementById('acumuladoDiaProgressContainer');
             if (acumuladoDiaEl) {
                  const targetValue = parseFloat(localStorage.getItem('metaMoagem') || '25000');
                  const percentDia = targetValue > 0 ? Math.min((total / targetValue) * 100, 100).toFixed(0) : 0;
                  
                  acumuladoDiaEl.innerHTML = `
-                     <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 15px;">
-                         ${percentDia}% da Meta (${typeof Utils !== 'undefined' ? Utils.formatNumber(targetValue) : targetValue.toLocaleString()} t)
-                     </div>
-                     <div class="progress-container" style="height: 12px; margin-top: 5px;">
-                         <div class="progress-bar" style="width: ${percentDia}%; background: linear-gradient(90deg, var(--proprio-color), var(--terceiro-color));"></div>
-                     </div>
-                   `;
+                      <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 15px;">
+                          ${percentDia}% da Meta (${typeof Utils !== 'undefined' ? Utils.formatNumber(targetValue) : targetValue.toLocaleString()} t)
+                      </div>
+                      <div class="progress-container" style="height: 12px; margin-top: 5px;">
+                          <div class="progress-bar" style="width: ${percentDia}%; background: linear-gradient(90deg, var(--proprio-color), var(--terceiro-color));"></div>
+                      </div>
+                    `;
             }
         }
     }

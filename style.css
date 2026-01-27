@@ -1202,9 +1202,9 @@ main {
     font-size: 0.7rem; 
     text-align: right;
     /* Standard & Vendor Prefixes */
-    appearance: textfield;
-    -moz-appearance: textfield;
     -webkit-appearance: textfield;
+    -moz-appearance: textfield;
+    appearance: textfield;
 }
 
 /* Chrome, Safari, Edge, Opera - Remove as setas */
@@ -2282,7 +2282,7 @@ html, body {
     /* KPIs com scroll horizontal */
     .kpi-fixed-top-moagem {
         display: flex;
-        overflow-x: auto;
+        overflow-x: a;
         scrollbar-width: none;
         gap: 0.75rem;
         padding: 0.5rem 0 1rem;
@@ -2624,7 +2624,7 @@ html, body {
 .responsive-chart-container canvas {
     display: block !important;
     max-width: 100% !important;
-    height: auto !important;
+    height: 100% !important;
 }
 
 /* 16. ESTADOS DE CARREGAMENTO */
@@ -3076,3 +3076,4 @@ body.snapshot-mode canvas#particles-js {
     font-size: 0.6rem; /* Garante tamanho correto */
     letter-spacing: 0.5px;
 }
+

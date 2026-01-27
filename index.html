@@ -11,13 +11,9 @@
     <meta name="theme-color" content="#050A14"> 
     <meta name="apple-mobile-web-app-title" content="AgroAnalytics">
     
-    <!-- CORREÇÃO 1: Caminho relativo ./ para o manifesto -->
     <link rel="manifest" href="./manifest.json">
     
-    <!-- Ícone do Navegador -->
     <link rel="icon" type="image/x-icon" href="https://usinapitangueiras.com.br/wp-content/uploads/2020/10/cropped-favicon-180x180.png">
-    
-    <!-- CORREÇÃO 2: Ícone do iPhone usando o link direto (já que o arquivo local pode não existir) -->
     <link rel="apple-touch-icon" href="https://usinapitangueiras.com.br/wp-content/uploads/2020/10/cropped-favicon-180x180.png">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -32,7 +28,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     
     <script>
-        // Configuração do Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyADUuqh_THzGInTSytxzUFEwHV5LmwdvYc",
             authDomain: "agroanalytics-api.firebaseapp.com",
@@ -43,16 +38,13 @@
             measurementId: "G-6TYZDXMJZ5"
         };
 
-        // Inicializa o Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
     </script>
     
-    <!-- CORREÇÃO 3: Caminho relativo ./ para o CSS -->
     <link rel="stylesheet" href="./style.css"> 
     
-    <!-- Estilo Inline para o Checkbox de Login -->
     <style>
         .checkbox-container {
             display: flex;
@@ -138,7 +130,6 @@
                 <input type="text" id="login-user" placeholder="Apelido ou E-mail" required autocomplete="username">
                 <input type="password" id="login-password" placeholder="Senha" required autocomplete="current-password">
                 
-                <!-- 🔥 NOVO: CHECKBOX MANTER CONECTADO -->
                 <div class="checkbox-container">
                     <input type="checkbox" id="remember-me" checked>
                     <label for="remember-me" style="cursor: pointer;">Manter conectado</label>
@@ -200,7 +191,6 @@
 
                     <div id="lastWeighingDisplayContainer" class="last-weighing-container">
                          <span id="refreshStatusText">Aguardando... 🔄️</span>
-                         
                          <span id="lastWeighingText" style="display: none;"></span>
                     </div>
 
@@ -341,7 +331,7 @@
                                         <p>Status de Conexão: <span class="success-color-bold">ATIVO</span></p>
                                         <p>Usuário: <span id="current-user-email" class="primary-color">-</span></p>
                                         <p>Última Configuração: <span class="primary-color">v1.3.0 - 2025-12-18</span></p>
-                                        <p><button class="btn-action" onclick="alert('Baixando Log de Eventos.')">Baixar Log</button></p>
+                                        
                                     </div>
                                 </div>
                             </div>
@@ -408,7 +398,7 @@
                                     <div class="stat-icon"><i class="fas fa-route"></i></div>
                                     <div class="stat-info">
                                         <span class="stat-value" id="totalViagens">0</span>
-                                        <span class="stat-label">Frota</span>
+                                        <span class="stat-label">Total de Viagens</span>
                                         <div class="stat-sub-info">
                                             <span class="sub-stat green" title="Própria">
                                                 <span id="viagensProprias">0</span> Pró
@@ -694,7 +684,15 @@
                         </div>
                         
                         <div id="tab-metas" class="tab-pane">
+                            <div class="analytics-row">
+                                <div class="analytics-card glass-card full-width">
+                                    <div class="card-header">
+                                        <h3><i class="fas fa-bullseye"></i> Metas e Indicadores por Frente</h3>
+                                    </div>
+                                    <div id="frontsMetaContainer" class="fronts-grid"></div>
+                                </div>
                             </div>
+                        </div>
 
                         <div id="tab-horaria" class="tab-pane">
                             <div class="analytics-row">
@@ -734,7 +732,6 @@
         <footer class="dashboard-footer"></footer>
     </div>
     
-    <!-- CORREÇÃO 4: Caminhos relativos ./ em todos os scripts JS -->
     <script src="./utils.js"></script>
     <script src="./intelligent-processor.js"></script>
     
@@ -758,7 +755,6 @@
     <script src="./mobile-fixes.js"></script>
 
     <script>
-        // Sistema de autenticação
         document.addEventListener('DOMContentLoaded', function() {
             const loginScreen = document.getElementById('login-screen');
             const mainDashboard = document.getElementById('main-dashboard');
@@ -770,21 +766,17 @@
             const logoutBtn = document.getElementById('logout-btn');
             const currentUserEmail = document.getElementById('current-user-email');
             
-            // --- INICIALIZAÇÃO DO APP COM OS NOVOS LISTENERS ---
             if (typeof window.agriculturalDashboard !== 'undefined') {
                 window.agriculturalDashboard.initializeEventListeners();
             }
 
-            // Verifica se o usuário já está logado (mantido para fallback)
             auth.onAuthStateChanged((user) => {
                 if (user) {
                     loginScreen.classList.add('hidden');
                     mainDashboard.classList.remove('hidden');
-                    // 🔥 CORREÇÃO: Mostra Apelido se disponível
                     if(user.displayName) {
                         currentUserEmail.textContent = user.displayName;
                     } else {
-                        // Tenta remover o sufixo de domínio interno se for um login por apelido
                         let display = user.email;
                         if(display.includes('@agro.local')) {
                             display = display.split('@')[0];
@@ -798,18 +790,14 @@
                 }
             });
 
-            // Login (REDIRECIONADO PARA APP.JS)
             loginForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                const userIdentifier = document.getElementById('login-user').value;
-                const password = document.getElementById('login-password').value;
-                
                 if (typeof window.agriculturalDashboard !== 'undefined' && window.agriculturalDashboard.handleLogin) {
                     window.agriculturalDashboard.handleLogin(e); 
                     return;
                 }
-
-                // Fallback (apenas para email)
+                const userIdentifier = document.getElementById('login-user').value;
+                const password = document.getElementById('login-password').value;
                 auth.signInWithEmailAndPassword(userIdentifier, password)
                     .then((userCredential) => {
                         authError.classList.add('hidden');
@@ -821,7 +809,6 @@
                     });
             });
 
-            // Cadastro (REDIRECIONADO PARA APP.JS)
             signupForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 if (typeof window.agriculturalDashboard !== 'undefined' && window.agriculturalDashboard.handleSignup) {
@@ -832,11 +819,9 @@
                 }
             });
 
-
-            // Alternar entre login e cadastro
             showSignupLink.addEventListener('click', (e) => {
                 e.preventDefault();
-                authError.classList.add('hidden'); // Oculta erro ao trocar
+                authError.classList.add('hidden');
                 document.getElementById('auth-success').classList.add('hidden');
                 loginForm.classList.add('hidden');
                 signupForm.classList.remove('hidden');
@@ -844,13 +829,12 @@
 
             showLoginLink.addEventListener('click', (e) => {
                 e.preventDefault();
-                authError.classList.add('hidden'); // Oculta erro ao trocar
+                authError.classList.add('hidden');
                 document.getElementById('auth-success').classList.add('hidden');
                 signupForm.classList.add('hidden');
                 loginForm.classList.remove('hidden');
             });
 
-            // Redefinir Senha (Esqueceu a senha) - REDIRECIONADO PARA APP.JS
             const forgotPasswordLink = document.getElementById('forgot-password-link');
             if (forgotPasswordLink) {
                  forgotPasswordLink.addEventListener('click', (e) => {
@@ -861,8 +845,6 @@
                  });
             }
 
-
-            // Logout (mantido o fallback para compatibilidade inicial do HTML)
             if (logoutBtn) {
                 logoutBtn.addEventListener('click', () => {
                     auth.signOut().catch((error) => {
@@ -870,7 +852,6 @@
                     });
                 });
             }
-
         });
     </script>
 </body>

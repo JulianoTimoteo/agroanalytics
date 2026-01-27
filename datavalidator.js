@@ -179,7 +179,7 @@ class DataValidator {
                         type: 'PESO_IMPAR',
                         severity: 'critical',
                         title: 'Pesagem Ímpar Detectada',
-                        message: `Viagem ${viagemId} fechou com peso de ${Utils.formatNumber(peso)} t (Final Ímpar).`,
+                        message: `Viagem ${viagemId} fechou com peso de ${typeof Utils !== 'undefined' ? Utils.formatNumber(peso) : peso.toFixed(2)} t (Final Ímpar).`,
                         detail: `Frota: ${frotaId} | O peso deve ser múltiplo de 20kg (ex: final par como .00, .02, .04).`,
                         viagem: viagemId, 
                         frota: frotaId
@@ -244,8 +244,8 @@ class DataValidator {
                             type: 'CALCULO_PESO',
                             severity: 'critical',
                             title: `Cálculo de Peso Incorreto`,
-                            message: `Viagem ${viagemId} (Frota ${frotaId}): Reportado ${Utils.formatNumber(round2(pesoLiquido))} t vs Calculado ${Utils.formatNumber(round2(pesoCalculado))} t.`,
-                            detail: `Diferença: ${Utils.formatNumber(diferenca, 2)} t | Verifique a pesagem na balança.`, 
+                            message: `Viagem ${viagemId} (Frota ${frotaId}): Reportado ${typeof Utils !== 'undefined' ? Utils.formatNumber(round2(pesoLiquido)) : pesoLiquido.toFixed(2)} t vs Calculado ${typeof Utils !== 'undefined' ? Utils.formatNumber(round2(pesoCalculado)) : pesoCalculado.toFixed(2)} t.`,
+                            detail: `Diferença: ${typeof Utils !== 'undefined' ? Utils.formatNumber(diferenca) : diferenca.toFixed(2)} t | Verifique a pesagem na balança.`, 
                             viagem: viagemId,
                             frota: frotaId
                         });
