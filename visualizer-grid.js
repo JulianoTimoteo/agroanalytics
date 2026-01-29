@@ -1,4 +1,4 @@
-// visualizer-grid.js - Renderização de Grids (Frentes, Status Frota)
+// visualizer-grid.js - Renderização de Grids (Frentes, Status Frota) - VERSÃO FINAL CORRIGIDA
 class VisualizerGrid {
 
     constructor(visualizer) {
@@ -48,7 +48,7 @@ class VisualizerGrid {
                     <div class="harvester-detail-row" style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; padding: 2px 0;">
                         <span style="font-weight: 600; color: ${hColor};">C${hIndex + 1} - ${this._safeHTML(h.codigo)}</span>
                         <span>${h.percent}%</span>
-                        <span style="font-weight: 700;">${Utils.formatNumber(h.peso)}t</span>
+                        <span style="font-weight: 700;">${typeof Utils !== 'undefined' ? Utils.formatNumber(h.peso) : Math.round(h.peso)}t</span>
                     </div>
                 `;
             });
@@ -62,36 +62,30 @@ class VisualizerGrid {
 
             const libStatusColor = frente.isLibConflict ? this.baseColors.danger : this.baseColors.primary;
             
-            // 1. Tenta extrair o código da Fazenda da Liberação (Ex: 243301002 -> 243301)
             const liberacaoStr = String(frente.liberacao);
             const codFazendaSource = liberacaoStr.length >= 6 ? liberacaoStr.slice(0, 6) : 'N/A';
 
-            // 2. O campo frente.codFazenda, que está vindo com a descrição, é usado para a Desc. Faz.
             const finalCodFazDisplay = this._safeHTML(codFazendaSource); 
             const finalDescFazDisplay = this._safeHTML(frente.codFazenda); 
 
-            // --- LÓGICA DE COR PARA DENSIDADE ---
             const produtividade = parseFloat(frente.produtividade);
             let densidadeColor = colors.success; 
             if (produtividade < 65) {
                 densidadeColor = colors.danger;
             }
-            // --- FIM LÓGICA DE COR PARA DENSIDADE ---
 
-            // --- LÓGICA DA BARRA DE PROGRESSO (NOVO) ---
             const metaTotal = frente.potencialTotal || 0;
             let progressHTML = '';
 
             if (metaTotal > 0) {
                 const percent = (frente.pesoTotal / metaTotal) * 100;
                 const percentDisplay = percent.toFixed(1);
-                const width = Math.min(percent, 100); // Trava visualmente em 100%
+                const width = Math.min(percent, 100); 
                 
-                // Cores Dinâmicas: Vermelho -> Amarelo -> Azul -> Verde
-                let barColor = '#FF2E63'; // Vermelho (< 30%)
-                if (percent >= 98) barColor = '#40800c'; // Verde (Concluído)
-                else if (percent >= 70) barColor = '#00D4FF'; // Azul (Reta final)
-                else if (percent >= 30) barColor = '#FFB800'; // Amarelo (Meio termo)
+                let barColor = '#FF2E63'; 
+                if (percent >= 98) barColor = '#40800c'; 
+                else if (percent >= 70) barColor = '#00D4FF'; 
+                else if (percent >= 30) barColor = '#FFB800'; 
 
                 progressHTML = `
                     <div class="front-progress-container" style="margin-top: 12px; margin-bottom: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);">
@@ -108,10 +102,8 @@ class VisualizerGrid {
                     </div>
                 `;
             } else {
-                // Se não tiver meta definida, mostra apenas um separador sutil
                 progressHTML = `<div style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.05);"></div>`;
             }
-            // ---------------------------------------------
             
             const statsHTML = `
                 <span style="font-size: 1.1em; font-weight: 700; color: ${frente.status === 'critical' ? colors.danger : colors.success};">
@@ -123,10 +115,10 @@ class VisualizerGrid {
                 <span style="font-weight: 700; color: var(--text);">${frente.viagens}</span>
                 <span style="color: var(--text-secondary);">Viagens</span>
                 <br>
-                <span style="font-weight: 700; color: var(--text);">${Utils.formatNumber(frente.pesoTotal)}</span>
+                <span style="font-weight: 700; color: var(--text);">${typeof Utils !== 'undefined' ? Utils.formatNumber(frente.pesoTotal) : Math.round(frente.pesoTotal)}</span>
                 <span style="color: var(--text-secondary);">Toneladas</span>
                 <br>
-                <span style="font-weight: 700; color: ${densidadeColor};">${Utils.formatNumber(frente.produtividade)}</span>
+                <span style="font-weight: 700; color: ${densidadeColor};">${typeof Utils !== 'undefined' ? Utils.formatNumber(frente.produtividade) : Math.round(frente.produtividade)}</span>
                 <span style="color: var(--text-secondary);">Densidade</span>
                 <br>
                 <span style="color: var(--text-secondary);">Análises:</span>
@@ -142,7 +134,6 @@ class VisualizerGrid {
                 <span style="color: var(--text-secondary);">Desc Faz:</span>
                 <span style="color: var(--text); font-weight: 700;">${finalDescFazDisplay}</span>
             `;
-
 
             card.innerHTML = `
                 <div class="snake-border top"></div>
@@ -165,9 +156,6 @@ class VisualizerGrid {
         });
     }
 
-    /**
-     * Retorna a linha do potencial que corresponde à hora atual (ou a hora mais próxima anterior).
-     */
     _getCurrentHourData(rawData) {
         if (!rawData || rawData.length === 0) return null;
 
@@ -216,27 +204,25 @@ class VisualizerGrid {
         return bestMatch;
     }
 
+    renderFleetAndAvailabilityCards(potentialData, analysis) {
+        const grid = document.getElementById('fleetStatusCardsGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
 
-    /**
-     * Renderiza o Status da Frota.
-     */
-    renderFleetAndAvailabilityCards(rawData, analysis) {
-        const gridFrota = document.getElementById('fleetStatusCardsGrid');
-
-        if (!gridFrota || !rawData || rawData.length === 0) {
-            if (gridFrota) gridFrota.innerHTML = `<p class="text-secondary" style="text-align: center;">Aguardando dados.</p>`;
+        if (!potentialData || potentialData.length === 0) {
+            grid.innerHTML = `<p class="text-secondary" style="text-align: center;">Aguardando dados.</p>`;
             return;
         }
 
-        const lastRow = this._getCurrentHourData(rawData);
+        const lastRow = this._getCurrentHourData(potentialData);
         
         if (!lastRow || Object.keys(lastRow).length === 0) {
-            if (gridFrota) gridFrota.innerHTML = `<p class="text-secondary" style="text-align: center;">Dados de status da frota da hora atual não encontrados.</p>`;
+            grid.innerHTML = `<p class="text-secondary" style="text-align: center;">Dados de status da frota da hora atual não encontrados.</p>`;
             return;
         }
         
-        // CORREÇÃO: Usando Math.round para garantir que os valores sejam inteiros
-        const parados = Math.round(lastRow['Caminhões  PARADO'] || 0); 
+        // --- 1. CAPTURA DOS DADOS DA HORA ATUAL (RESUMO) ---
+        // Usa as chaves exatas do CSV
         const ida = Math.round(lastRow['Caminhões  Ida'] || 0);
         const campo = Math.round(lastRow['Caminhões  Campo'] || 0);
         const volta = Math.round(lastRow['Caminhões  Volta'] || 0);
@@ -244,10 +230,60 @@ class VisualizerGrid {
         const filaExterna = Math.round(lastRow['Caminhões Fila externa'] || 0);
         const carretasCarregadas = Math.round(lastRow['CARRETAS CARREGADAS'] || 0);
         
-        const totalFrotaMovel = parados + ida + campo + volta + descarga + filaExterna;
+        // --- 2. CÁLCULO DE TOTAIS ---
+        
+        // Frotas Ativas (Trabalhando) = Soma dos status operacionais da planilha
+        const frotasAtivas = ida + campo + volta + descarga + filaExterna;
 
-        const cardData = [
-            { title: 'Parados', icon: 'fa-stop-circle', value: parados, color: 'var(--danger)' },
+        // Frota Registrada (Banco de Dados)
+        // Se ainda não tiver dado do banco (primeira carga), usa o ativo como base para não ficar negativo
+        let totalRegistered = analysis && analysis.totalRegisteredFleets ? analysis.totalRegisteredFleets : frotasAtivas;
+
+        // Segurança: Se hoje tem mais gente trabalhando do que o banco conhecia, atualiza visualmente
+        if (frotasAtivas > totalRegistered) {
+            totalRegistered = frotasAtivas;
+        }
+
+        // Parados = Diferença
+        const parados = Math.max(0, totalRegistered - frotasAtivas);
+
+        // --- 3. RENDERIZAÇÃO DOS CARDS ---
+
+        // A. Card Principal: Frota Registrada
+        let htmlCards = `
+            <div class="status-item card total-fleet-card" style="border-left: 5px solid var(--primary); background: rgba(0, 212, 255, 0.1);">
+                <i class="fas fa-layer-group" style="color: var(--primary); font-size: 1.6rem;"></i>
+                <div style="display: flex; flex-direction: column;">
+                    <span class="value" style="font-weight: bold; font-size: 1.4rem;">${totalRegistered}</span>
+                    <span class="label text-secondary" style="font-size: 0.75rem;">Frota Registrada</span>
+                </div>
+            </div>
+        `;
+
+        // B. Card Secundário: Frotas Ativas
+        htmlCards += `
+            <div class="status-item card" style="border-left: 5px solid var(--success);">
+                <i class="fas fa-tractor" style="color: var(--success); font-size: 1.3rem;"></i>
+                <div style="display: flex; flex-direction: column;">
+                    <span class="value" style="font-weight: bold; font-size: 1.2rem;">${frotasAtivas}</span>
+                    <span class="label text-secondary" style="font-size: 0.7rem;">Frotas Ativas</span>
+                </div>
+            </div>
+        `;
+
+        // C. Card Terciário: Parados
+        htmlCards += `
+            <div class="status-item card" style="border-left: 5px solid var(--danger);">
+                <i class="fas fa-stop-circle" style="color: var(--danger); font-size: 1.3rem;"></i>
+                <div style="display: flex; flex-direction: column;">
+                    <span class="value" style="font-weight: bold; font-size: 1.2rem;">${parados}</span>
+                    <span class="label text-secondary" style="font-size: 0.7rem;">Parados</span>
+                </div>
+            </div>
+        `;
+
+        // D. Detalhes (Ida, Campo, etc.)
+        const detailCards = [
             { title: 'Ida', icon: 'fa-sign-in-alt', value: ida, color: 'var(--warning)' },
             { title: 'Campo', icon: 'fa-warehouse', value: campo, color: 'var(--primary)' }, 
             { title: 'Volta', icon: 'fa-sign-out-alt', value: volta, color: 'var(--secondary)' },
@@ -255,35 +291,19 @@ class VisualizerGrid {
             { title: 'Fila Externa', icon: 'fa-ellipsis-h', value: filaExterna, color: 'var(--accent)' },
             { title: 'Carretas Carregadas', icon: 'fa-box', value: carretasCarregadas, color: 'var(--proprio-color)' },
         ];
-        
-        // O valor 'frotaMotrizDistinta' é mais preciso se disponível, senão usa o calculado a partir do Potencial.
-        const frotaTotalDisplay = analysis.frotaMotrizDistinta || totalFrotaMovel;
 
-        let htmlFrota = `
-            <div class="status-item card total-fleet-card" style="border-left: 5px solid var(--primary); background: rgba(0, 212, 255, 0.1);">
-                <i class="fas fa-balance-scale" style="color: var(--primary); font-size: 1.6rem;"></i>
-                <span class="value" style="font-weight: bold; font-size: 1.4rem;">${Utils.formatWeight(frotaTotalDisplay)}</span>
-                <span class="label text-secondary" style="font-size: 0.75rem;">Frota Móvel Total</span>
-            </div>
-        `;
-
-        cardData.forEach(item => {
-            // CORREÇÃO: Usa Math.round(item.value) para garantir que seja um número inteiro antes de converter para string simples.
-            const formattedValue = String(Math.round(item.value)); 
-            const cardColor = item.color;
-            
-            htmlFrota += `
-                <div class="status-item card" style="border-left: 5px solid ${cardColor};">
-                    <i class="fas ${item.icon}" style="color: ${cardColor}; font-size: 1.3rem;"></i>
-                    <span class="value" style="font-weight: bold; font-size: 1.2rem;">${formattedValue}</span>
+        detailCards.forEach(item => {
+            htmlCards += `
+                <div class="status-item card" style="border-left: 5px solid ${item.color};">
+                    <i class="fas ${item.icon}" style="color: ${item.color}; font-size: 1.3rem;"></i>
+                    <span class="value" style="font-weight: bold; font-size: 1.2rem;">${item.value}</span>
                     <span class="label text-secondary" style="font-size: 0.7rem;">${item.title}</span>
                 </div>
             `;
         });
-        
-        gridFrota.innerHTML = htmlFrota;
+
+        grid.innerHTML = htmlCards;
     }
 }
-if (typeof VisualizerGrid === 'undefined') {
-    window.VisualizerGrid = VisualizerGrid;
-}
+
+if (typeof window !== 'undefined') window.VisualizerGrid = VisualizerGrid;

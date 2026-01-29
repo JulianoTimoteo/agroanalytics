@@ -1,4 +1,4 @@
-// data-analyzer-rankings.js - Módulo de Rankings e Top 5 (VERSÃO CORRIGIDA: EXIBE NOMES DOS OPERADORES)
+// data-analyzer-rankings.js - MÃ³dulo de Rankings e Top 5 (VERSÃƒO CORRIGIDA: EXIBE NOMES DOS OPERADORES)
 
 if (typeof DataAnalyzerRankings === 'undefined') {
     class DataAnalyzerRankings {
@@ -38,13 +38,13 @@ if (typeof DataAnalyzerRankings === 'undefined') {
             return Array.from(frontMap.entries()).sort((a, b) => b[1] - a[1])[0][0];
         }
 
-        // NOVO MÉTODO: Encontra o nome do operador baseado no código
+        // NOVO MÃ‰TODO: Encontra o nome do operador baseado no cÃ³digo
         findOperatorName(data, operatorCode) {
-            // Remove qualquer caractere não numérico do código
+            // Remove qualquer caractere nÃ£o numÃ©rico do cÃ³digo
             const cleanCode = String(operatorCode).replace(/[^0-9]/g, '');
             if (!cleanCode) return null;
 
-            // Procura nas linhas de dados por uma correspondência
+            // Procura nas linhas de dados por uma correspondÃªncia
             for (const row of data) {
                 if (!row.operadores || !row.operadoresDescricao) continue;
                 
@@ -53,8 +53,8 @@ if (typeof DataAnalyzerRankings === 'undefined') {
                     const opCode = String(row.operadores[i] || '').replace(/[^0-9]/g, '');
                     if (opCode === cleanCode && row.operadoresDescricao[i]) {
                         const nome = String(row.operadoresDescricao[i]).trim();
-                        // Remove código do início se presente
-                        const cleanName = nome.replace(/^[0-9]+\s*(?:-|–)?\s*/, '').trim();
+                        // Remove cÃ³digo do inÃ­cio se presente
+                        const cleanName = nome.replace(/^[0-9]+\s*(?:-|â€“)?\s*/, '').trim();
                         if (cleanName.length > 0) return cleanName;
                     }
                 }
@@ -63,7 +63,7 @@ if (typeof DataAnalyzerRankings === 'undefined') {
             return null;
         }
 
-        // NOVO MÉTODO: Encontra o nome do operador de transbordo baseado no código
+        // NOVO MÃ‰TODO: Encontra o nome do operador de transbordo baseado no cÃ³digo
         findTransbordoOperatorName(data, transbordoCode) {
             const cleanCode = String(transbordoCode).replace(/[^0-9]/g, '');
             if (!cleanCode) return null;
@@ -76,7 +76,7 @@ if (typeof DataAnalyzerRankings === 'undefined') {
                     const descCode = descStr.replace(/[^0-9]/g, '');
                     
                     if (descCode === cleanCode) {
-                        const nome = descStr.replace(/^[0-9]+\s*(?:-|–)?\s*/, '').trim();
+                        const nome = descStr.replace(/^[0-9]+\s*(?:-|â€“)?\s*/, '').trim();
                         if (nome.length > 0) return nome;
                     }
                 }
@@ -195,12 +195,12 @@ if (typeof DataAnalyzerRankings === 'undefined') {
 
             return Array.from(operadoresMap.values()).sort((a, b) => b.peso - a.peso).slice(0, 5)
                 .map(item => {
-                    // Tenta encontrar o nome do operador nas descrições
+                    // Tenta encontrar o nome do operador nas descriÃ§Ãµes
                     let displayName = this.findOperatorName(data, item.codigo);
                     
-                    // Se não encontrou nas descrições, usa o melhor nome disponível
+                    // Se nÃ£o encontrou nas descriÃ§Ãµes, usa o melhor nome disponÃ­vel
                     if (!displayName) {
-                        displayName = item.bestName.replace(/^[0-9]+\s*(?:-|–)?\s*/, '').trim();
+                        displayName = item.bestName.replace(/^[0-9]+\s*(?:-|â€“)?\s*/, '').trim();
                         if (displayName.length === 0) displayName = item.bestName;
                     }
 
@@ -246,10 +246,10 @@ if (typeof DataAnalyzerRankings === 'undefined') {
             
             return Array.from(transbordoMap.values()).sort((a, b) => b.peso - a.peso).slice(0, 5)
                 .map(item => {
-                    // Tenta encontrar o nome do operador do transbordo nas descrições
+                    // Tenta encontrar o nome do operador do transbordo nas descriÃ§Ãµes
                     let displayName = this.findTransbordoOperatorName(data, item.codigo);
                     
-                    // Se não encontrou, usa o código do transbordo
+                    // Se nÃ£o encontrou, usa o cÃ³digo do transbordo
                     if (!displayName) {
                         displayName = item.codigoOriginal;
                     }

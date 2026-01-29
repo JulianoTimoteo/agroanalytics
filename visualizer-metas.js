@@ -1,4 +1,4 @@
-// visualizer-metas.js - VERSÃO ATUALIZADA COM CORREÇÕES
+// visualizer-metas.js - VERSÃƒO ATUALIZADA COM CORREÃ‡Ã•ES
 class VisualizerMetas {
 
     constructor(visualizer) {
@@ -17,7 +17,7 @@ class VisualizerMetas {
         if (key === 'maturador' || key === 'possivel_reforma') {
             const valUpper = String(value).toUpperCase().trim();
             if (valUpper === 'SIM') return `<span style="color: var(--success); font-weight: 700;">SIM</span>`;
-            if (valUpper === 'NÃO' || valUpper === 'NAO') return `<span style="color: var(--danger); font-weight: 700;">NÃO</span>`;
+            if (valUpper === 'NÃƒO' || valUpper === 'NAO') return `<span style="color: var(--danger); font-weight: 700;">NÃƒO</span>`;
             return this._safeHTML(value);
         }
 
@@ -41,28 +41,28 @@ class VisualizerMetas {
         const map = {
             'cod_fazenda': 'Cod. Fazenda',
             'desc_fazenda': 'Desc. Fazenda',
-            'proprietario': 'Proprietário',
+            'proprietario': 'ProprietÃ¡rio',
             'colheitabilidade': 'Colheitabilidade',
-            'raio': 'Raio Médio (Km)',
+            'raio': 'Raio MÃ©dio (Km)',
             'tmd': 'TMD',
             'cd': 'Qtd. Colhedora',
             'potencial_entrega_total': 'Potencial Total (t)',
             'meta': 'Meta (t)',
             'atr': 'ATR',
             'maturador': 'Maturador',
-            'possivel_reforma': 'Possível Reforma',
+            'possivel_reforma': 'PossÃ­vel Reforma',
             'vel': 'Velocidade (Km/h)',
             'tc': 'TC',
             'tch': 'TCH (t/ha)',
             'ton_hora': 'Ton/Hora',
-            'cm_hora': 'CM (Caminhões/h)',
+            'cm_hora': 'CM (CaminhÃµes/h)',
             'tempo_carre_min': 'Tempo Carreg. (min)',
             'cam': 'Cam. Total no Ciclo',
             'ciclo': 'Ciclo Total (min)',
             'viagens': 'Viagens Estimadas',
-            'tempo': 'Tempo Médio Carreg.',
-            'previsao_mudanca': 'PREVISÃO MUDANÇA',
-            'liberacao_ativa': 'Liberação Ativa'
+            'tempo': 'Tempo MÃ©dio Carreg.',
+            'previsao_mudanca': 'PREVISÃƒO MUDANÃ‡A',
+            'liberacao_ativa': 'LiberaÃ§Ã£o Ativa'
         };
         return map[key] || this._safeHTML(key.toUpperCase());
     }
@@ -119,8 +119,8 @@ class VisualizerMetas {
             }
 
             // Obter valores corretos
-            const codFazenda = cardData.cod_fazenda || 'N/A';  // Este é o valor da coluna F.A (ex: 219201)
-            const descFazenda = cardData.desc_fazenda || 'N/A'; // Este é o nome da fazenda (ex: FAZENDA PAULICEIA)
+            const codFazenda = cardData.cod_fazenda || 'N/A';  // Este Ã© o valor da coluna F.A (ex: 219201)
+            const descFazenda = cardData.desc_fazenda || 'N/A'; // Este Ã© o nome da fazenda (ex: FAZENDA PAULICEIA)
 
             htmlContent += `
                 <div class="front-card" style="--rank-color: ${rankColor};">
@@ -168,7 +168,7 @@ class VisualizerMetas {
                             </div>
                             ${detailHtml}
                             <div style="display: flex; justify-content: space-between; width: 100%; border-bottom: 1px dashed rgba(255,255,255,0.05);">
-                                <span class="stat-lbl" style="font-weight: 700; font-size: 0.8rem; text-align: left;">Liberação Ativa:</span>
+                                <span class="stat-lbl" style="font-weight: 700; font-size: 0.8rem; text-align: left;">LiberaÃ§Ã£o Ativa:</span>
                                 <span class="stat-val" style="font-size: 0.85rem; color: var(--primary);">${this._formatValue('liberacao_ativa', cardData.liberacao_ativa)}</span>
                             </div>
                         </div>

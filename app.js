@@ -964,9 +964,9 @@ class AgriculturalDashboard {
 
         try {
             const snapshot = await this.db.collection("requests")
-                                      .where("status", "==", "pending")
-                                      .orderBy("requestedAt", "asc")
-                                      .get();
+                                        .where("status", "==", "pending")
+                                        .orderBy("requestedAt", "asc")
+                                        .get();
             const requests = [];
             snapshot.forEach(doc => requests.push({ id: doc.id, ...doc.data() }));
 
@@ -1790,6 +1790,71 @@ class AgriculturalDashboard {
         }
     }
 
+    // --- NOVA LÓGICA DE FROTAS (SYNC COM FIREBASE) ---
+    async syncFleetRegistry(data) {
+        if (!this.db) {
+            console.warn("Firestore não disponível para sincronização de frotas.");
+            return 0;
+        }
+
+        const NOW = new Date();
+        const CUTOFF_TIME = new Date(NOW.getTime() - (72 * 60 * 60 * 1000)); // 72 horas atrás
+        const collectionRef = this.db.collection('fleet_registry');
+        
+        // 1. Identificar Frotas Únicas na importação atual
+        // Usa o campo 'frota' mapeado pelo IntelligentProcessor
+        const uniqueFleetsInImport = new Set();
+        data.forEach(row => {
+            if (row.frota) {
+                // Remove zeros à esquerda e espaços para padronizar ID
+                const cleanFrota = String(row.frota).trim().replace(/^0+/, '');
+                if(cleanFrota.length > 0) uniqueFleetsInImport.add(cleanFrota);
+            }
+        });
+
+        if (uniqueFleetsInImport.size === 0) return 0;
+
+        try {
+            console.log(`[FleetSync] Sincronizando ${uniqueFleetsInImport.size} frotas ativas...`);
+
+            // 2. Atualizar 'last_seen' em Lote (Batch Write)
+            const fleetsArray = Array.from(uniqueFleetsInImport);
+            const chunkSize = 400; // Limite seguro para batch do Firestore
+            
+            for (let i = 0; i < fleetsArray.length; i += chunkSize) {
+                const chunk = fleetsArray.slice(i, i + chunkSize);
+                const batch = this.db.batch();
+                
+                chunk.forEach(frotaId => {
+                    const docRef = collectionRef.doc(frotaId);
+                    batch.set(docRef, {
+                        id: frotaId,
+                        last_seen: firebase.firestore.Timestamp.fromDate(NOW),
+                        active: true
+                    }, { merge: true });
+                });
+
+                await batch.commit();
+            }
+
+            // 3. Contar Frotas Válidas (Last Seen <= 72h)
+            // Executa query no banco para pegar o total real de frotas ativas
+            const snapshot = await collectionRef
+                .where('last_seen', '>=', firebase.firestore.Timestamp.fromDate(CUTOFF_TIME))
+                .get();
+            
+            const totalRegistered = snapshot.size;
+            console.log(`[FleetSync] Total Registrado (72h): ${totalRegistered}`);
+            
+            return totalRegistered;
+
+        } catch (e) {
+            console.error("[FleetSync] Erro ao sincronizar frotas:", e);
+            // Em caso de erro, retorna o fallback (frotas atuais)
+            return uniqueFleetsInImport.size; 
+        }
+    }
+
     async processDataAsync(productionData, potentialData, metaData, refreshTargetTime) {
         await this._yieldControl(); 
         this.validationResult = this.validator.validateAll(productionData);
@@ -1798,6 +1863,17 @@ class AgriculturalDashboard {
         await this._yieldControl(); 
         this.analysisResult = this.analyzer.analyzeAll(productionData, potentialData, this.metaData, this.validationResult, this.acmSafraData);
         
+        // --- INÍCIO DA SINCRONIZAÇÃO DE FROTAS ---
+        await this._yieldControl();
+        // Sincroniza com Firebase e obtém o total registrado nas últimas 72h
+        const totalRegistered = await this.syncFleetRegistry(productionData);
+        
+        // Injeta o total no objeto de análise para que o VisualizerGrid possa usar
+        if (this.analysisResult) {
+            this.analysisResult.totalRegisteredFleets = totalRegistered;
+        }
+        // --- FIM DA SINCRONIZAÇÃO DE FROTAS ---
+
         await this._yieldControl(); 
         this.visualizer.updateDashboard(this.analysisResult);
 

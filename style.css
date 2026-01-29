@@ -3076,4 +3076,274 @@ body.snapshot-mode canvas#particles-js {
     font-size: 0.6rem; /* Garante tamanho correto */
     letter-spacing: 0.5px;
 }
+/* ========================================================================= */
+/* 🔘 SWITCH DESMARCAR/MARCAR (Estilo solicitado) */
+/* ========================================================================= */
 
+.radio {
+  border: 0;
+  display: flex;
+  background: rgba(0, 0, 0, 0.2); /* Fundo sutil para contraste no dashboard */
+  border-radius: 20px;
+  padding: 2px;
+}
+
+/* Hide default radio */
+.radio input[type="radio"] {
+  position: absolute;
+  visibility: hidden;
+  display: none;
+  opacity: 0;
+  z-index: -1;
+}
+
+/* Customizing label */
+.radio label {
+  position: relative;
+  padding: 6px 15px 6px 20px; /* Ajustado para caber melhor no card */
+  cursor: pointer;
+  border-radius: 20px;
+  color: #00D4FF; /* Cor Primary do Dashboard */
+  margin: 0px 2px;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem; /* Fonte um pouco menor para o contexto do gráfico */
+  transition: .25s all ease;
+}
+
+/* Borda indicativa */
+.radio label::before {
+  box-sizing: border-box;
+  content: " ";
+  position: absolute;
+  top: 50%;
+  left: 5px;
+  transform: translateY(-50%);
+  width: 0.8em;
+  height: 0.8em;
+  border: 2px solid #00D4FF;
+  border-radius: 50%;
+  transition: .25s all ease;
+}
+
+/* Checked toggle */
+.radio input[type="radio"]:checked + label {
+  color: #fff;
+  background: #00D4FF; /* Cor Primary */
+  z-index: 1;
+}
+
+.radio input[type="radio"]:checked + label::before {
+  border-color: #fff;
+  background-color: #fff;
+}
+
+.radio:hover input[type="radio"]:checked + label {
+  box-shadow: 0px 0px 10px rgba(0, 212, 255, 0.4);
+}
+
+
+
+/* ==========================================================================
+   AGRO INTELLIGENCE CHAT WIDGET (ESTILO DEFINITIVO)
+   ========================================================================== */
+
+/* Botão Flutuante (O Cérebro) */
+#agro-chat-trigger {
+    position: fixed;
+    bottom: 25px;
+    right: 25px;
+    width: 65px;
+    height: 65px;
+    background: linear-gradient(135deg, #00D4FF, #0056b3);
+    border-radius: 50%;
+    box-shadow: 0 4px 20px rgba(0, 212, 255, 0.5);
+    cursor: pointer;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+#agro-chat-trigger:hover {
+    transform: scale(1.1) rotate(-5deg);
+    box-shadow: 0 0 30px rgba(0, 212, 255, 0.8);
+}
+
+#agro-chat-trigger i {
+    font-size: 28px;
+    color: #fff;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+/* Janela Principal do Chat */
+#agro-chat-window {
+    position: fixed;
+    bottom: 100px;
+    right: 25px;
+    width: 400px;
+    height: 600px;
+    max-height: 80vh;
+    background: rgba(10, 14, 23, 0.95); /* Fundo escuro AgroAnalytics */
+    border: 1px solid #00D4FF;
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    display: none; /* Controlado via JS */
+    flex-direction: column;
+    overflow: hidden;
+    z-index: 99999;
+    transform-origin: bottom right;
+    animation: openChat 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+#agro-chat-window.active {
+    display: flex;
+}
+
+@keyframes openChat {
+    from { opacity: 0; transform: scale(0.9) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Cabeçalho */
+.chat-header {
+    background: linear-gradient(90deg, rgba(0, 212, 255, 0.15), transparent);
+    padding: 15px 20px;
+    border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.chat-title h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #fff;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+.chat-title span {
+    font-size: 11px;
+    color: #00D4FF;
+    text-transform: uppercase;
+}
+
+.chat-close {
+    cursor: pointer;
+    color: #aaa;
+    transition: color 0.2s;
+}
+
+.chat-close:hover { color: #fff; }
+
+/* Área de Mensagens */
+#chat-history {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    scroll-behavior: smooth;
+}
+
+#chat-history::-webkit-scrollbar { width: 6px; }
+#chat-history::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+/* Balões de Mensagem */
+.msg {
+    max-width: 85%;
+    padding: 12px 16px;
+    font-size: 14px;
+    line-height: 1.5;
+    position: relative;
+    word-wrap: break-word;
+}
+
+.msg.bot {
+    align-self: flex-start;
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 3px solid #00D4FF;
+    border-radius: 4px 12px 12px 12px;
+    color: #e0e0e0;
+}
+
+.msg.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #0056b3, #004494);
+    color: #fff;
+    border-radius: 12px 12px 4px 12px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* Elementos Gráficos dentro do Chat (Barras de Progresso) */
+.chat-metric {
+    margin-top: 8px;
+    background: rgba(0,0,0,0.2);
+    padding: 8px;
+    border-radius: 6px;
+}
+
+.chat-progress-bg {
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    margin-top: 4px;
+    overflow: hidden;
+}
+
+.chat-progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 1s ease;
+}
+
+/* Input Area */
+.chat-input-wrapper {
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.3);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    gap: 10px;
+}
+
+#chat-input-field {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+    padding: 12px 15px;
+    border-radius: 25px;
+    outline: none;
+    font-size: 14px;
+    transition: border-color 0.3s;
+}
+
+#chat-input-field:focus {
+    border-color: #00D4FF;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+#chat-send-btn {
+    width: 45px;
+    height: 45px;
+    border: none;
+    border-radius: 50%;
+    background: #00D4FF;
+    color: #000;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+
+#chat-send-btn:hover {
+    transform: scale(1.1);
+}

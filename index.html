@@ -59,6 +59,45 @@
             margin-right: 8px !important;
             margin-bottom: 0 !important;
         }
+
+        /* Estilos do Switch de Filtro de Frentes */
+        .radio-switch {
+            display: flex;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 3px;
+            margin-left: auto; /* Empurra para a direita no flexbox */
+            margin-right: 15px;
+            border: 1px solid var(--glass-border);
+            align-items: center;
+        }
+
+        .radio-switch input[type="radio"] {
+            display: none; /* Esconde o input nativo */
+        }
+
+        .radio-switch label {
+            padding: 4px 12px;
+            cursor: pointer;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+            font-weight: 500;
+            user-select: none;
+            margin: 0 !important; /* Remove margens padrão */
+        }
+
+        .radio-switch label:hover {
+            color: var(--text);
+            background: rgba(255,255,255,0.1);
+        }
+
+        .radio-switch input[type="radio"]:checked + label {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
     </style>
 </head>
 <body>
@@ -190,8 +229,8 @@
                     </div>
 
                     <div id="lastWeighingDisplayContainer" class="last-weighing-container">
-                         <span id="refreshStatusText">Aguardando... 🔄️</span>
-                         <span id="lastWeighingText" style="display: none;"></span>
+                         <span id="refreshStatusText">Próxima atualização: --:-- 🔄️</span>
+                         <span id="lastWeighingText" style="display: none;">Última pesagem: N/A</span>
                     </div>
 
                     <button class="btn-cssbuttons">
@@ -711,7 +750,7 @@
                             </div>
                             <div class="analytics-row">
                                 <div class="analytics-card glass-card full-width hover-zoom-card">
-                                    <div class="card-header">
+                                    <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
                                         <div class="header-title-with-tooltip">
                                             <h3><i class="fas fa-calendar-alt"></i> Entrega de Peso por Frente</h3>
                                             <div class="tooltip-container">
@@ -719,6 +758,16 @@
                                                 <div class="tooltip-text">Volume horário entregue por cada frente.</div>
                                             </div>
                                         </div>
+                                        <fieldset id="front-filter-switch" class="radio-switch">
+                                            <input name="front-switch" id="filter-propria" type="radio" onclick="if(window.filterFrontChart) window.filterFrontChart('propria')">
+                                            <label for="filter-propria">Própria</label>
+
+                                            <input name="front-switch" id="filter-terceira" type="radio" onclick="if(window.filterFrontChart) window.filterFrontChart('terceira')">
+                                            <label for="filter-terceira">Terceira</label>
+
+                                            <input checked name="front-switch" id="filter-todas" type="radio" onclick="if(window.filterFrontChart) window.filterFrontChart('todas')">
+                                            <label for="filter-todas">Todas</label>
+                                        </fieldset>
                                     </div>
                                     <div class="chart-container wide"><canvas id="frontHourlyChart"></canvas></div>
                                 </div>
@@ -753,6 +802,8 @@
     <script src="./app.js"></script>
     
     <script src="./mobile-fixes.js"></script>
+    
+    <script src="./chatbox-analytics.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -852,7 +903,44 @@
                     });
                 });
             }
+
+            // --- LÓGICA ATUALIZADA DO FILTRO DE FRENTES (Propria vs Terceira) ---
+            window.filterFrontChart = function(type) {
+                if (!window.agriculturalDashboard || !window.agriculturalDashboard.data) return;
+                
+                const dashboard = window.agriculturalDashboard;
+                const allData = dashboard.data;
+                const analyzer = dashboard.analyzer;
+                
+                if (!analyzer || !analyzer.timeModule || !analyzer.timeModule.analyzeFrontHourlyComplete) return;
+
+                // 1. Gera dados SEMPRE com todos os registros (para que o gráfico tenha todos os datasets)
+                const fullHourlyData = analyzer.timeModule.analyzeFrontHourlyComplete(allData);
+
+                // 2. Identifica quais frentes são "Próprias" baseadas na REGRA NUMÉRICA EXPLICITA DO USUÁRIO
+                // REGRA: Frentes < 30 são PRÓPRIAS (8, 10-15). Frentes >= 30 são TERCEIRAS (30, 33-36).
+                const propriaSet = new Set();
+                
+                allData.forEach(row => {
+                    const frenteCode = String(row.frente || '').trim();
+                    const frenteNum = parseInt(frenteCode.replace(/\D/g, '')) || 0;
+                    
+                    if (frenteNum > 0 && frenteNum < 30) {
+                        propriaSet.add(frenteCode);
+                    }
+                });
+
+                // 3. Passa tudo para o renderer, incluindo o tipo de filtro desejado e o Set de próprias
+                if (dashboard.visualizer && dashboard.visualizer.chartsBaseRenderer) {
+                    const theme = dashboard.visualizer.getThemeConfig();
+                    dashboard.visualizer.chartsBaseRenderer.createFrontHourlyChart(fullHourlyData, theme, type, propriaSet);
+                }
+            };
         });
     </script>
-</body>
+    <link rel="stylesheet" href="style.css">
+<script src="chatbox-analytics.js"></script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    </body>
 </html>

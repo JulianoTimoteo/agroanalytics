@@ -5,7 +5,7 @@ const puppeteer = require('puppeteer');
 const DASHBOARD_BASE_URL = 'https://julianotimoteo.github.io/agroanalytics/index.html'; 
 // =================================================================================
 
-// Lista padrão de abas
+// Lista padrÃ£o de abas
 const REPORT_TABS = [
     'tab-moagem', 
     'tab-caminhao', 
@@ -16,7 +16,7 @@ const REPORT_TABS = [
 ];
 
 functions.http('generateReport', async (req, res) => {
-    // 1. Validação
+    // 1. ValidaÃ§Ã£o
     if (req.method !== 'POST') {
         return res.status(405).send('Method Not Allowed. Use POST.');
     }
@@ -36,13 +36,13 @@ functions.http('generateReport', async (req, res) => {
     try {
         console.log('Launching browser...');
         
-        // 2. Configuração Otimizada do Puppeteer para Cloud Functions
+        // 2. ConfiguraÃ§Ã£o Otimizada do Puppeteer para Cloud Functions
         browser = await puppeteer.launch({
             args: [
                 '--no-sandbox', 
                 '--disable-setuid-sandbox', 
                 '--disable-gpu',
-                '--disable-dev-shm-usage', // CRÍTICO: Evita crash de memória em container
+                '--disable-dev-shm-usage', // CRÃTICO: Evita crash de memÃ³ria em container
                 '--no-first-run',
                 '--no-zygote',
                 '--single-process' // Otimiza uso de recursos
@@ -65,26 +65,26 @@ functions.http('generateReport', async (req, res) => {
             
             console.log(`Navigating to tab: ${tabId}`);
 
-            // Aumentei o timeout para garantir carregamento em conexões lentas
+            // Aumentei o timeout para garantir carregamento em conexÃµes lentas
             await page.goto(url, { waitUntil: 'networkidle0', timeout: 45000 }); 
 
-            // Script injetado na página para forçar a troca de aba e tema
+            // Script injetado na pÃ¡gina para forÃ§ar a troca de aba e tema
             await page.evaluate(async (themeName, activeTabId) => {
-                // Força o tema
+                // ForÃ§a o tema
                 document.documentElement.setAttribute('data-theme', themeName);
                 
-                // Força a troca de aba via função global do seu app
+                // ForÃ§a a troca de aba via funÃ§Ã£o global do seu app
                 if (window.agriculturalDashboard && typeof window.agriculturalDashboard.showTab === 'function') {
                     window.agriculturalDashboard.showTab(activeTabId);
                 }
                 
-                // Espera renderização dos gráficos (Chart.js tem animação)
+                // Espera renderizaÃ§Ã£o dos grÃ¡ficos (Chart.js tem animaÃ§Ã£o)
                 await new Promise(resolve => setTimeout(resolve, 2000)); 
             }, theme, tabId);
             
             // Captura
             const screenshotBuffer = await page.screenshot({
-                // Clip ajustado para ignorar o header se necessário (y: 80)
+                // Clip ajustado para ignorar o header se necessÃ¡rio (y: 80)
                 clip: { x: 0, y: 0, width: 1200, height: 800 }, 
                 encoding: 'binary',
                 quality: 80, // Otimiza tamanho (apenas para jpg) - para png ignore
@@ -94,7 +94,7 @@ functions.http('generateReport', async (req, res) => {
             screenshotData.push({
                 tab: tabId.replace('tab-', ''),
                 image_base64: Buffer.from(screenshotBuffer).toString('base64'),
-                caption: `📊 *${tabId.replace('tab-', '').toUpperCase()}* - ${new Date().toLocaleTimeString('pt-BR')}`
+                caption: `ðŸ“Š *${tabId.replace('tab-', '').toUpperCase()}* - ${new Date().toLocaleTimeString('pt-BR')}`
             });
         }
         
@@ -124,7 +124,7 @@ functions.http('generateReport', async (req, res) => {
         console.error('Execution Error:', error);
         res.status(500).json({ error: error.message });
     } finally {
-        // Garante que o navegador fecha para não estourar memória do servidor
+        // Garante que o navegador fecha para nÃ£o estourar memÃ³ria do servidor
         if (browser) {
             await browser.close();
             console.log('Browser closed.');

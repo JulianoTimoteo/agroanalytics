@@ -1,4 +1,4 @@
-// data-analyzer-time.js - VERSÃO BLINDADA CONTRA ERROS DE FORMATAÇÃO E DIVISÃO
+// data-analyzer-time.js - VERSÃƒO BLINDADA CONTRA ERROS DE FORMATAÃ‡ÃƒO E DIVISÃƒO
 class DataAnalyzerTime {
 
     constructor(analyzer) {
@@ -6,17 +6,17 @@ class DataAnalyzerTime {
     }
 
     /**
-     * Auxiliar de Segurança: Garante que o valor é um número JS válido (float/int)
+     * Auxiliar de SeguranÃ§a: Garante que o valor Ã© um nÃºmero JS vÃ¡lido (float/int)
      * Converte "22.000,00" -> 22000.00
      */
     _safeNumber(val, defaultValue = 0) {
         if (val === null || val === undefined || val === '') return defaultValue;
         if (typeof val === 'number') return isNaN(val) ? defaultValue : val;
         
-        // Se for string, limpa formatação BR
+        // Se for string, limpa formataÃ§Ã£o BR
         let str = String(val).trim();
         if (str.includes(',') || str.includes('.')) {
-            // Remove pontos de milhar e troca vírgula por ponto
+            // Remove pontos de milhar e troca vÃ­rgula por ponto
             str = str.replace(/\./g, '').replace(',', '.');
         }
         
@@ -25,7 +25,7 @@ class DataAnalyzerTime {
     }
 
     /**
-     * Gera os dados para o gráfico de barras 24h (Moagem Real e Meta)
+     * Gera os dados para o grÃ¡fico de barras 24h (Moagem Real e Meta)
      */
     analyze24hComplete(data) {
         const buckets = this._initHourlyBuckets();
@@ -46,7 +46,7 @@ class DataAnalyzerTime {
             if (analisado) buckets[hourIndex].analisadas += 1;
         });
 
-        // Formata para Array garantindo precisão decimal
+        // Formata para Array garantindo precisÃ£o decimal
         return buckets.map(b => ({
             time: b.label,
             peso: parseFloat(b.peso.toFixed(2)),
@@ -56,7 +56,7 @@ class DataAnalyzerTime {
     }
 
     /**
-     * Gera os dados para o gráfico de Frota Horária (Própria vs Terceiros)
+     * Gera os dados para o grÃ¡fico de Frota HorÃ¡ria (PrÃ³pria vs Terceiros)
      */
     analyzeFleetHourly(data) {
         const buckets = this._initHourlyBuckets();
@@ -82,7 +82,7 @@ class DataAnalyzerTime {
             const total = b.propria + b.terceiros;
             let winner = '-';
             if (total > 0) {
-                winner = b.propria >= b.terceiros ? 'Própria' : 'Terceiros';
+                winner = b.propria >= b.terceiros ? 'PrÃ³pria' : 'Terceiros';
             }
 
             return {
@@ -135,8 +135,8 @@ class DataAnalyzerTime {
     }
 
     /**
-     * Calcula a projeção de moagem para o fim do dia
-     * ESTE É O PONTO CRÍTICO QUE ESTAVA FALHANDO
+     * Calcula a projeÃ§Ã£o de moagem para o fim do dia
+     * ESTE Ã‰ O PONTO CRÃTICO QUE ESTAVA FALHANDO
      */
     calculateProjectionMoagem(data, totalReal) {
         const empty = this._emptyProjection();
@@ -159,7 +159,7 @@ class DataAnalyzerTime {
 
         const hoursPassed = lastHourWithDataIndex + 1;
         
-        // 3. Calcula Ritmo e Projeção
+        // 3. Calcula Ritmo e ProjeÃ§Ã£o
         const totalRealSafe = this._safeNumber(totalReal);
         const rhythm = hoursPassed > 0 ? totalRealSafe / hoursPassed : 0;
         const forecast = rhythm * 24;
@@ -170,7 +170,7 @@ class DataAnalyzerTime {
         if (forecast >= meta) status = 'Bater a meta';
         else status = 'Abaixo da meta';
 
-        // 5. Cálculo do Ritmo Necessário para as horas restantes
+        // 5. CÃ¡lculo do Ritmo NecessÃ¡rio para as horas restantes
         const hoursRemaining = 24 - hoursPassed;
         const weightRemaining = meta - totalRealSafe;
         const requiredRhythm = hoursRemaining > 0 && weightRemaining > 0 ? weightRemaining / hoursRemaining : 0;
@@ -186,7 +186,7 @@ class DataAnalyzerTime {
     }
 
     calculateRequiredHourlyRates(data, totalWeight) {
-        // Blindagem da Meta novamente para o gráfico de linha pontilhada
+        // Blindagem da Meta novamente para o grÃ¡fico de linha pontilhada
         const metaStorage = localStorage.getItem('metaMoagem');
         const meta = this._safeNumber(metaStorage, 25000);
         
@@ -198,11 +198,11 @@ class DataAnalyzerTime {
         return potentialData || [];
     }
 
-    // --- MÉTODOS AUXILIARES PRIVADOS ---
+    // --- MÃ‰TODOS AUXILIARES PRIVADOS ---
 
     _initHourlyBuckets() {
         const buckets = [];
-        // Turno Agro: 06:00 de hoje até 05:00 de amanhã
+        // Turno Agro: 06:00 de hoje atÃ© 05:00 de amanhÃ£
         for (let i = 0; i < 24; i++) {
             const hour = (i + 6) % 24; // 6, 7, ..., 23, 0, ..., 5
             const timeLabel = `${String(hour).padStart(2, '0')}:00`;

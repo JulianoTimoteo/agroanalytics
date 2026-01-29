@@ -1,4 +1,4 @@
-// datavisualizer.js - CORE DO VISUALIZER (ORQUESTRAÇÃO E TEMA)
+// datavisualizer.js - CORE DO VISUALIZER (ORQUESTRAÃ‡ÃƒO E TEMA)
 class DataVisualizer {
     constructor() {
         this.charts = {};
@@ -15,7 +15,7 @@ class DataVisualizer {
             tier2: '#00D4FF', 
             tier3: '#FFB800', 
             tier4: '#FF2E63',
-            // Cores específicas (Moagem/Potencial)
+            // Cores especÃ­ficas (Moagem/Potencial)
             potencial_color: '#00F5A0',
             rotacao_color: '#FF8C00',
             real_moagem_color: '#00D4FF',
@@ -26,7 +26,7 @@ class DataVisualizer {
             Chart.register(ChartDataLabels);
         }
         
-        // Inicializa Submódulos de Visualização
+        // Inicializa SubmÃ³dulos de VisualizaÃ§Ã£o
         this.kpisRenderer = new VisualizerKPIs(this);
         this.chartsBaseRenderer = new VisualizerChartsBase(this);
         this.chartsMoagemRenderer = new VisualizerChartsMoagem(this);
@@ -57,7 +57,7 @@ class DataVisualizer {
 
     updateDashboard(analysis) {
         if (!analysis) {
-            console.warn('[VISUALIZER] Análise vazia ou inválida');
+            console.warn('[VISUALIZER] AnÃ¡lise vazia ou invÃ¡lida');
             return;
         }
         
@@ -90,7 +90,7 @@ class DataVisualizer {
             this.updateMoagemTab(analysis, theme);
 
         } catch (error) {
-            console.error("❌ [Visualizer] Erro na renderização:", error);
+            console.error("âŒ [Visualizer] Erro na renderizaÃ§Ã£o:", error);
         }
     }
     
@@ -101,10 +101,10 @@ class DataVisualizer {
         if (timestamp instanceof Date && !isNaN(timestamp.getTime())) {
             const dateStr = timestamp.toLocaleDateString('pt-BR');
             const timeStr = timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-            displayEl.textContent = `Última pesagem: ${dateStr} às ${timeStr}`;
+            displayEl.textContent = `Ãšltima pesagem: ${dateStr} Ã s ${timeStr}`;
             return;
         }
-        displayEl.textContent = 'Última pesagem: N/A';
+        displayEl.textContent = 'Ãšltima pesagem: N/A';
     }
 
     updateMoagemTab(analysis, config) {
@@ -122,7 +122,7 @@ class DataVisualizer {
         
         this.kpisRenderer.updateOwnerDistributionBar(analysis);
         
-        // --- PROJEÇÃO COM FORMATAÇÃO DE VALORES ABAIXO/BATER META ---
+        // --- PROJEÃ‡ÃƒO COM FORMATAÃ‡ÃƒO DE VALORES ABAIXO/BATER META ---
         const projection = analysis.projecaoMoagem || { forecast: 0, status: 'Calculando...' };
         const moagemForecastEl = document.getElementById('moagemForecast');
         const moagemStatusEl = document.getElementById('moagemStatus');
@@ -133,13 +133,13 @@ class DataVisualizer {
         }
         
         if (moagemStatusEl) {
-            // Calcula a porcentagem e diferença para a formatação detalhada
+            // Calcula a porcentagem e diferenÃ§a para a formataÃ§Ã£o detalhada
             const diffTons = Math.abs(projection.forecastDifference || 0);
             const diffPerc = target > 0 ? (diffTons / target * 100).toFixed(1) : "0.0";
             
             let statusHTML = `<div style="line-height: 1.2;">${projection.status}</div>`;
             
-            // Se não estiver consolidado, mostra a linha de detalhe (Porcentagem e Toneladas)
+            // Se nÃ£o estiver consolidado, mostra a linha de detalhe (Porcentagem e Toneladas)
             if (!projection.status.includes('Consolidado') && target > 0) {
                 statusHTML += `
                     <div style="font-size: 0.85em; opacity: 0.9; margin-top: 4px; font-weight: normal;">
@@ -160,7 +160,7 @@ class DataVisualizer {
             moagemStatusEl.className = statusClass;
         }
 
-        // --- GRÁFICOS DO CARROSSEL ---
+        // --- GRÃFICOS DO CARROSSEL ---
         const hourlyData = analysis.analise24h || []; 
         const realLabels = hourlyData.map(d => d.time); 
         const moagemReal = hourlyData.map(d => d.peso); 
