@@ -109,17 +109,24 @@
             <div id="modal-alert-message" class="alert-success-login hidden margin-bottom-10"></div>
             
             <form id="update-password-form">
-                <p class="text-secondary margin-bottom-15">Atualize sua senha. O email de redefinição será enviado para a sua conta atual.</p>
-                <input type="password" id="current-password" placeholder="Senha Atual (Obrigatório para Confirmação)" required autocomplete="current-password">
-                <input type="password" id="new-password" placeholder="Nova Senha (Mín. 6 caracteres)" required autocomplete="new-password">
-                <input type="password" id="confirm-new-password" placeholder="Confirme a Nova Senha" required autocomplete="new-password">
-                <button type="submit" class="btn-primary margin-bottom-10">
-                    <i class="fas fa-key"></i> Salvar Nova Senha
-                </button>
-                <p class="text-secondary modal-footer-text">
-                    Para alterar o e-mail, entre em contato com o administrador.
-                </p>
-            </form>
+    <input type="text" name="username" style="display:none" autocomplete="username">
+
+    <p class="text-secondary margin-bottom-15">Atualize sua senha. O email de redefinição será enviado para a sua conta atual.</p>
+    
+    <input type="password" name="current-password" id="current-password" placeholder="Senha Atual (Obrigatório para Confirmação)" required autocomplete="current-password">
+    
+    <input type="password" name="new-password" id="new-password" placeholder="Nova Senha (Mín. 6 caracteres)" required autocomplete="new-password">
+    
+    <input type="password" name="confirm-password" id="confirm-new-password" placeholder="Confirme a Nova Senha" required autocomplete="new-password">
+    
+    <button type="submit" class="btn-primary margin-bottom-10">
+        <i class="fas fa-key"></i> Salvar Nova Senha
+    </button>
+    
+    <p class="text-secondary modal-footer-text">
+        Para alterar o e-mail, entre em contato com o administrador.
+    </p>
+</form>
         </div>
     </div>
 
@@ -130,12 +137,23 @@
             
             <form id="admin-user-form">
                 <input type="hidden" id="admin-user-id"> <div class="input-group-row margin-bottom-10">
-                    <input type="text" id="admin-user-nickname" placeholder="Apelido (Login)" required style="width: 100%;">
-                </div>
+    <input type="text" 
+           id="admin-user-nickname" 
+           name="username" 
+           autocomplete="username" 
+           placeholder="Apelido (Login)" 
+           required 
+           style="width: 100%;">
+</div>
                 
                 <div class="input-group-row margin-bottom-10">
-                    <input type="password" id="admin-user-password" placeholder="Senha (Deixe em branco para manter)" style="width: 100%;">
-                </div>
+    <input type="password" 
+           id="admin-user-password" 
+           name="admin-password" 
+           autocomplete="new-password" 
+           placeholder="Senha (Deixe em branco para manter)" 
+           style="width: 100%;">
+</div>
 
                 <div class="permissions-container margin-bottom-15">
                     <p class="text-secondary" style="margin-bottom: 5px;"><strong>Permissões de Acesso:</strong></p>
@@ -798,13 +816,8 @@
     <script src="./visualizer-grid.js"></script>
     <script src="./visualizer-metas.js"></script> 
     <script src="./datavisualizer.js"></script>
-
-    <script src="./app.js"></script>
-    
+    <script src="./app.js"></script>    
     <script src="./mobile-fixes.js"></script>
-    
-    <script src="./chatbox-analytics.js"></script>
-
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const loginScreen = document.getElementById('login-screen');
@@ -829,7 +842,7 @@
                         currentUserEmail.textContent = user.displayName;
                     } else {
                         let display = user.email;
-                        if(display.includes('@agro.local')) {
+                        if(display && display.includes('@agro.local')) {
                             display = display.split('@')[0];
                         }
                         currentUserEmail.textContent = display;
@@ -938,9 +951,5 @@
             };
         });
     </script>
-    <link rel="stylesheet" href="style.css">
-<script src="chatbox-analytics.js"></script>
-
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     </body>
 </html>
