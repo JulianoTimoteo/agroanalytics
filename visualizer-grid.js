@@ -156,100 +156,60 @@ class VisualizerGrid {
         });
     }
 
-    _getCurrentHourData(rawData) {
+    _getCurrentHourData(rawData, analysis) {
         if (!rawData || rawData.length === 0) return null;
-
-        const now = new Date();
-        const currentHour = now.getHours();
-        const currentMinute = now.getMinutes();
-        
-        const currentMinutesOfDay = currentHour * 60 + currentMinute;
-
-        let bestMatch = null;
-        let minDiff = Infinity;
-
-        const HORA_KEY = 'HORA';
-
-        for (const row of rawData) {
-            const horaStr = row[HORA_KEY];
-            
-            if (typeof horaStr !== 'string' || !horaStr) continue;
-
-            const parts = horaStr.split(':');
-            if (parts.length < 2) continue;
-            
-            let dataHour = parseInt(parts[0]);
-            let dataMinute = parseInt(parts[1]);
-            
-            if (isNaN(dataHour) || isNaN(dataMinute)) continue;
-
-            let dataMinutesOfDay = dataHour * 60 + dataMinute;
-            
-            let diff = currentMinutesOfDay - dataMinutesOfDay;
-
-            if (diff < 0) {
-                continue; 
-            }
-            
-            if (diff < minDiff) {
-                minDiff = diff;
-                bestMatch = row;
-            }
+        let referenceHour = new Date().getHours();
+        if (analysis && analysis.lastExitTimestamp instanceof Date) {
+            referenceHour = analysis.lastExitTimestamp.getHours();
         }
-        
-        if (!bestMatch) {
-            return rawData[rawData.length - 1];
-        }
-
-        return bestMatch;
+        const targetHourStr = String(referenceHour).padStart(2, '0') + ':00';
+        const bestMatch = rawData.find(row => {
+            const rowHora = String(row.hora || row.HORA || '').trim();
+            return rowHora.startsWith(targetHourStr);
+        });
+        return bestMatch || rawData[rawData.length - 1];
     }
 
     renderFleetAndAvailabilityCards(potentialData, analysis) {
+        // 1. Atualiza os cards de Disponibilidade no topo (Informativo)
+        const lastRow = this._getCurrentHourData(potentialData, analysis);
+        
+        if (lastRow) {
+            const dispColh = parseFloat(lastRow.dispColhedora) || 0;
+            const dispTrans = parseFloat(lastRow.dispTransbordo) || 0;
+            const dispCam = parseFloat(lastRow.dispCaminhoes) || 0;
+
+            const elColh = document.getElementById('dispColhedora');
+            const elTrans = document.getElementById('dispTransbordo');
+            const elCam = document.getElementById('dispCaminhoes');
+
+            if (elColh) elColh.textContent = dispColh.toFixed(2);
+            if (elTrans) elTrans.textContent = dispTrans.toFixed(2);
+            if (elCam) elCam.textContent = dispCam.toFixed(2);
+        }
+
+        // 2. Renderiza o grid de Status da Frota (Logística)
         const grid = document.getElementById('fleetStatusCardsGrid');
         if (!grid) return;
         grid.innerHTML = '';
 
-        if (!potentialData || potentialData.length === 0) {
-            grid.innerHTML = `<p class="text-secondary" style="text-align: center;">Aguardando dados.</p>`;
-            return;
-        }
-
-        const lastRow = this._getCurrentHourData(potentialData);
-        
         if (!lastRow || Object.keys(lastRow).length === 0) {
-            grid.innerHTML = `<p class="text-secondary" style="text-align: center;">Dados de status da frota da hora atual não encontrados.</p>`;
+            grid.innerHTML = `<p class="text-secondary" style="text-align: center;">Aguardando dados de status.</p>`;
             return;
         }
+
+        const ida = Math.round(lastRow['Caminhões  Ida'] || lastRow.caminhoesIda || 0);
+        const campo = Math.round(lastRow['Caminhões  Campo'] || lastRow.caminhoesCampo || 0);
+        const volta = Math.round(lastRow['Caminhões  Volta'] || lastRow.caminhoesVolta || 0);
+        const descarga = Math.round(lastRow['Caminhões  Descarga'] || lastRow.caminhoesDescarga || 0);
+        const filaExterna = Math.round(lastRow['Caminhões Fila externa'] || lastRow.filaExterna || 0);
+        const carretasCarregadas = Math.round(lastRow['CARRETAS CARREGADAS'] || lastRow.carretasCarregadas || 0);
         
-        // --- 1. CAPTURA DOS DADOS DA HORA ATUAL (RESUMO) ---
-        // Usa as chaves exatas do CSV
-        const ida = Math.round(lastRow['Caminhões  Ida'] || 0);
-        const campo = Math.round(lastRow['Caminhões  Campo'] || 0);
-        const volta = Math.round(lastRow['Caminhões  Volta'] || 0);
-        const descarga = Math.round(lastRow['Caminhões  Descarga'] || 0);
-        const filaExterna = Math.round(lastRow['Caminhões Fila externa'] || 0);
-        const carretasCarregadas = Math.round(lastRow['CARRETAS CARREGADAS'] || 0);
-        
-        // --- 2. CÁLCULO DE TOTAIS ---
-        
-        // Frotas Ativas (Trabalhando) = Soma dos status operacionais da planilha
         const frotasAtivas = ida + campo + volta + descarga + filaExterna;
-
-        // Frota Registrada (Banco de Dados)
-        // Se ainda não tiver dado do banco (primeira carga), usa o ativo como base para não ficar negativo
         let totalRegistered = analysis && analysis.totalRegisteredFleets ? analysis.totalRegisteredFleets : frotasAtivas;
-
-        // Segurança: Se hoje tem mais gente trabalhando do que o banco conhecia, atualiza visualmente
-        if (frotasAtivas > totalRegistered) {
-            totalRegistered = frotasAtivas;
-        }
-
-        // Parados = Diferença
+        if (frotasAtivas > totalRegistered) totalRegistered = frotasAtivas;
         const parados = Math.max(0, totalRegistered - frotasAtivas);
 
-        // --- 3. RENDERIZAÇÃO DOS CARDS ---
-
-        // A. Card Principal: Frota Registrada
         let htmlCards = `
             <div class="status-item card total-fleet-card" style="border-left: 5px solid var(--primary); background: rgba(0, 212, 255, 0.1);">
                 <i class="fas fa-layer-group" style="color: var(--primary); font-size: 1.6rem;"></i>
@@ -258,10 +218,6 @@ class VisualizerGrid {
                     <span class="label text-secondary" style="font-size: 0.75rem;">Frota Registrada</span>
                 </div>
             </div>
-        `;
-
-        // B. Card Secundário: Frotas Ativas
-        htmlCards += `
             <div class="status-item card" style="border-left: 5px solid var(--success);">
                 <i class="fas fa-tractor" style="color: var(--success); font-size: 1.3rem;"></i>
                 <div style="display: flex; flex-direction: column;">
@@ -269,10 +225,6 @@ class VisualizerGrid {
                     <span class="label text-secondary" style="font-size: 0.7rem;">Frotas Ativas</span>
                 </div>
             </div>
-        `;
-
-        // C. Card Terciário: Parados
-        htmlCards += `
             <div class="status-item card" style="border-left: 5px solid var(--danger);">
                 <i class="fas fa-stop-circle" style="color: var(--danger); font-size: 1.3rem;"></i>
                 <div style="display: flex; flex-direction: column;">
@@ -282,7 +234,6 @@ class VisualizerGrid {
             </div>
         `;
 
-        // D. Detalhes (Ida, Campo, etc.)
         const detailCards = [
             { title: 'Ida', icon: 'fa-sign-in-alt', value: ida, color: 'var(--warning)' },
             { title: 'Campo', icon: 'fa-warehouse', value: campo, color: 'var(--primary)' }, 

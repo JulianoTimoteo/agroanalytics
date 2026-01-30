@@ -1,4 +1,4 @@
-// app.js - VERSÃO FINAL COMPLETA (Shift Tracker, Frentes Dinâmicas, Sistema de Usuários Completo)
+// app.js - VERSÃO FINAL COMPLETA (SEM MODO TV/APRESENTAÇÃO)
 class AgriculturalDashboard {
     constructor() {
         // Inicializa módulos se disponíveis
@@ -23,12 +23,6 @@ class AgriculturalDashboard {
         this.refreshIntervalId = null; 
         this.refreshTimeoutId = null; 
         
-        // Controle de Apresentação
-        this.presentationInterval = null;
-        this.isPresentationActive = false;
-        this.presentationTabs = []; // Array de abas para apresentação
-        this.currentPresentationTabIndex = 0;
-
         // Inicialização do Firebase
         if (typeof firebase !== 'undefined') {
             this.auth = firebase.auth();
@@ -114,255 +108,8 @@ class AgriculturalDashboard {
                 background: rgba(255,255,255,0.1); 
                 border-color: rgba(255,255,255,0.2); 
             }
-            
-            /* Estilos para o modo apresentação */
-            body.presentation-mode {
-                overflow: hidden;
-                cursor: none !important;
-            }
-            body.presentation-mode .presentation-controls {
-                position: fixed;
-                bottom: 20px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: rgba(0, 0, 0, 0.8);
-                padding: 10px 20px;
-                border-radius: 30px;
-                z-index: 10000;
-                display: flex;
-                align-items: center;
-                gap: 15px;
-                backdrop-filter: blur(10px);
-                border: 2px solid var(--primary);
-                opacity: 0.3;
-                transition: opacity 0.3s;
-            }
-            body.presentation-mode .presentation-controls:hover {
-                opacity: 1;
-                cursor: pointer;
-            }
-            body.presentation-mode .presentation-controls .btn-primary {
-                background: var(--primary);
-                color: white;
-                border: none;
-                padding: 8px 20px;
-                border-radius: 20px;
-                font-weight: bold;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-            body.presentation-mode .presentation-controls .btn-primary:hover {
-                background: var(--primary-light);
-            }
-            body.presentation-mode .presentation-timer-container {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                color: white;
-            }
-            body.presentation-mode .presentation-timer-container input {
-                width: 60px;
-                background: rgba(255,255,255,0.1);
-                border: 1px solid var(--primary);
-                color: white;
-                padding: 4px 8px;
-                border-radius: 4px;
-                text-align: center;
-            }
-            body.presentation-mode #tabs-nav-container,
-            body.presentation-mode .header-controls,
-            body.presentation-mode .menu-toggle-btn,
-            body.presentation-mode .btn-export,
-            body.presentation-mode .shift-tracker {
-                display: none !important;
-            }
-            body.presentation-mode .tab-content {
-                padding: 0;
-                margin: 0;
-                height: 100vh;
-                overflow: hidden;
-            }
-            body.presentation-mode .tab-pane {
-                height: 100vh;
-                overflow: auto;
-                padding: 20px;
-            }
-            body.presentation-mode .presentation-indicator {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: rgba(255, 165, 0, 0.9);
-                color: black;
-                padding: 8px 16px;
-                border-radius: 20px;
-                font-weight: bold;
-                font-size: 0.9rem;
-                z-index: 9999;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                animation: pulse 2s infinite;
-            }
-            @keyframes pulse {
-                0% { opacity: 0.8; }
-                50% { opacity: 1; }
-                100% { opacity: 0.8; }
-            }
         `;
         document.head.appendChild(style);
-    }
-
-    // =================== 📺 MODO APRESENTAÇÃO ===================
-
-    togglePresentation() {
-        const timerInput = document.getElementById('presentation-timer');
-        const intervalSeconds = parseInt(timerInput.value) || 30;
-        
-        if (this.isPresentationActive) {
-            this.stopPresentation();
-        } else {
-            this.startPresentation(intervalSeconds);
-        }
-    }
-
-    startPresentation(seconds) {
-        this.isPresentationActive = true;
-        document.body.classList.add('presentation-mode');
-        
-        // Configura abas para apresentação (filtra apenas as que o usuário tem acesso)
-        const allTabs = [
-            'tab-moagem', 
-            'tab-alertas', 
-            'tab-caminhao', 
-            'tab-equipamento', 
-            'tab-frentes', 
-            'tab-metas',
-            'tab-horaria'
-        ];
-        
-        this.presentationTabs = allTabs.filter(tab => this.canAccessTab(tab));
-        
-        if (this.presentationTabs.length === 0) {
-            alert("Nenhuma aba disponível para apresentação!");
-            this.stopPresentation();
-            return;
-        }
-        
-        // Cria indicador de apresentação
-        const indicator = document.createElement('div');
-        indicator.className = 'presentation-indicator';
-        indicator.innerHTML = `
-            <i class="fas fa-tv"></i>
-            MODO APRESENTAÇÃO
-            <span id="presentation-counter" style="margin-left: 10px; background: white; color: black; padding: 2px 8px; border-radius: 10px;">1/${this.presentationTabs.length}</span>
-        `;
-        document.body.appendChild(indicator);
-        
-        // Entra em tela cheia se disponível
-        if (document.documentElement.requestFullscreen) {
-            document.documentElement.requestFullscreen().catch(e => {
-                console.log("Tela cheia não suportada:", e);
-            });
-        }
-
-        this.currentPresentationTabIndex = 0;
-        this.showTab(this.presentationTabs[this.currentPresentationTabIndex]);
-        this.updatePresentationCounter();
-
-        this.presentationInterval = setInterval(() => {
-            this.currentPresentationTabIndex = (this.currentPresentationTabIndex + 1) % this.presentationTabs.length;
-            this.showTab(this.presentationTabs[this.currentPresentationTabIndex]);
-            this.updatePresentationCounter();
-        }, seconds * 1000);
-
-        // Listener para sair com ESC
-        this.escHandler = (e) => {
-            if (e.key === 'Escape') {
-                this.stopPresentation();
-            }
-        };
-        document.addEventListener('keydown', this.escHandler);
-
-        // Listener para sair quando sai da tela cheia
-        this.fullscreenHandler = () => {
-            if (!document.fullscreenElement) {
-                this.stopPresentation();
-            }
-        };
-        document.addEventListener('fullscreenchange', this.fullscreenHandler);
-
-        const btn = document.querySelector('.presentation-controls .btn-primary');
-        if (btn) {
-            btn.innerHTML = '<i class="fas fa-stop"></i> PARAR APRESENTAÇÃO';
-            btn.style.background = 'var(--danger)';
-        }
-        
-        // Esconde cursor após 3 segundos
-        this.cursorTimeout = setTimeout(() => {
-            if (this.isPresentationActive) {
-                document.body.style.cursor = 'none';
-            }
-        }, 3000);
-    }
-
-    stopPresentation() {
-        this.isPresentationActive = false;
-        
-        // Limpa intervalos
-        if (this.presentationInterval) {
-            clearInterval(this.presentationInterval);
-            this.presentationInterval = null;
-        }
-        
-        if (this.cursorTimeout) {
-            clearTimeout(this.cursorTimeout);
-            this.cursorTimeout = null;
-        }
-        
-        // Remove classes e elementos
-        document.body.classList.remove('presentation-mode');
-        document.body.style.cursor = '';
-        
-        const indicator = document.querySelector('.presentation-indicator');
-        if (indicator) indicator.remove();
-        
-        // Remove event listeners
-        if (this.escHandler) {
-            document.removeEventListener('keydown', this.escHandler);
-        }
-        if (this.fullscreenHandler) {
-            document.removeEventListener('fullscreenchange', this.fullscreenHandler);
-        }
-        
-        // Sai da tela cheia
-        if (document.fullscreenElement) {
-            document.exitFullscreen().catch(e => console.log("Erro ao sair da tela cheia:", e));
-        }
-
-        // Restaura botão
-        const btn = document.querySelector('.presentation-controls .btn-primary');
-        if (btn) {
-            btn.innerHTML = '<i class="fas fa-play"></i> INICIAR APRESENTAÇÃO';
-            btn.style.background = '';
-        }
-        
-        // Volta para aba de gerenciar ou primeira disponível
-        if (this.canAccessTab('tab-gerenciar')) {
-            this.showTab('tab-gerenciar');
-        } else if (this.presentationTabs.length > 0) {
-            this.showTab(this.presentationTabs[0]);
-        }
-        
-        this.presentationTabs = [];
-    }
-
-    updatePresentationCounter() {
-        const counter = document.getElementById('presentation-counter');
-        if (counter) {
-            counter.textContent = `${this.currentPresentationTabIndex + 1}/${this.presentationTabs.length}`;
-        }
     }
 
     // =================== LÓGICA DE UI E ABAS ===================
@@ -373,7 +120,7 @@ class AgriculturalDashboard {
             return; 
         }
 
-        if (window.innerWidth <= 768 && !this.isPresentationActive) {
+        if (window.innerWidth <= 768) {
             this.toggleMenu(true);
         }
 
@@ -395,13 +142,7 @@ class AgriculturalDashboard {
         const activeBtn = document.querySelector(`.tabs-nav .tab-button[onclick*='${tabId}']`);
         if (activeBtn) activeBtn.classList.add('active');
         
-        // Em modo apresentação, maximiza visualização
-        if (this.isPresentationActive && activePane) {
-            activePane.style.height = 'calc(100vh - 40px)';
-            activePane.style.overflow = 'auto';
-        }
-        
-        const needsParticles = (tabId === 'tab-gerenciar' || tabId === 'tab-usuarios') && !this.isPresentationActive;
+        const needsParticles = (tabId === 'tab-gerenciar' || tabId === 'tab-usuarios');
         if (needsParticles && !this.isAnimatingParticles) {
             this.isAnimatingParticles = true;
             this.initializeParticles(); 
@@ -412,9 +153,7 @@ class AgriculturalDashboard {
         if (tabId === 'tab-moagem') {
              setTimeout(() => {
                  this.showSlide(this.currentSlideIndex); 
-                 if (!this.isPresentationActive) {
-                     this.initializeCarousel();
-                 }
+                 this.initializeCarousel();
              }, 50);
         } else {
              this.stopCarousel();
@@ -607,7 +346,7 @@ class AgriculturalDashboard {
 
         try {
             if (id) {
-                // MODO EDIÇÃO (Sem alterações necessárias aqui)
+                // MODO EDIÇÃO
                 const updateData = {
                     nickname: nickname,
                     customPermissions: selectedPerms, 
@@ -626,14 +365,12 @@ class AgriculturalDashboard {
 
                 const email = nickname.includes('@') ? nickname.toLowerCase() : `${nickname.toLowerCase()}@agro.local`;
                 
-                // --- CORREÇÃO AQUI: Verifica se o App 'Secondary' já existe ---
                 let secondaryApp;
                 if (!firebase.apps.find(app => app.name === 'Secondary')) {
                     secondaryApp = firebase.initializeApp(firebaseConfig, "Secondary");
                 } else {
                     secondaryApp = firebase.app("Secondary");
                 }
-                // -------------------------------------------------------------
 
                 const userCredential = await secondaryApp.auth().createUserWithEmailAndPassword(email, password);
                 const newUid = userCredential.user.uid;
@@ -648,9 +385,6 @@ class AgriculturalDashboard {
 
                 // Faz logout na instância secundária para não afetar o Admin logado
                 await secondaryApp.auth().signOut();
-                
-                // Opcional: NÃO delete o app aqui se você pretende criar mais usuários 
-                // na mesma sessão, ou use um bloco try/catch para segurança.
 
                 alert(`Usuário ${nickname} criado com sucesso!`);
                 this.closeModal('admin-user-modal');
@@ -1280,9 +1014,6 @@ class AgriculturalDashboard {
             this.currentUserCustomPermissions = null;
             
             if (this.refreshTimeoutId) clearTimeout(this.refreshTimeoutId);
-            if (this.isPresentationActive) {
-                this.stopPresentation();
-            }
         }
     }
     
@@ -1509,7 +1240,7 @@ class AgriculturalDashboard {
 
         if (!menuContainer || !backdrop) return;
 
-        if (!isMobile || this.isPresentationActive) {
+        if (!isMobile) {
             menuContainer.classList.remove('open');
             backdrop.classList.remove('active');
             document.body.style.overflowY = 'auto'; 
@@ -1695,6 +1426,8 @@ class AgriculturalDashboard {
         
         this.visualizer.updateDashboard(this.analysisResult);
         
+        this.updateRollingAverages();
+        
         this.hideLoadingAnimation();
         
         this.initializeCarousel();
@@ -1711,7 +1444,7 @@ class AgriculturalDashboard {
             let cssClass = '';
             
             const startA = 7 * 60 + 45; 
-            const startB = 16 * 60;        
+            const startB = 16 * 60;         
             const startC = 23 * 60 + 40; 
 
             if (currentMinutes >= startA && currentMinutes < startB) {
@@ -1761,6 +1494,216 @@ class AgriculturalDashboard {
         setInterval(updateShift, 10000); 
     }
 
+    // 🟥 CÁLCULO DE MÉDIAS DINÂMICAS E DISPONIBILIDADES (VERSÃO CORRIGIDA)
+    updateRollingAverages() {
+        if (!this.analysisResult) return;
+        
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        
+        console.log(`[RollingAverage] Hora Atual: ${currentHour}:${String(currentMinute).padStart(2, '0')}`);
+        
+        // 🔥 BUSCA DIRETA: Tenta encontrar os dados da hora atual
+        const findCurrentHourData = (data) => {
+            if (!data || !Array.isArray(data)) return null;
+            
+            // Procura pela hora exata
+            const found = data.find(row => {
+                const rowHour = parseInt(row.hora || row.time || row.HORA || -1);
+                return rowHour === currentHour;
+            });
+            
+            if (found) return found;
+            
+            // Se não encontrou, tenta encontrar pelo campo 'time' (formato HH:MM:SS)
+            return data.find(row => {
+                if (row.time && typeof row.time === 'string') {
+                    const timeParts = row.time.split(':');
+                    if (timeParts.length > 0) {
+                        const rowHour = parseInt(timeParts[0]);
+                        return rowHour === currentHour;
+                    }
+                }
+                return false;
+            });
+        };
+        
+        // Busca dados da hora atual
+        const currentPotData = findCurrentHourData(this.analysisResult.potentialData || []);
+        
+        if (currentPotData) {
+            console.log(`[RollingAverage] Dados encontrados para hora ${currentHour}:00`);
+            
+            // 🔥 USAR VALORES DIRETOS da hora atual para disponibilidades
+            const currentDispColh = parseFloat(
+                currentPotData['dispColhedora'] || 
+                currentPotData['DISP COLHEDORA'] || 
+                currentPotData['DISPONIBILIDADE COLHEDORA'] || 
+                0
+            );
+            
+            const currentDispTrans = parseFloat(
+                currentPotData['dispTransbordo'] || 
+                currentPotData['DISP TRANSBORDO'] || 
+                currentPotData['DISPONIBILIDADE TRANSBORDO'] || 
+                0
+            );
+            
+            const currentDispCam = parseFloat(
+                currentPotData['dispCaminhoes'] || 
+                currentPotData['DISP CAMINHÕES'] || 
+                currentPotData['DISP CAMINHOES'] || 
+                currentPotData['DISPONIBILIDADE CAMINHOES'] || 
+                0
+            );
+            
+            // Atualiza os cards com valores DIRETOS da hora atual
+            const updateEl = (id, val, suffix) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (typeof val === 'number') {
+                        el.textContent = val.toFixed(2) + suffix;
+                    } else {
+                        el.textContent = val + suffix;
+                    }
+                }
+            };
+            
+            updateEl('dispColhedora', currentDispColh, '');
+            updateEl('dispTransbordo', currentDispTrans, '');
+            updateEl('dispCaminhoes', currentDispCam, '');
+            
+            console.log(`[RollingAverage] Valores diretos hora ${currentHour}:00:`, {
+                dispColh: currentDispColh.toFixed(2),
+                dispTrans: currentDispTrans.toFixed(2),
+                dispCam: currentDispCam.toFixed(2)
+            });
+            
+            // Para moagem, potencial e rotação, faz média das últimas 3 horas
+            this._calculate3HourAverages(currentHour);
+            
+        } else {
+            console.log(`[RollingAverage] Dados NÃO encontrados para hora ${currentHour}:00, usando média de 3 horas`);
+            // Se não tem dados da hora atual, usa média das últimas 3 horas para tudo
+            this._calculate3HourAverageForDisps(currentHour);
+            this._calculate3HourAverages(currentHour);
+        }
+    }
+    
+    // 🔥 Método auxiliar para calcular médias de 3 horas para disponibilidades
+    _calculate3HourAverageForDisps(currentHour) {
+        const last3HoursData = this._getLastNHoursData(this.analysisResult.potentialData, currentHour, 3);
+        
+        if (last3HoursData.length === 0) {
+            this._updateElement('dispColhedora', '0.00', '');
+            this._updateElement('dispTransbordo', '0.00', '');
+            this._updateElement('dispCaminhoes', '0.00', '');
+            return;
+        }
+        
+        // Calcula médias
+        let sumColh = 0, sumTrans = 0, sumCam = 0;
+        
+        last3HoursData.forEach(row => {
+            sumColh += parseFloat(row['dispColhedora'] || row['DISP COLHEDORA'] || row['DISPONIBILIDADE COLHEDORA'] || 0);
+            sumTrans += parseFloat(row['dispTransbordo'] || row['DISP TRANSBORDO'] || row['DISPONIBILIDADE TRANSBORDO'] || 0);
+            sumCam += parseFloat(row['dispCaminhoes'] || row['DISP CAMINHÕES'] || row['DISP CAMINHOES'] || row['DISPONIBILIDADE CAMINHOES'] || 0);
+        });
+        
+        const avgColh = sumColh / last3HoursData.length;
+        const avgTrans = sumTrans / last3HoursData.length;
+        const avgCam = sumCam / last3HoursData.length;
+        
+        this._updateElement('dispColhedora', avgColh.toFixed(2), '');
+        this._updateElement('dispTransbordo', avgTrans.toFixed(2), '');
+        this._updateElement('dispCaminhoes', avgCam.toFixed(2), '');
+        
+        console.log(`[RollingAverage] Média 3h para disponibilidades:`, {
+            dispColh: avgColh.toFixed(2),
+            dispTrans: avgTrans.toFixed(2),
+            dispCam: avgCam.toFixed(2),
+            horasUsadas: last3HoursData.length
+        });
+    }
+    
+    // 🔥 Método para calcular médias de 3 horas para moagem, potencial e rotação
+    _calculate3HourAverages(currentHour) {
+        // Moagem
+        const last3Moagem = this._getLastNHoursData(this.analysisResult.analise24h, currentHour, 3);
+        if (last3Moagem.length > 0) {
+            const totalMoagem = last3Moagem.reduce((sum, row) => {
+                return sum + (parseFloat(row.peso) || 0);
+            }, 0);
+            const avgMoagem = totalMoagem / last3Moagem.length;
+            this._updateElement('avgMoagem3h', Math.round(avgMoagem).toLocaleString('pt-BR'), ' t/h');
+        } else {
+            this._updateElement('avgMoagem3h', '0', ' t/h');
+        }
+        
+        // Potencial e Rotação
+        const last3Pot = this._getLastNHoursData(this.analysisResult.potentialData, currentHour, 3);
+        if (last3Pot.length > 0) {
+            const totalPot = last3Pot.reduce((sum, row) => {
+                return sum + (parseFloat(row.potencial || row.POTENCIAL) || 0);
+            }, 0);
+            const avgPot = totalPot / last3Pot.length;
+            this._updateElement('avgPotencial3h', Math.round(avgPot).toLocaleString('pt-BR'), ' t/h');
+            
+            const totalRot = last3Pot.reduce((sum, row) => {
+                const val = parseFloat(
+                    row['rotacaoMoenda'] || 
+                    row['ROTACAO DA MOENDA'] || 
+                    row['ROTAÇÃO DA MOENDA'] || 
+                    row['RPM'] || 0
+                );
+                return sum + (val || 0);
+            }, 0);
+            const avgRot = totalRot / last3Pot.length;
+            this._updateElement('avgRotacao3h', Math.round(avgRot).toLocaleString('pt-BR'), ' RPM');
+            
+            console.log(`[RollingAverage] Média 3h para métricas:`, {
+                avgPot: avgPot.toFixed(2),
+                avgRot: avgRot.toFixed(2),
+                horasUsadas: last3Pot.length
+            });
+        } else {
+            this._updateElement('avgPotencial3h', '0', ' t/h');
+            this._updateElement('avgRotacao3h', '0', ' RPM');
+        }
+    }
+    
+    // 🔥 Método auxiliar para obter dados das últimas N horas
+    _getLastNHoursData(data, currentHour, n) {
+        if (!data || !Array.isArray(data)) return [];
+        
+        const result = [];
+        for (let i = 0; i < n; i++) {
+            const targetHour = (currentHour - i + 24) % 24;
+            const found = data.find(row => {
+                const hora = parseInt(row.hora || row.HORA || -1);
+                if (hora === targetHour) return true;
+                
+                if (row.time && typeof row.time === 'string') {
+                    const timeParts = row.time.split(':');
+                    if (timeParts.length > 0) {
+                        return parseInt(timeParts[0]) === targetHour;
+                    }
+                }
+                return false;
+            });
+            if (found) result.push(found);
+        }
+        
+        return result;
+    }
+    
+    // 🔥 Método auxiliar para atualizar elementos
+    _updateElement(id, val, suffix) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = val + suffix;
+    }
+
     showLoadingAnimation() {
         const overlay = document.getElementById('loading-overlay');
         if (overlay) {
@@ -1802,11 +1745,9 @@ class AgriculturalDashboard {
         const collectionRef = this.db.collection('fleet_registry');
         
         // 1. Identificar Frotas Únicas na importação atual
-        // Usa o campo 'frota' mapeado pelo IntelligentProcessor
         const uniqueFleetsInImport = new Set();
         data.forEach(row => {
             if (row.frota) {
-                // Remove zeros à esquerda e espaços para padronizar ID
                 const cleanFrota = String(row.frota).trim().replace(/^0+/, '');
                 if(cleanFrota.length > 0) uniqueFleetsInImport.add(cleanFrota);
             }
@@ -1819,7 +1760,7 @@ class AgriculturalDashboard {
 
             // 2. Atualizar 'last_seen' em Lote (Batch Write)
             const fleetsArray = Array.from(uniqueFleetsInImport);
-            const chunkSize = 400; // Limite seguro para batch do Firestore
+            const chunkSize = 400; 
             
             for (let i = 0; i < fleetsArray.length; i += chunkSize) {
                 const chunk = fleetsArray.slice(i, i + chunkSize);
@@ -1838,7 +1779,6 @@ class AgriculturalDashboard {
             }
 
             // 3. Contar Frotas Válidas (Last Seen <= 72h)
-            // Executa query no banco para pegar o total real de frotas ativas
             const snapshot = await collectionRef
                 .where('last_seen', '>=', firebase.firestore.Timestamp.fromDate(CUTOFF_TIME))
                 .get();
@@ -1850,7 +1790,6 @@ class AgriculturalDashboard {
 
         } catch (e) {
             console.error("[FleetSync] Erro ao sincronizar frotas:", e);
-            // Em caso de erro, retorna o fallback (frotas atuais)
             return uniqueFleetsInImport.size; 
         }
     }
@@ -1865,10 +1804,8 @@ class AgriculturalDashboard {
         
         // --- INÍCIO DA SINCRONIZAÇÃO DE FROTAS ---
         await this._yieldControl();
-        // Sincroniza com Firebase e obtém o total registrado nas últimas 72h
         const totalRegistered = await this.syncFleetRegistry(productionData);
         
-        // Injeta o total no objeto de análise para que o VisualizerGrid possa usar
         if (this.analysisResult) {
             this.analysisResult.totalRegisteredFleets = totalRegistered;
         }
@@ -1876,6 +1813,9 @@ class AgriculturalDashboard {
 
         await this._yieldControl(); 
         this.visualizer.updateDashboard(this.analysisResult);
+        
+        // Atualiza as médias dinâmicas após o processamento
+        this.updateRollingAverages();
 
         this.showAnalyticsSection(true);
         if (this.canAccessTab('tab-moagem')) {
@@ -1883,7 +1823,6 @@ class AgriculturalDashboard {
         }
         
         this.updateNextRefreshDisplay(refreshTargetTime); 
-        
         this.initializeCarousel();
     }
     
@@ -1916,9 +1855,7 @@ class AgriculturalDashboard {
                 }
 
                 if (name.includes('AcmSafra')) {
-                    // Correção específica: Processar CSV do Acumulado Safra
                     if (typeof XLSX !== 'undefined') {
-                        // O Google Sheets publica como CSV, então lemos como string/csv
                         const wb = XLSX.read(csvText, { type: 'string' });
                         const sheet = wb.Sheets[wb.SheetNames[0]];
                         const json = XLSX.utils.sheet_to_json(sheet);
@@ -1989,9 +1926,7 @@ class AgriculturalDashboard {
         let cloudMissingFiles = [];
         const fileInfoElement = document.getElementById('fileInfo');
         
-        // CHAMA A FUNÇÃO FETCH ATUALIZADA
         const cloudResult = await this.fetchFilesFromCloud();
-        
         cloudMissingFiles = cloudResult.missingFiles;
 
         if (this.data.length === 0 && this.potentialData.length === 0 && this.metaData.length === 0 && this.acmSafraData.length === 0) {
@@ -2006,10 +1941,7 @@ class AgriculturalDashboard {
         }
 
         if(fileInfoElement) {
-            
             let msg = [];
-            let missingFilesList = cloudMissingFiles;
-            
             const essentialFiles = {
                 'Produção': this.data.length > 0,
                 'Potencial': this.potentialData.length > 0,
@@ -2022,16 +1954,9 @@ class AgriculturalDashboard {
             if (essentialFiles.Metas) msg.push(`Metas`);
             if (essentialFiles.AcmSafra) msg.push(`AcmSafra`);
 
-            let finalMessage = `Arquivos carregados: ${msg.join(' + ')}.`;
-            let statusColor = 'var(--success)';
-            if (missingFilesList.length > 0) {
-                finalMessage = `Carregados: ${msg.join(' + ')}.`;
-            }
-            
-            finalMessage += ` (Via Google Sheets)`;
-
+            let finalMessage = `Arquivos carregados: ${msg.join(' + ')}. (Via Google Sheets)`;
             fileInfoElement.textContent = finalMessage;
-            fileInfoElement.style.color = statusColor;
+            fileInfoElement.style.color = 'var(--success)';
         }
 
         const now = new Date();
@@ -2076,7 +2001,6 @@ class AgriculturalDashboard {
 
             dropzoneCard.addEventListener('drop', (e) => {
                 dropzoneCard.classList.remove('hover');
-                
                 let files = [];
                 if (e.dataTransfer.items) {
                     for (let i = 0; i < e.dataTransfer.items.length; i++) {
@@ -2222,33 +2146,6 @@ class AgriculturalDashboard {
                  });
              });
         }
-        
-        // Adicionar event listener para o botão de captura de tela
-        const screenshotBtn = document.getElementById('screenshot-btn');
-        if (screenshotBtn) {
-            screenshotBtn.addEventListener('click', () => this.captureScreenshot());
-        }
-        
-        // Adicionar event listener para o botão de apresentação
-        const presentationBtn = document.querySelector('.presentation-controls .btn-primary');
-        if (presentationBtn) {
-            presentationBtn.addEventListener('click', () => this.togglePresentation());
-        }
-        
-        // Adicionar event listener para cliques durante apresentação (para mostrar controles)
-        document.addEventListener('click', (e) => {
-            if (this.isPresentationActive) {
-                const controls = document.querySelector('.presentation-controls');
-                if (controls) {
-                    controls.style.opacity = '1';
-                    setTimeout(() => {
-                        if (this.isPresentationActive) {
-                            controls.style.opacity = '0.3';
-                        }
-                    }, 3000);
-                }
-            }
-        });
     }
     
     loadTheme() {
@@ -2306,7 +2203,7 @@ class AgriculturalDashboard {
         }
 
         const animate = () => {
-            if (!this.isAnimatingParticles || this.isPresentationActive) { 
+            if (!this.isAnimatingParticles) { 
                 this.animationFrameId = null; 
                 return; 
             }
