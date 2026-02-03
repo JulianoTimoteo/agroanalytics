@@ -1,0 +1,361 @@
+/* * MOBILE REVOLUTION CSS
+ * Sistema completo de otimização mobile com rotação inteligente
+ * Suporta portrait, landscape e gestos avançados
+ */
+
+/* ============================================
+   VARIÁVEIS DE CONTROLE MOBILE
+   ============================================ */
+:root {
+    --mobile-header-height: 60px;
+    --mobile-nav-height: 55px;
+    --mobile-padding: 12px;
+    --mobile-card-gap: 12px;
+    --landscape-sidebar-width: 280px;
+    --touch-target-size: 44px;
+    --chart-min-height-portrait: 280px;
+    --chart-min-height-landscape: 200px;
+    --transition-speed: 0.3s;
+}
+
+/* ============================================
+   DETECÇÃO DE ORIENTAÇÃO
+   ============================================ */
+@media (max-width: 768px) and (orientation: portrait) {
+    body {
+        --current-orientation: portrait;
+    }
+    
+    .dashboard-layout {
+        padding-top: var(--mobile-header-height);
+        padding-bottom: 80px; /* Espaço para nav inferior se houver */
+    }
+}
+
+@media (max-width: 768px) and (orientation: landscape) {
+    body {
+        --current-orientation: landscape;
+    }
+    
+    .dashboard-layout {
+        padding-top: 50px;
+    }
+}
+
+/* ============================================
+   RESET E BASE MOBILE
+   ============================================ */
+@media (max-width: 768px) {
+    * {
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+    }
+
+    body {
+        font-size: 14px;
+        overflow-x: hidden;
+        overscroll-behavior-y: none; /* Previne pull-to-refresh nativo indesejado */
+    }
+
+    /* Scrollbar oculta mas funcional */
+    ::-webkit-scrollbar {
+        width: 4px;
+        height: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+    }
+}
+
+/* ============================================
+   HEADER E NAVEGAÇÃO
+   ============================================ */
+@media (max-width: 768px) {
+    .dashboard-header {
+        height: var(--mobile-header-height);
+        padding: 0 10px;
+        justify-content: space-between;
+    }
+
+    .logo h1 {
+        font-size: 1.2rem;
+    }
+
+    .logo .beta-tag {
+        font-size: 0.6rem;
+        padding: 1px 4px;
+    }
+
+    /* Botões do Header simplificados */
+    .header-controls .btn-cssbuttons span {
+        display: none; /* Esconde texto "Ações" */
+    }
+    
+    .header-controls .btn-cssbuttons {
+        padding: 8px;
+        background: transparent;
+        border: 1px solid var(--glass-border);
+    }
+    
+    .header-controls .btn-cssbuttons i {
+        margin: 0;
+        font-size: 1.2rem;
+    }
+
+    /* Turno Display Compacto */
+    .turno-display-container {
+        max-width: 120px;
+        height: 30px;
+        background: rgba(255, 255, 255, 0.05);
+    }
+    
+    .shift-info-content {
+        font-size: 0.7rem;
+    }
+    
+    .selector-icon {
+        font-size: 0.8rem;
+    }
+}
+
+/* ============================================
+   GRIDS E CARDS
+   ============================================ */
+@media (max-width: 768px) {
+    .dashboard-main {
+        padding: 10px;
+    }
+
+    .analytics-row {
+        gap: var(--mobile-card-gap);
+        margin-bottom: var(--mobile-card-gap);
+    }
+
+    .glass-card {
+        padding: 15px;
+        border-radius: 12px;
+    }
+
+    .card-header h3 {
+        font-size: 1rem;
+    }
+
+    /* KPI Cards - Grid 2x2 ou Scroll Horizontal */
+    .info-grid-container {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr) !important; /* Força 2 colunas */
+        gap: 8px;
+        padding-bottom: 5px;
+    }
+
+    /* Cards específicos ocupam largura total */
+    .info-compact-card:first-child {
+        grid-column: 1 / -1; /* Acumulado Safra full width */
+        background: linear-gradient(90deg, rgba(64, 128, 12, 0.2), rgba(0, 0, 0, 0));
+        border-left: 4px solid var(--success);
+    }
+
+    .info-compact-card {
+        min-height: 70px;
+        padding: 10px !important;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start; /* Alinhamento à esquerda para leitura melhor */
+    }
+
+    .info-compact-card .card-icon {
+        position: absolute;
+        right: 10px;
+        top: 10px;
+        font-size: 1.2rem;
+        opacity: 0.5;
+    }
+
+    .info-compact-card .card-value {
+        font-size: 1.1rem !important;
+        margin-top: 5px;
+    }
+    
+    .info-compact-card .card-label {
+        font-size: 0.7rem !important;
+        opacity: 0.8;
+    }
+}
+
+/* ============================================
+   GRÁFICOS (CHART.JS)
+   ============================================ */
+@media (max-width: 768px) {
+    .chart-container {
+        height: var(--chart-min-height-portrait);
+        width: 100%;
+        position: relative;
+    }
+
+    /* Ajuste para orientação paisagem */
+    @media (orientation: landscape) {
+        .chart-container {
+            height: var(--chart-min-height-landscape);
+        }
+    }
+
+    /* Botões do Carrossel maiores */
+    .carousel-nav {
+        width: 44px;
+        height: 44px;
+        background: rgba(0,0,0,0.6);
+        font-size: 1.2rem;
+    }
+}
+
+/* ============================================
+   TABELAS E LISTAS
+   ============================================ */
+@media (max-width: 768px) {
+    .top-list-container.side-by-side {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .top-list-section {
+        width: 100%;
+    }
+
+    .rank-item {
+        padding: 10px;
+    }
+
+    .rank-pos {
+        font-size: 1rem;
+        min-width: 30px;
+    }
+
+    .rank-name {
+        font-size: 0.9rem;
+    }
+
+    .rank-value {
+        font-size: 0.9rem;
+    }
+    
+    /* Scroll horizontal para tabelas grandes */
+    .meta-table-wrapper {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -15px; /* Quebra margens do card */
+        padding: 0 15px;
+    }
+    
+    .meta-table {
+        min-width: 600px; /* Garante largura mínima */
+    }
+}
+
+/* ============================================
+   CONTROLES DE INPUT (UPLOAD, CONFIG)
+   ============================================ */
+@media (max-width: 768px) {
+    .dropzone-card {
+        padding: 20px;
+        border-width: 2px;
+    }
+
+    .upload-btn {
+        width: 100%;
+        padding: 15px;
+        font-size: 1rem;
+    }
+
+    .meta-setting-rodape-moagem {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .meta-item-rodape {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .meta-item-rodape input {
+        width: 100px;
+        padding: 8px;
+        font-size: 1rem; /* Evita zoom no iOS */
+    }
+}
+
+/* ============================================
+   MODAIS FULLSCREEN NO MOBILE
+   ============================================ */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        height: auto;
+        max-height: 90vh;
+        overflow-y: auto;
+        padding: 20px;
+        margin: 10px;
+    }
+
+    .login-container {
+        padding: 20px;
+    }
+
+    .login-container h1 {
+        font-size: 2rem;
+    }
+
+    .login-container input {
+        padding: 15px; /* Área de toque maior */
+    }
+    
+    .btn-primary {
+        padding: 15px;
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* ============================================
+   STATUS DA FROTA (GRID ESPECÍFICO)
+   ============================================ */
+@media (max-width: 768px) {
+    .fleet-status-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 8px;
+    }
+
+    .fleet-status-grid .status-item {
+        min-height: 60px;
+    }
+
+    .fleet-status-grid .status-item .value {
+        font-size: 1.2rem;
+    }
+    
+    /* Último item ocupa largura total se for ímpar */
+    .fleet-status-grid .status-item:last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+    }
+}
+
+/* ============================================
+   ANIMAÇÕES E FEEDBACK VISUAL
+   ============================================ */
+.upload-highlight {
+    animation: pulseBorder 2s infinite;
+}
+
+@keyframes pulseBorder {
+    0% { border-color: var(--glass-border); }
+    50% { border-color: var(--primary); }
+    100% { border-color: var(--glass-border); }
+}
+
+/* Feedback de Toque */
+.btn-primary:active, .tab-button:active, .info-compact-card:active {
+    transform: scale(0.98);
+    opacity: 0.8;
+}
