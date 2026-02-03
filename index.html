@@ -1,1244 +1,858 @@
 <!DOCTYPE html>
 <html lang="pt-BR" data-theme="dark">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>🌱AgroAnalytics - Dashboard Operacional</title>
-
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#050A14"> 
-<meta name="apple-mobile-web-app-title" content="AgroAnalytics">
-
-<link rel="manifest" href="./manifest.json">
-
-<link rel="icon" type="image/x-icon" href="https://usinapitangueiras.com.br/wp-content/uploads/2020/10/cropped-favicon-180x180.png">
-<link rel="apple-touch-icon" href="https://usinapitangueiras.com.br/wp-content/uploads/2020/10/cropped-favicon-180x180.png">
-
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/luxon@3.3.0/build/global/luxon.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-
-<script>
-    const firebaseConfig = {
-        apiKey: "AIzaSyADUuqh_THzGInTSytxzUFEwHV5LmwdvYc",
-        authDomain: "agroanalytics-api.firebaseapp.com",
-        projectId: "agroanalytics-api",
-        storageBucket: "agroanalytics-api.firebasestorage.app",
-        messagingSenderId: "739888244342",
-        appId: "1:739888244342:web:558d620583469ec515e157",
-        measurementId: "G-6TYZDXMJZ5"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-</script>
-
-<link rel="stylesheet" href="./style.css"> 
-
-<style>
-    .checkbox-container {
-        display: flex;
-        align-items: center;
-        justify-content: flex-start;
-        margin-bottom: 15px;
-        color: var(--text-secondary);
-        font-size: 0.9rem;
-    }
-    .checkbox-container input {
-        width: auto !important;
-        margin-right: 8px !important;
-        margin-bottom: 0 !important;
-    }
-
-    /* Estilos do Switch de Filtro de Frentes */
-    .radio-switch {
-        display: flex;
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 20px;
-        padding: 3px;
-        margin-left: auto;
-        margin-right: 15px;
-        border: 1px solid var(--glass-border);
-        align-items: center;
-    }
-
-    .radio-switch input[type="radio"] {
-        display: none;
-    }
-
-    .radio-switch label {
-        padding: 4px 12px;
-        cursor: pointer;
-        border-radius: 15px;
-        font-size: 0.75rem;
-        color: var(--text-secondary);
-        transition: all 0.3s ease;
-        font-weight: 500;
-        user-select: none;
-        margin: 0 !important;
-    }
-
-    .radio-switch label:hover {
-        color: var(--text);
-        background: rgba(255,255,255,0.1);
-    }
-
-    .radio-switch input[type="radio"]:checked + label {
-        background: var(--primary);
-        color: #fff;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-    }
-
-    /* Ajustes para Status da Frota */
-    .fleet-status-grid .status-item {
-        min-height: 52px !important;
-        padding: 0.4rem 0.3rem !important;
-    }
-    .fleet-status-grid .status-item .value {
-        font-size: 1rem !important;
-    }
-    .fleet-status-grid .status-item .label {
-        font-size: 0.58rem !important;
-    }
-    .averages-container, .disp-container {
-        display: flex;
-        gap: 1rem;
-        width: 100%;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>🌱AgroAnalytics - Dashboard Operacional</title>
     
-    /* ========================================================================= */
-    /* 📊 ESTILO PARA CARDS DO INFORMATIVO EM GRID AJUSTÁVEL (SEM SCROLL) */
-    /* ========================================================================= */
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#050A14"> 
+    <meta name="apple-mobile-web-app-title" content="AgroAnalytics">
     
-    /* Container principal - Grid responsivo sem scroll */
-    .info-grid-container {
-        display: grid;
-        grid-template-columns: repeat(9, 1fr);
-        gap: 0.6rem;
-        width: 100%;
-        padding: 0.5rem 0;
-        margin: 0;
-        overflow: hidden;
-    }
+    <link rel="manifest" href="./manifest.json">
+    
+    <link rel="icon" type="image/x-icon" href="https://usinapitangueiras.com.br/wp-content/uploads/2020/10/cropped-favicon-180x180.png">
+    <link rel="apple-touch-icon" href="https://usinapitangueiras.com.br/wp-content/uploads/2020/10/cropped-favicon-180x180.png">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@3.3.0/build/global/luxon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyADUuqh_THzGInTSytxzUFEwHV5LmwdvYc",
+            authDomain: "agroanalytics-api.firebaseapp.com",
+            projectId: "agroanalytics-api",
+            storageBucket: "agroanalytics-api.firebasestorage.app",
+            messagingSenderId: "739888244342",
+            appId: "1:739888244342:web:558d620583469ec515e157",
+            measurementId: "G-6TYZDXMJZ5"
+        };
 
-    /* Cards do informativo compactos */
-    .info-compact-card {
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid var(--glass-border);
-        border-radius: 8px;
-        padding: 0.6rem 0.4rem !important;
-        text-align: center;
-        transition: all 0.2s ease;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        position: relative;
-        border-left: 4px solid var(--primary);
-        min-height: 60px;
-        min-width: 0; /* Permite que o card encolha */
-    }
-
-    .info-compact-card:hover {
-        background: rgba(255, 255, 255, 0.08);
-        transform: translateY(-2px);
-        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
-    }
-
-    /* Destaque para cards principais (os 3 primeiros) */
-    .info-compact-card.highlight {
-        background: rgba(0, 212, 255, 0.1) !important;
-        border-color: var(--success) !important;
-        min-height: 70px;
-    }
-
-    /* Primeiro card (Acumulado Safra) - mais destacado */
-    .info-compact-card:first-child {
-        background: rgba(0, 212, 255, 0.15) !important;
-        border-color: var(--success) !important;
-    }
-
-    /* Estilo do ícone */
-    .info-compact-card .card-icon {
-        font-size: 1rem;
-        margin-bottom: 5px;
-        color: var(--primary);
-    }
-
-    /* Estilo do valor */
-    .info-compact-card .card-value {
-        font-size: 0.9rem !important;
-        font-weight: 700;
-        color: var(--primary);
-        line-height: 1.1;
-        margin-bottom: 3px;
-        display: block;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        width: 100%;
-    }
-
-    /* Estilo do label */
-    .info-compact-card .card-label {
-        font-size: 0.55rem !important;
-        color: var(--text-secondary);
-        text-transform: uppercase;
-        letter-spacing: 0.2px;
-        line-height: 1.1;
-        display: block;
-        margin-bottom: 2px;
-        white-space: normal;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        width: 100%;
-        max-height: 2.2em;
-    }
-
-    /* Informação adicional */
-    .info-compact-card .card-subinfo {
-        font-size: 0.5rem;
-        color: var(--text-secondary);
-        margin-top: 2px;
-        display: none; /* Oculto por padrão para economizar espaço */
-    }
-
-    /* Status colors para bordas */
-    .info-compact-card.success-border {
-        border-left-color: var(--success) !important;
-    }
-    .info-compact-card.warning-border {
-        border-left-color: var(--warning) !important;
-    }
-    .info-compact-card.danger-border {
-        border-left-color: var(--danger) !important;
-    }
-    .info-compact-card.primary-border {
-        border-left-color: var(--primary) !important;
-    }
-
-    /* Para cards com informações extras (os 3 primeiros) */
-    .info-compact-card.highlight .card-subinfo {
-        display: block;
-    }
-
-    /* Para estatísticas de viagens (segundo card) */
-    .info-compact-card.viagens-info {
-        position: relative;
-    }
-
-    .viagens-stats {
-        display: flex;
-        justify-content: center;
-        gap: 4px;
-        margin-top: 2px;
-        font-size: 0.5rem;
-        width: 100%;
-    }
-
-    .viagens-stats span {
-        padding: 0 3px;
-        border-radius: 2px;
-        font-weight: 600;
-    }
-
-    .viagens-pro {
-        color: var(--success);
-    }
-
-    .viagens-terc {
-        color: var(--warning);
-    }
-
-    /* Responsividade */
-    @media (max-width: 1400px) {
-        .info-grid-container {
-            grid-template-columns: repeat(6, 1fr);
-            grid-template-rows: repeat(2, auto);
-            gap: 0.5rem;
-        }
-        
-        /* Cards 1-3 na primeira linha, cards 4-9 na segunda */
-        .info-compact-card:nth-child(1),
-        .info-compact-card:nth-child(2),
-        .info-compact-card:nth-child(3) {
-            grid-row: 1;
-        }
-        
-        .info-compact-card:nth-child(4),
-        .info-compact-card:nth-child(5),
-        .info-compact-card:nth-child(6),
-        .info-compact-card:nth-child(7),
-        .info-compact-card:nth-child(8),
-        .info-compact-card:nth-child(9) {
-            grid-row: 2;
-        }
-    }
-
-    @media (max-width: 1024px) {
-        .info-grid-container {
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(3, auto);
-            gap: 0.5rem;
-        }
-        
-        .info-compact-card {
-            min-height: 55px;
-            padding: 0.5rem 0.3rem !important;
-        }
-        
-        .info-compact-card .card-value {
-            font-size: 0.85rem !important;
-        }
-        
-        .info-compact-card .card-label {
-            font-size: 0.5rem !important;
-        }
-        
-        .info-compact-card .card-icon {
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+    </script>
+    
+    <link rel="stylesheet" href="./style.css"> 
+    
+    <style>
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            margin-bottom: 15px;
+            color: var(--text-secondary);
             font-size: 0.9rem;
-            margin-bottom: 3px;
         }
-    }
-
-    @media (max-width: 768px) {
-        .info-grid-container {
-            grid-template-columns: repeat(2, 1fr);
-            grid-template-rows: repeat(5, auto);
-            gap: 0.4rem;
+        .checkbox-container input {
+            width: auto !important;
+            margin-right: 8px !important;
+            margin-bottom: 0 !important;
         }
-        
-        .info-compact-card {
-            min-height: 50px;
-            padding: 0.4rem 0.2rem !important;
-        }
-        
-        .info-compact-card .card-value {
-            font-size: 0.8rem !important;
-        }
-        
-        .info-compact-card .card-label {
-            font-size: 0.45rem !important;
-        }
-        
-        .info-compact-card .card-icon {
-            font-size: 0.8rem;
-            margin-bottom: 2px;
-        }
-        
-        .info-compact-card.highlight {
-            min-height: 60px;
-        }
-        
-        /* Em mobile, os primeiros 3 cards ficam na primeira linha */
-        .info-compact-card:nth-child(1),
-        .info-compact-card:nth-child(2) {
-            grid-row: 1;
-        }
-        
-        .info-compact-card:nth-child(3) {
-            grid-row: 2;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .info-grid-container {
-            grid-template-columns: 1fr;
-            grid-template-rows: repeat(9, auto);
-            gap: 0.3rem;
-        }
-        
-        .info-compact-card {
-            min-height: 45px;
-        }
-    }
-    
-    /* 🟢 CORREÇÃO: Remover bordas verdes específicas */
-    #tab-moagem .analytics-card:first-child,
-    #tab-moagem .analytics-card:first-child .glass-card,
-    .info-kpi-wrapper .glass-card,
-    .info-kpi-wrapper .glass-card.stat-card-mini,
-    .info-mini-cards-grid .status-item:first-child {
-        border-left: 1px solid var(--glass-border) !important;
-        background: rgba(255, 255, 255, 0.03) !important;
-    }
-</style>
+    </style>
 </head>
 <body>
-<div id="user-settings-modal" class="modal-overlay">
-<div class="modal-content">
-<button class="close-btn" onclick="window.agriculturalDashboard.closeModal('user-settings-modal')" aria-label="Fechar"><i class="fas fa-times"></i></button>
-<h3 id="modal-title">Configurações de Conta</h3>
-
-        <div id="modal-alert-message" class="alert-success-login hidden margin-bottom-10"></div>
-        
-        <form id="update-password-form">
-            <input type="text" name="username" style="display:none" autocomplete="username">
-            <p class="text-secondary margin-bottom-15">Atualize sua senha. O email de redefinição será enviado para a sua conta atual.</p>
-            <input type="password" name="current-password" id="current-password" placeholder="Senha Atual (Obrigatório para Confirmação)" required autocomplete="current-password">
-            <input type="password" name="new-password" id="new-password" placeholder="Nova Senha (Mín. 6 caracteres)" required autocomplete="new-password">
-            <input type="password" name="confirm-password" id="confirm-new-password" placeholder="Confirme a Nova Senha" required autocomplete="new-password">
-            <button type="submit" class="btn-primary margin-bottom-10">
-                <i class="fas fa-key"></i> Salvar Nova Senha
-            </button>
-            <p class="text-secondary modal-footer-text">
-                Para alterar o e-mail, entre em contato com o administrador.
-            </p>
-        </form>
-    </div>
-</div>
-
-<div id="admin-user-modal" class="modal-overlay">
-    <div class="modal-content modal-content-medium">
-        <button class="close-btn" onclick="window.agriculturalDashboard.closeModal('admin-user-modal')" aria-label="Fechar"><i class="fas fa-times"></i></button>
-        <h3><i class="fas fa-user-shield"></i> Gerenciar Usuário</h3>
-        
-        <form id="admin-user-form">
-            <input type="hidden" id="admin-user-id"> 
-            <div class="input-group-row margin-bottom-10">
-                <input type="text" id="admin-user-nickname" name="username" autocomplete="username" placeholder="Apelido (Login)" required style="width: 100%;">
-            </div>
+    <div id="user-settings-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button class="close-btn" onclick="window.agriculturalDashboard.closeModal('user-settings-modal')" aria-label="Fechar"><i class="fas fa-times"></i></button>
+            <h3 id="modal-title">Configurações de Conta</h3>
             
-            <div class="input-group-row margin-bottom-10">
-                <input type="password" id="admin-user-password" name="admin-password" autocomplete="new-password" placeholder="Senha (Deixe em branco para manter)" style="width: 100%;">
-            </div>
-
-            <div class="permissions-container margin-bottom-15">
-                <p class="text-secondary" style="margin-bottom: 5px;"><strong>Permissões de Acesso:</strong></p>
-                <div class="checkbox-grid">
-                    <label><input type="checkbox" name="perm" value="tab-moagem"> Moagem</label>
-                    <label><input type="checkbox" name="perm" value="tab-alertas"> Alertas</label>
-                    <label><input type="checkbox" name="perm" value="tab-caminhao"> Caminhões</label>
-                    <label><input type="checkbox" name="perm" value="tab-equipamento"> Colheita</label>
-                    <label><input type="checkbox" name="perm" value="tab-frentes"> Frentes</label>
-                    <label><input type="checkbox" name="perm" value="tab-metas"> Metas</label>
-                    <label><input type="checkbox" name="perm" value="tab-horaria"> Entrega HxH</label>
-                    <label><input type="checkbox" name="perm" value="tab-gerenciar"> Gerenciar (Admin)</label>
-                </div>
-            </div>
-
-            <button type="submit" class="btn-primary">
-                <i class="fas fa-save"></i> Salvar Usuário
-            </button>
-        </form>
-    </div>
-</div>
-
-<div id="login-screen" class="full-screen-overlay">
-    <div class="login-container">
-        <h1>AgroAnalytics</h1>
-        <p>Acesse o painel com suas credenciais</p>
-        <div id="auth-error" class="alert-danger hidden"></div>
-        <div id="auth-success" class="alert-success-login hidden"></div>
-
-        <form id="login-form">
-            <input type="text" id="login-user" placeholder="Apelido ou E-mail" required autocomplete="username">
-            <input type="password" id="login-password" placeholder="Senha" required autocomplete="current-password">
+            <div id="modal-alert-message" class="alert-success-login hidden margin-bottom-10"></div>
             
-            <div class="checkbox-container">
-                <input type="checkbox" id="remember-me" checked>
-                <label for="remember-me" style="cursor: pointer;">Manter conectado</label>
-            </div>
-
-            <div class="login-actions">
-                <button type="submit" class="btn-primary">Entrar</button>
-            </div>
-            
-            <a href="#" id="forgot-password-link" class="btn-forgot">Esqueceu a senha? Redefinir</a>
-            
-            <p>Não tem conta? <a href="#" id="show-signup">Solicitar Cadastro</a></p>
-        </form>
-
-        <form id="signup-form" class="hidden">
-            <p>Preencha os dados abaixo para solicitar seu acesso. Responderemos em até 24h.</p>
-            <input type="text" id="signup-name" placeholder="Nome Completo / Apelido" required autocomplete="name">
-            <input type="email" id="signup-email" placeholder="E-mail (para recuperação)" required autocomplete="email">
-            <input type="tel" id="signup-phone" placeholder="Telefone/WhatsApp" required autocomplete="tel">
-            <button type="submit" class="btn-primary">Solicitar Cadastro</button>
-            <p>Já tem conta? <a href="#" id="show-login">Fazer Login</a></p>
-        </form>
-    </div>
-</div>
-
-<div id="main-dashboard" class="dashboard-layout hidden">
-    <div id="loading-overlay" class="hidden">
-        <div class="loading-content">
-            <div class="loader-wrapper">
-                <div class="loader"></div>
-                <p>Carregando...</p>
-            </div>
-        </div>
-    </div>
-    
-    <canvas id="particles-js"></canvas> 
-    
-    <header class="dashboard-header">
-        <div class="header-content">
-            <button class="menu-toggle-btn" id="menu-toggle-btn" aria-label="Abrir Menu">
-                <i class="fas fa-bars"></i>
-            </button>
-
-            <div class="logo">
-                <i class="fas fa-seedling"></i>
-                <h1>AgroAnalytics</h1>
-                <span class="beta-tag">MOAGEM</span>
-            </div>
-            
-            <div class="header-controls">
-                <div class="turno-display-container" id="shiftDisplay">
-                    <div class="shift-progress-fill" id="shiftProgressFill"></div>
-                    <div class="shift-info-content">
-                        <i class="fas fa-clock selector-icon"></i>
-                        <span id="shiftName">Calculando...</span>
-                        <span id="shiftTimeRemaining" class="shift-timer">0%</span>
-                    </div>
-                </div>
-
-                <div id="lastWeighingDisplayContainer" class="last-weighing-container">
-                     <span id="refreshStatusText">Próxima atualização: --:-- 🔄️</span>
-                     <span id="lastWeighingText" style="display: none;">Última pesagem: N/A</span>
-                </div>
-
-                <button class="btn-cssbuttons">
-                    <span><i class="fas fa-ellipsis-h"></i> Ações</span>
-                    <ul>
-                        <li>
-                            <a href="#" onclick="event.preventDefault(); window.agriculturalDashboard.captureScreenshot()" title="Capturar Tela">
-                                <i class="fas fa-camera"></i>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#" onclick="event.preventDefault(); window.agriculturalDashboard.openModal('user-settings-modal')" title="Configurações">
-                                <i class="fas fa-user-cog"></i>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#" onclick="event.preventDefault(); window.agriculturalDashboard.toggleTheme()" title="Alternar Tema">
-                                <i class="fas fa-sun" id="theme-icon"></i>
-                            </a>
-                        </li>
-                        <li>
-                            <a href="#" id="logout-btn" title="Sair">
-                                <i class="fas fa-sign-out-alt"></i>
-                            </a>
-                        </li>
-                    </ul>
+            <form id="update-password-form">
+                <p class="text-secondary margin-bottom-15">Atualize sua senha. O email de redefinição será enviado para a sua conta atual.</p>
+                <input type="password" id="current-password" placeholder="Senha Atual (Obrigatório para Confirmação)" required autocomplete="current-password">
+                <input type="password" id="new-password" placeholder="Nova Senha (Mín. 6 caracteres)" required autocomplete="new-password">
+                <input type="password" id="confirm-new-password" placeholder="Confirme a Nova Senha" required autocomplete="new-password">
+                <button type="submit" class="btn-primary margin-bottom-10">
+                    <i class="fas fa-key"></i> Salvar Nova Senha
                 </button>
+                <p class="text-secondary modal-footer-text">
+                    Para alterar o e-mail, entre em contato com o administrador.
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <div id="admin-user-modal" class="modal-overlay">
+        <div class="modal-content modal-content-medium">
+            <button class="close-btn" onclick="window.agriculturalDashboard.closeModal('admin-user-modal')" aria-label="Fechar"><i class="fas fa-times"></i></button>
+            <h3><i class="fas fa-user-shield"></i> Gerenciar Usuário</h3>
+            
+            <form id="admin-user-form">
+                <input type="hidden" id="admin-user-id"> <div class="input-group-row margin-bottom-10">
+                    <input type="text" id="admin-user-nickname" placeholder="Apelido (Login)" required style="width: 100%;">
+                </div>
+                
+                <div class="input-group-row margin-bottom-10">
+                    <input type="password" id="admin-user-password" placeholder="Senha (Deixe em branco para manter)" style="width: 100%;">
+                </div>
+
+                <div class="permissions-container margin-bottom-15">
+                    <p class="text-secondary" style="margin-bottom: 5px;"><strong>Permissões de Acesso:</strong></p>
+                    <div class="checkbox-grid">
+                        <label><input type="checkbox" name="perm" value="tab-moagem"> Moagem</label>
+                        <label><input type="checkbox" name="perm" value="tab-alertas"> Alertas</label>
+                        <label><input type="checkbox" name="perm" value="tab-caminhao"> Caminhões</label>
+                        <label><input type="checkbox" name="perm" value="tab-equipamento"> Colheita</label>
+                        <label><input type="checkbox" name="perm" value="tab-frentes"> Frentes</label>
+                        <label><input type="checkbox" name="perm" value="tab-metas"> Metas</label>
+                        <label><input type="checkbox" name="perm" value="tab-horaria"> Entrega HxH</label>
+                        <label><input type="checkbox" name="perm" value="tab-gerenciar"> Gerenciar (Admin)</label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-save"></i> Salvar Usuário
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div id="login-screen" class="full-screen-overlay">
+        <div class="login-container">
+            <h1>AgroAnalytics</h1>
+            <p>Acesse o painel com suas credenciais</p>
+            <div id="auth-error" class="alert-danger hidden"></div>
+            <div id="auth-success" class="alert-success-login hidden"></div>
+
+            <form id="login-form">
+                <input type="text" id="login-user" placeholder="Apelido ou E-mail" required autocomplete="username">
+                <input type="password" id="login-password" placeholder="Senha" required autocomplete="current-password">
+                
+                <div class="checkbox-container">
+                    <input type="checkbox" id="remember-me" checked>
+                    <label for="remember-me" style="cursor: pointer;">Manter conectado</label>
+                </div>
+
+                <div class="login-actions">
+                    <button type="submit" class="btn-primary">Entrar</button>
+                </div>
+                
+                <a href="#" id="forgot-password-link" class="btn-forgot">Esqueceu a senha? Redefinir</a>
+                
+                <p>Não tem conta? <a href="#" id="show-signup">Solicitar Cadastro</a></p>
+            </form>
+
+            <form id="signup-form" class="hidden">
+                <p>Preencha os dados abaixo para solicitar seu acesso. Responderemos em até 24h.</p>
+                <input type="text" id="signup-name" placeholder="Nome Completo / Apelido" required autocomplete="name">
+                <input type="email" id="signup-email" placeholder="E-mail (para recuperação)" required autocomplete="email">
+                <input type="tel" id="signup-phone" placeholder="Telefone/WhatsApp" required autocomplete="tel">
+                <button type="submit" class="btn-primary">Solicitar Cadastro</button>
+                <p>Já tem conta? <a href="#" id="show-login">Fazer Login</a></p>
+            </form>
+        </div>
+    </div>
+
+    <div id="main-dashboard" class="dashboard-layout hidden">
+        <div id="loading-overlay" class="hidden">
+            <div class="loading-content">
+                <div class="loader-wrapper">
+                    <div class="loader"></div>
+                    <p>Carregando...</p>
+                </div>
             </div>
         </div>
-    </header>
-
-    <section class="upload-fixed-top" id="uploadSection">
-        <div id="lastWeighingDisplayContainer2" class="last-weighing-container">
-        </div>
-    </section>
-
-    <div id="menu-backdrop"></div>
-
-    <div id="tabs-nav-container" class="tabs-nav-container">
-        <nav class="tabs-nav">
-            <button class="tab-button active" onclick="window.agriculturalDashboard.showTab('tab-gerenciar')">
-                <i class="fas fa-cogs"></i> Gerenciar
-            </button>
-            <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-moagem')">
-                <i class="fas fa-industry"></i> Moagem
-            </button>
-            <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-alertas')">
-                <i class="fas fa-exclamation-triangle"></i> Alertas
-            </button>
-            <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-caminhao')">
-                <i class="fas fa-truck"></i> Caminhões
-            </button>
-            <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-equipamento')">
-                <i class="fas fa-tractor"></i> Colheita
-            </button>
-            <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-frentes')">
-                <i class="fas fa-map-marked-alt"></i> Frentes
-            </button>
-            <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-metas')">
-                <i class="fas fa-bullseye"></i> Metas
-            </button>
-            <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-horaria')">
-                <i class="fas fa-clock"></i> Entrega HxH
-            </button>
-            <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-usuarios')">
-                <i class="fas fa-user-lock"></i> Usuários
-            </button>
-        </nav>
-    </div>
-    <main class="dashboard-main">
-        <div class="main-content-layout"> 
         
-            <section class="analytics-container"> 
+        <canvas id="particles-js"></canvas> 
+        
+        <header class="dashboard-header">
+            <div class="header-content">
+                <button class="menu-toggle-btn" id="menu-toggle-btn" aria-label="Abrir Menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+
+                <div class="logo">
+                    <i class="fas fa-seedling"></i>
+                    <h1>AgroAnalytics</h1>
+                    <span class="beta-tag">MOAGEM</span>
+                </div>
                 
-                <div class="tabs-content">
-                    
-                    <div id="tab-gerenciar" class="tab-pane active">
-                        <div class="analytics-row">
-                            <div class="analytics-card glass-card full-width hover-zoom-card">
-    <div class="card-header">
-        <h3><i class="fas fa-tv"></i> Modo Apresentação (TV/Quiosque)</h3>
-    </div>
-    <div class="presentation-controls" style="display: flex; align-items: center; gap: 20px; padding: 10px;">
-        <div class="input-group-row" style="flex: 0 0 auto;">
-            <label for="presentation-timer">Tempo por Slide (seg):</label>
-            <input type="number" id="presentation-timer" value="30" min="5" 
-                   style="width: 80px; text-align: center; background: rgba(255,255,255,0.1); 
-                          border: 1px solid var(--glass-border); color: var(--text); 
-                          padding: 5px; border-radius: 4px;">
-        </div>
-        <button class="btn-primary" id="presentation-toggle-btn">
-            <i class="fas fa-play"></i> INICIAR APRESENTAÇÃO
-        </button>
-        <p class="text-secondary" style="margin: 0;">
-            <i class="fas fa-info-circle"></i> Pressione <strong>ESC</strong> para sair do modo tela cheia.
-        </p>
-    </div>
-</div>
-                        </div>
-
-                        <div class="analytics-row">
-                            <div class="analytics-card glass-card half-width hover-zoom-card">
-                                <div class="card-header">
-                                    <h3><i class="fas fa-upload"></i> Carregamento de Dados</h3>
-                                </div>
-                                
-                                <div class="dropzone-card glass-card upload-highlight" id="dropzoneCard"> 
-                                    <label for="fileInput" class="sr-only">Upload de Arquivo</label>
-                                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" 
-                                        multiple webkitdirectory directory hidden>
-                                    
-                                    <div class="dropzone-content">
-                                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
-                                        <p class="drop-text">Arraste e Solte seus arquivos ou pastas aqui</p>
-                                        <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
-                                            <i class="fas fa-file-import"></i> 
-                                            Selecionar Arquivo
-                                        </button>
-                                    </div>
-                                    <div class="file-info-compact" id="fileInfo">Aguardando arquivo...</div>
-                                </div>
-
-                                <div class="info-section upload-info-section"> 
-                                    <h4>Instruções:</h4>
-                                    <p>Arraste e solte <strong>múltiplos arquivos</strong> ou uma <strong>pasta inteira</strong>
-                                        na área acima, ou utilize o botão 'Selecionar Arquivo'.</p>
-                                    <p>Formatos aceitos: Excel (.xlsx, .xls) e CSV</p>
-                                    <p class="upload-warning-text">
-                                        Aguarde a mensagem de "Arquivos carregados" ou "Falha no carregamento"
-                                        antes de interagir com as outras abas.
-                                    </p>
-                                </div>
-                            </div>
-                            
-                            <div class="analytics-card glass-card half-width hover-zoom-card">
-                                <div class="card-header">
-                                    <h3><i class="fas fa-clipboard-list"></i> Relatórios de Configuração</h3>
-                                </div>
-                                <div class="mini-list">
-                                    <p>Status de Conexão: <span class="success-color-bold">ATIVO</span></p>
-                                    <p>Usuário: <span id="current-user-email" class="primary-color">-</span></p>
-                                    <p>Última Configuração: <span class="primary-color">v1.3.0 - 2025-12-18</span></p>
-                                    
-                                </div>
-                            </div>
+                <div class="header-controls">
+                    <div class="turno-display-container" id="shiftDisplay">
+                        <div class="shift-progress-fill" id="shiftProgressFill"></div>
+                        <div class="shift-info-content">
+                            <i class="fas fa-clock selector-icon"></i>
+                            <span id="shiftName">Calculando...</span>
+                            <span id="shiftTimeRemaining" class="shift-timer">0%</span>
                         </div>
                     </div>
+
+                    <div id="lastWeighingDisplayContainer" class="last-weighing-container">
+                         <span id="refreshStatusText">Aguardando... 🔄️</span>
+                         <span id="lastWeighingText" style="display: none;"></span>
+                    </div>
+
+                    <button class="btn-cssbuttons">
+                        <span><i class="fas fa-ellipsis-h"></i> Ações</span>
+                        <ul>
+                            <li>
+                                <a href="#" onclick="event.preventDefault(); window.agriculturalDashboard.captureScreenshot()" title="Capturar Tela">
+                                    <i class="fas fa-camera"></i>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" onclick="event.preventDefault(); window.agriculturalDashboard.openModal('user-settings-modal')" title="Configurações">
+                                    <i class="fas fa-user-cog"></i>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" onclick="event.preventDefault(); window.agriculturalDashboard.toggleTheme()" title="Alternar Tema">
+                                    <i class="fas fa-sun" id="theme-icon"></i>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" id="logout-btn" title="Sair">
+                                    <i class="fas fa-sign-out-alt"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <section class="upload-fixed-top" id="uploadSection">
+            <div id="lastWeighingDisplayContainer2" class="last-weighing-container">
+            </div>
+        </section>
+
+        <div id="menu-backdrop"></div>
+
+        <div id="tabs-nav-container" class="tabs-nav-container">
+            <nav class="tabs-nav">
+                <button class="tab-button active" onclick="window.agriculturalDashboard.showTab('tab-gerenciar')">
+                    <i class="fas fa-cogs"></i> Gerenciar
+                </button>
+                <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-moagem')">
+                    <i class="fas fa-industry"></i> Moagem
+                </button>
+                <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-alertas')">
+                    <i class="fas fa-exclamation-triangle"></i> Alertas
+                </button>
+                <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-caminhao')">
+                    <i class="fas fa-truck"></i> Caminhões
+                </button>
+                <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-equipamento')">
+                    <i class="fas fa-tractor"></i> Colheita
+                </button>
+                <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-frentes')">
+                    <i class="fas fa-map-marked-alt"></i> Frentes
+                </button>
+                <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-metas')">
+                    <i class="fas fa-bullseye"></i> Metas
+                </button>
+                <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-horaria')">
+                    <i class="fas fa-clock"></i> Entrega HxH
+                </button>
+                <button class="tab-button" onclick="window.agriculturalDashboard.showTab('tab-usuarios')">
+                    <i class="fas fa-user-lock"></i> Usuários
+                </button>
+            </nav>
+        </div>
+        <main class="dashboard-main">
+            <div class="main-content-layout"> 
+            
+                <section class="analytics-container"> 
                     
-                    <div id="tab-usuarios" class="tab-pane">
-                        <div class="sub-tabs-nav">
-                            <button class="tab-button active" onclick="window.agriculturalDashboard.showSubTab('subtab-gerenciar-acesso', this)">
-                                <i class="fas fa-users-cog"></i> Gerenciar Acesso
-                            </button>
-                            <button class="tab-button" onclick="window.agriculturalDashboard.showSubTab('subtab-solicitacoes', this)">
-                                <i class="fas fa-bell"></i> Solicitações (<span id="requests-count">0</span>)
-                            </button>
-                            </div>
+                    <div class="tabs-content">
                         
-                        <div class="tabs-content-sub">
-                            <div id="subtab-gerenciar-acesso" class="tab-pane-sub active">
-                                <div class="analytics-row">
-                                    <div class="analytics-card glass-card full-width hover-zoom-card">
-                                        <div class="card-header">
-                                            <h3><i class="fas fa-user-lock"></i> Gestão de Usuários (Login por Apelido)</h3>
-                                            <button class="btn-primary" onclick="window.agriculturalDashboard.openUserModal()">
-                                                <i class="fas fa-plus"></i> Novo Usuário
+                        <div id="tab-gerenciar" class="tab-pane active">
+                            <div class="analytics-row">
+                                <div class="analytics-card glass-card full-width hover-zoom-card">
+                                    <div class="card-header">
+                                        <h3><i class="fas fa-tv"></i> Modo Apresentação (TV/Quiosque)</h3>
+                                    </div>
+                                    <div class="presentation-controls" style="display: flex; align-items: center; gap: 20px; padding: 10px;">
+                                        <div class="input-group-row" style="flex: 0 0 auto;">
+                                            <label for="presentation-timer">Tempo por Slide (seg):</label>
+                                            <input type="number" id="presentation-timer" value="30" min="5" style="width: 80px; text-align: center; background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); color: var(--text); padding: 5px; border-radius: 4px;">
+                                        </div>
+                                        <button class="btn-primary" onclick="window.agriculturalDashboard.togglePresentation()">
+                                            <i class="fas fa-play"></i> INICIAR APRESENTAÇÃO
+                                        </button>
+                                        <p class="text-secondary" style="margin: 0;">
+                                            <i class="fas fa-info-circle"></i> Pressione <strong>ESC</strong> para sair do modo tela cheia.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="analytics-row">
+                                <div class="analytics-card glass-card half-width hover-zoom-card">
+                                    <div class="card-header">
+                                        <h3><i class="fas fa-upload"></i> Carregamento de Dados</h3>
+                                    </div>
+                                    
+                                    <div class="dropzone-card glass-card upload-highlight" id="dropzoneCard"> 
+                                        <label for="fileInput" class="sr-only">Upload de Arquivo</label>
+                                        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" 
+                                            multiple webkitdirectory directory hidden>
+                                        
+                                        <div class="dropzone-content">
+                                            <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                                            <p class="drop-text">Arraste e Solte seus arquivos ou pastas aqui</p>
+                                            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                                                <i class="fas fa-file-import"></i> 
+                                                Selecionar Arquivo
                                             </button>
                                         </div>
-                                        <div id="user-management-container" class="meta-table-wrapper">
-                                            <p>Carregando dados de usuários...</p>
-                                        </div>
+                                        <div class="file-info-compact" id="fileInfo">Aguardando arquivo...</div>
                                     </div>
-                                </div>
-                            </div>
-
-                            <div id="subtab-solicitacoes" class="tab-pane-sub">
-                                <div class="analytics-row">
-                                    <div class="analytics-card glass-card full-width hover-zoom-card">
-                                        <div class="card-header">
-                                            <h3><i class="fas fa-user-plus"></i> Solicitações Pendentes de Cadastro</h3>
-                                        </div>
-                                        <div id="registration-requests-container" class="meta-table-wrapper">
-                                            <p>Nenhuma solicitação pendente.</p>
-                                        </div>
+    
+                                    <div class="info-section upload-info-section"> 
+                                        <h4>Instruções:</h4>
+                                        <p>Arraste e solte <strong>múltiplos arquivos</strong> ou uma <strong>pasta inteira</strong>
+                                            na área acima, ou utilize o botão 'Selecionar Arquivo'.</p>
+                                        <p>Formatos aceitos: Excel (.xlsx, .xls) e CSV</p>
+                                        <p class="upload-warning-text">
+                                            Aguarde a mensagem de "Arquivos carregados" ou "Falha no carregamento"
+                                            antes de interagir com as outras abas.
+                                        </p>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div id="tab-moagem" class="tab-pane">
-                        <div class="analytics-row">
-                            <div class="analytics-card glass-card full-width hover-zoom-card">
-                                <div class="card-header">
-                                    <h3><i class="fas fa-info-circle"></i> Informativo Operacional</h3>
                                 </div>
                                 
-                                <div class="info-grid-container">
-                                    <div class="info-compact-card highlight success-border">
-                                        <i class="fas fa-chart-line card-icon" style="color: var(--success);"></i>
-                                        <span class="card-value" id="acumuladoSafra">2.818.825,42 ton</span>
-                                        <span class="card-label">Acumulado Safra</span>
-                                        <div class="card-subinfo">Desde o início da safra</div>
+                                <div class="analytics-card glass-card half-width hover-zoom-card">
+                                    <div class="card-header">
+                                        <h3><i class="fas fa-clipboard-list"></i> Relatórios de Configuração</h3>
                                     </div>
-
-                                    <div class="info-compact-card primary-border viagens-info">
-                                        <i class="fas fa-route card-icon" style="color: var(--primary);"></i>
-                                        <span class="card-value" id="totalViagens">251</span>
-                                        <span class="card-label">Total de Viagens</span>
-                                        <div class="viagens-stats">
-                                            <span class="viagens-pro"><span id="viagensProprias">160</span> Pró</span>
-                                            <span style="color: var(--text-secondary);">|</span>
-                                            <span class="viagens-terc"><span id="viagensTerceiros">91</span> Terc</span>
-                                        </div>
-                                    </div>
-
-                                    <div class="info-compact-card" style="border-left-color: rgb(33, 150, 243);" id="statAnalise">
-                                        <i class="fas fa-chart-bar card-icon" style="color: rgb(33, 150, 243);"></i>
-                                        <span class="card-value" style="color: rgb(33, 150, 243);" id="taxaAnalise">34%</span>
-                                        <span class="card-label">Taxa de Análise</span>
-                                    </div>
-
-                                    <div class="info-compact-card">
-                                        <i class="fas fa-bolt card-icon"></i>
-                                        <span class="card-value" id="avgPotencial3h">610 t/h</span>
-                                        <span class="card-label">Média Potencial (3H)</span>
-                                    </div>
-
-                                    <div class="info-compact-card">
-                                        <i class="fas fa-cogs card-icon"></i>
-                                        <span class="card-value" id="avgRotacao3h">1.250 RPM</span>
-                                        <span class="card-label">Média Rotação (3H)</span>
-                                    </div>
-
-                                    <div class="info-compact-card">
-                                        <i class="fas fa-industry card-icon"></i>
-                                        <span class="card-value" id="avgMoagem3h">767 t/h</span>
-                                        <span class="card-label">Média Moagem (3H)</span>
-                                    </div>
-
-                                    <div class="info-compact-card">
-                                        <i class="fas fa-tractor card-icon"></i>
-                                        <span class="card-value" id="dispColhedora">0.75</span>
-                                        <span class="card-label">Disp. Colhedora</span>
-                                    </div>
-
-                                    <div class="info-compact-card">
-                                        <i class="fas fa-exchange-alt card-icon"></i>
-                                        <span class="card-value" id="dispTransbordo">0.75</span>
-                                        <span class="card-label">Disp. Transbordo</span>
-                                    </div>
-
-                                    <div class="info-compact-card">
-                                        <i class="fas fa-truck card-icon"></i>
-                                        <span class="card-value" id="dispCaminhoes">0.75</span>
-                                        <span class="card-label">Disp. Caminhões</span>
+                                    <div class="mini-list">
+                                        <p>Status de Conexão: <span class="success-color-bold">ATIVO</span></p>
+                                        <p>Usuário: <span id="current-user-email" class="primary-color">-</span></p>
+                                        <p>Última Configuração: <span class="primary-color">v1.3.0 - 2025-12-18</span></p>
+                                        
                                     </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="analytics-row fleet-status-row">
-                            <div class="analytics-card glass-card full-width hover-zoom-card" id="cardStatusFrota">
-                                <div class="card-header">
-                                    <h3><i class="fas fa-truck-moving"></i> Status da Frota</h3>
+                        <div id="tab-usuarios" class="tab-pane">
+                            <div class="sub-tabs-nav">
+                                <button class="tab-button active" onclick="window.agriculturalDashboard.showSubTab('subtab-gerenciar-acesso', this)">
+                                    <i class="fas fa-users-cog"></i> Gerenciar Acesso
+                                </button>
+                                <button class="tab-button" onclick="window.agriculturalDashboard.showSubTab('subtab-solicitacoes', this)">
+                                    <i class="fas fa-bell"></i> Solicitações (<span id="requests-count">0</span>)
+                                </button>
                                 </div>
-                                <div class="fleet-status-grid" id="fleetStatusCardsGrid"></div>
-                            </div>
-                        </div>
-                        
-                        <div class="analytics-row">
-                            <div class="analytics-card glass-card half-width hover-zoom-card">
-                                <div class="card-header">
-                                    <div class="header-title-with-tooltip">
-                                        <h3><i class="fas fa-chart-bar"></i> Acumulado & Progresso</h3>
-                                        <div class="tooltip-container">
-                                            <i class="fas fa-info-circle info icon"></i>
-                                            <div class="tooltip-text">Acompanhamento do progresso da Moagem em relação à meta diária configurada.</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="moagem-control-panel">
-                                    <div class="acumulado-display">
-                                        <div class="acumulado-header">
-                                            <span class="acumulado-label">Acumulado do Dia</span>
-                                            <span class="acumulado-value" id="moagemAcumulado">0 t</span>
-                                        </div>
-                                        <div class="progress-container">
-                                            <div class="progress-bar" id="moagemProgressBar"></div>
-                                        </div>
-                                        <div class="progress-stats">
-                                            <span id="moagemPerc">0%</span> da Meta (<span id="moagemTargetDisplay">25000 t</span>)
-                                        </div>
-                                    </div>
-                                    <div class="meta-setting-rodape-moagem">
-                                        <div class="meta-item-rodape">
-                                            <label for="metaMoagemInput">Meta Moagem (t/h):</label>
-                                            <input type="number" id="metaMoagemInput" value="25000" class="moagem-input-discreto" onchange="window.agriculturalDashboard.saveMeta(this.value, 'metaMoagem')">
-                                        </div>
-                                        <div class="meta-item-rodape">
-                                            <label for="metaRotacaoInput">Meta Rotação (RPM):</label>
-                                            <input type="number" id="metaRotacaoInput" value="1100" class="moagem-input-discreto" onchange="window.agriculturalDashboard.saveMeta(this.value, 'metaRotacao')">
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="analytics-card glass-card half-width hover-zoom-card">
-                                <div class="card-header">
-                                    <div class="header-title-with-tooltip">
-                                        <h3><i class="fas fa-chart-line"></i> Projeção De Moagem</h3>
-                                        <div class="tooltip-container">
-                                            <i class="fas fa-info-circle icon"></i>
-                                            <div class="tooltip-text">Estima se a meta será atingida com base no ritmo atual.</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="forecast-panel">
-                                    <div class="forecast-main">
-                                        <span class="forecast-label">Previsão 24h</span>
-                                        <div class="forecast-value-group">
-                                            <span class="forecast-value-big" id="moagemForecast">0 t</span>
-                                            <span class="forecast-diff" id="forecastDifferenceContainer"></span> 
-                                        </div>
-                                        <span class="forecast-badge" id="moagemStatus">Calculando...</span>
-                                        <div class="owner-distribution-container" id="ownerDistributionBarContainer"></div>
-                                        <div class="ritmo-medio-info" id="ritmoAtualFormulaContainer"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="analytics-row">
-                            <div class="analytics-card glass-card full-width hover-zoom-card">
-                                <div class="card-header">
-                                    <div class="header-title-with-tooltip">
-                                        <h3><i class="fas fa-chart-bar"></i> Visão Horária Detalhada</h3>
-                                        <div class="tooltip-container">
-                                            <i class="fas fa-info-circle icon"></i>
-                                            <div class="tooltip-text">Visualização detalhada do ritmo de moagem (Real, Potencial e Rotação) de hora em hora.</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="carousel-container wide" id="hourlyCarouselContainer">
-                                    <div class="carousel-slide active">
-                                        <div class="chart-container-title primary-color">Moagem(t/h)</div>
-                                        <div class="chart-container wide"><canvas id="realHourlyChart"></canvas></div>
-                                    </div>
-                                    <div class="carousel-slide">
-                                        <div class="chart-container-title potencial-color">Potencial(t/h)</div>
-                                        <div class="chart-container wide"><canvas id="potencialHourlyChart"></canvas></div>
-                                    </div>
-                                    <div class="carousel-slide">
-                                        <div class="chart-container-title rotacao-color">Rotação(RPM)</div>
-                                        <div class="chart-container wide"><canvas id="rotacaoHourlyChart"></canvas></div>
-                                    </div>
-                                    
-                                    <button class="carousel-nav prev-btn" aria-label="Gráfico Anterior"><i class="fas fa-chevron-left"></i></button>
-                                    <button class="carousel-nav next-btn" aria-label="Próximo Gráfico"><i class="fas fa-chevron-right"></i></button>
-                                    
-                                    <div class="carousel-indicators" id="carouselIndicators">
-                                        <span class="indicator active" onclick="window.agriculturalDashboard.showSlide(0)" aria-label="Ir para Gráfico 1"></span>
-                                        <span class="indicator" onclick="window.agriculturalDashboard.showSlide(1)" aria-label="Ir para Gráfico 2"></span>
-                                        <span class="indicator" onclick="window.agriculturalDashboard.showSlide(2)" aria-label="Ir para Gráfico 3"></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="tab-alertas" class="tab-pane">
-                        <div class="analytics-row">
-                            <div class="analytics-card glass-card full-width">
-                                <div class="card-header">
-                                    <div class="header-title-with-tooltip">
-                                        <h3><i class="fas fa-check-circle"></i> Alertas de Conformidade</h3>
-                                        <div class="tooltip-container">
-                                            <i class="fas fa-info-circle icon"></i>
-                                            <div class="tooltip-text">Inconsistências encontradas nos dados (Pesos, Duplicidades).</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="alert-list" id="alertsContainer"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="tab-caminhao" class="tab-pane">
-                        <div class="analytics-row">
-                            <div class="analytics-card glass-card full-width hover-zoom-card">
-                                <div class="card-header">
-                                    <div class="header-title-with-tooltip">
-                                        <h3><i class="fas fa-chart-bar"></i> Entrega Horária (Própria vs Terceiros)</h3>
-                                        <div class="tooltip-container">
-                                            <i class="fas fa-info-circle icon"></i>
-                                            <div class="tooltip-text">Distribuição horária de peso entre frota própria e terceiros (Ciclo 06:00 - 05:59). Passe o mouse sobre as barras para ver os percentuais.</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="chart-container wide"><canvas id="fleetHourlyChartInCaminhoes"></canvas></div>
-                            </div>
-                        </div>
-                        <div class="analytics-row">
-                            <div class="analytics-card glass-card half-width hover-zoom-card min-height-400">
-                                <div class="card-header">
-                                    <div class="header-title-with-tooltip">
-                                        <h3><i class="fas fa-trophy"></i> Top 5 Caminhões</h3>
-                                        <div class="tooltip-container">
-                                            <i class="fas fa-info-circle icon"></i>
-                                            <div class="tooltip-text">Ranking das frotas com maior volume transportado.</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="top-list-container side-by-side">
-                                    <div class="top-list-section" id="topFrotasPropriasContainer">
-                                        <h4>Próprias</h4>
-                                        <div class="top-list" id="topFrotasProprias"></div>
-                                    </div>
-                                    <div class="top-list-section" id="topFrotasTerceirosContainer">
-                                        <h4>Terceiros</h4>
-                                        <div class="top-list" id="topFrotasTerceiros"></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="analytics-card glass-card half-width hover-zoom-card min-height-400">
-                                <div class="card-header">
-                                    <div class="header-title-with-tooltip">
-                                        <h3><i class="fas fa-chart-pie"></i> Distribuição de Peso</h3>
-                                        <div class="tooltip-container">
-                                            <i class="fas fa-info-circle icon"></i>
-                                            <div class="tooltip-text">Proporção entre frota própria e terceirizada.</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="chart-container"><canvas id="fleetChart"></canvas></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="tab-equipamento" class="tab-pane">
-                        <div class="analytics-row">
-                            <div class="analytics-card glass-card half-width hover-zoom-card">
-                                <div class="card-header">
-                                    <div class="header-title-with-tooltip">
-                                        <h3><i class="fas fa-tractor"></i> Top 5 Colheita</h3>
-                                        <div class="tooltip-container">
-                                            <i class="fas fa-info-circle icon"></i>
-                                            <div class="tooltip-text">Equipamentos de colheita mais produtivos.</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="top-list-container side-by-side">
-                                    <div class="top-list-section">
-                                        <h4>Próprias</h4>
-                                        <div class="top-list" id="topEquipamentosProprios"></div>
-                                    </div>
-                                    <div class="top-list-section">
-                                        <h4>Terceiros</h4>
-                                        <div class="top-list" id="topEquipamentosTerceiros"></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="analytics-card glass-card half-width hover-zoom-card">
-                                <div class="card-header">
-                                    <div class="header-title-with-tooltip">
-                                        <h3><i class="fas fa-chart-pie"></i> Produtividade Colheita</h3>
-                                        <div class="tooltip-container">
-                                            <i class="fas fa-info-circle icon"></i>
-                                            <div class="tooltip-text">Participação de cada grupo de colhedoras no total.</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="chart-container"><canvas id="harvestChart"></canvas></div>
-                            </div>
-                        </div>
-                        <div class="analytics-row">
-                            <div class="analytics-card glass-card full-width hover-zoom-card">
-                                <div class="card-header">
-                                    <div class="header-title-with-tooltip">
-                                        <h3><i class="fas fa-users"></i> Operadores e Transbordos</h3>
-                                        <div class="tooltip-container">
-                                            <i class="fas fa-info-circle icon"></i>
-                                            <div class="tooltip-text">Desempenho individual de operadores e transbordos.</div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="top-list-container side-by-side">
-                                    <div class="top-list-section">
-                                        <h4>Operadores de Colheita Própria</h4>
-                                        <div class="top-list" id="topOperadoresColheitaPropria"></div>
-                                    </div>
-                                    <div class="top-list-section">
-                                        <h4>Transbordos Terceiros</h4>
-                                        <div class="top-list" id="topTransbordos"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="tab-frentes" class="tab-pane">
-                        <div class="analytics-row">
-                            <div class="analytics-card glass-card full-width">
-                                <div class="card-header">
-                                    <div class="header-title-with-tooltip">
-                                        <h3><i class="fas fa-map-pin"></i> Visão por Frente de Trabalho</h3>
-                                        <div class="tooltip-container">
-                                            <i class="fas fa-info-circle icon"></i>
-                                            <div class="tooltip-text">
-                                                <strong>Regra de Ranking:</strong><br>
-                                                1º Maior Ton Total<br>
-                                                2º Menor Nº Viagens<br>
-                                                3º Melhor Ton/Viagem<br>
-                                                4º Maior Nº Análises
+                            
+                            <div class="tabs-content-sub">
+                                <div id="subtab-gerenciar-acesso" class="tab-pane-sub active">
+                                    <div class="analytics-row">
+                                        <div class="analytics-card glass-card full-width hover-zoom-card">
+                                            <div class="card-header">
+                                                <h3><i class="fas fa-user-lock"></i> Gestão de Usuários (Login por Apelido)</h3>
+                                                <button class="btn-primary" onclick="window.agriculturalDashboard.openUserModal()">
+                                                    <i class="fas fa-plus"></i> Novo Usuário
+                                                </button>
+                                            </div>
+                                            <div id="user-management-container" class="meta-table-wrapper">
+                                                <p>Carregando dados de usuários...</p>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="fronts-grid" id="frontsGrid"></div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div id="tab-metas" class="tab-pane">
-                        <div class="analytics-row">
-                            <div class="analytics-card glass-card full-width">
-                                <div class="card-header">
-                                    <h3><i class="fas fa-bullseye"></i> Metas e Indicadores por Frente</h3>
-                                </div>
-                                <div id="frontsMetaContainer" class="fronts-grid"></div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div id="tab-horaria" class="tab-pane">
-                        <div class="analytics-row">
-                            <div class="analytics-card glass-card full-width hover-zoom-card">
-                                <div class="card-header">
-                                    <div class="header-title-with-tooltip">
-                                        <h3><i class="fas fa-clock"></i> Viagens e Análise por Hora</h3>
-                                        <div class="tooltip-container">
-                                            <i class="fas fa-info-circle icon"></i>
-                                            <div class="tooltip-text">Fluxo de viagens e taxa de análise ao longo do dia.</div>
+                                <div id="subtab-solicitacoes" class="tab-pane-sub">
+                                    <div class="analytics-row">
+                                        <div class="analytics-card glass-card full-width hover-zoom-card">
+                                            <div class="card-header">
+                                                <h3><i class="fas fa-user-plus"></i> Solicitações Pendentes de Cadastro</h3>
+                                            </div>
+                                            <div id="registration-requests-container" class="meta-table-wrapper">
+                                                <p>Nenhuma solicitação pendente.</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="chart-container wide"><canvas id="timeChart"></canvas></div>
                             </div>
                         </div>
-                        <div class="analytics-row">
-                            <div class="analytics-card glass-card full-width hover-zoom-card">
-                                <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
-                                    <div class="header-title-with-tooltip">
-                                        <h3><i class="fas fa-calendar-alt"></i> Entrega de Peso por Frente</h3>
-                                        <div class="tooltip-container">
-                                            <i class="fas fa-info-circle icon"></i>
-                                            <div class="tooltip-text">Volume horário entregue por cada frente.</div>
+                        
+                        <div id="tab-moagem" class="tab-pane">
+                            <div class="kpi-fixed-top-moagem">
+                                <div class="glass-card stat-card-mini" id="cardAcumuladoSafra">
+                                    <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+                                    <div class="stat-info">
+                                        <span class="stat-value" id="acumuladoSafra">0 ton</span>
+                                        <span class="stat-label">Acumulado Safra</span>
+                                        <div class="stat-sub-info">
+                                            <span class="text-secondary" style="font-size: 0.8rem;">
+                                                Desde o início da safra
+                                            </span>
                                         </div>
                                     </div>
-                                    <fieldset id="front-filter-switch" class="radio-switch">
-                                        <input name="front-switch" id="filter-propria" type="radio" onclick="if(window.filterFrontChart) window.filterFrontChart('propria')">
-                                        <label for="filter-propria">Própria</label>
-
-                                        <input name="front-switch" id="filter-terceira" type="radio" onclick="if(window.filterFrontChart) window.filterFrontChart('terceira')">
-                                        <label for="filter-terceira">Terceira</label>
-
-                                        <input checked name="front-switch" id="filter-todas" type="radio" onclick="if(window.filterFrontChart) window.filterFrontChart('todas')">
-                                        <label for="filter-todas">Todas</label>
-                                    </fieldset>
                                 </div>
-                                <div class="chart-container wide"><canvas id="frontHourlyChart"></canvas></div>
+
+                                <div class="glass-card stat-card-mini" id="cardViagens">
+                                    <div class="stat-icon"><i class="fas fa-route"></i></div>
+                                    <div class="stat-info">
+                                        <span class="stat-value" id="totalViagens">0</span>
+                                        <span class="stat-label">Frota</span>
+                                        <div class="stat-sub-info">
+                                            <span class="sub-stat green" title="Própria">
+                                                <span id="viagensProprias">0</span> Pró
+                                            </span>
+                                            <span class="separator">|</span>
+                                            <span class="sub-stat orange" title="Terceiros">
+                                                <span id="viagensTerceiros">0</span> Terc
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="glass-card stat-card-mini analysis-card" id="statAnalise">
+                                    <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+                                    <div class="stat-info">
+                                        <span class="stat-value" id="taxaAnalise">0%</span>
+                                        <span class="stat-label">Analisadas</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="analytics-row fleet-status-row">
+                                <div class="analytics-card glass-card full-width hover-zoom-card" id="cardStatusFrota">
+                                    <div class="card-header">
+                                        <h3><i class="fas fa-truck-moving"></i> Status da Frota</h3>
+                                    </div>
+                                    <div class="fleet-status-grid" id="fleetStatusCardsGrid"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="analytics-row">
+                                <div class="analytics-card glass-card half-width hover-zoom-card">
+                                    <div class="card-header">
+                                        <div class="header-title-with-tooltip">
+                                            <h3><i class="fas fa-chart-bar"></i> Acumulado & Progresso</h3>
+                                            <div class="tooltip-container">
+                                                <i class="fas fa-info-circle info icon"></i>
+                                                <div class="tooltip-text">Acompanhamento do progresso da Moagem em relação à meta diária configurada.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="moagem-control-panel">
+                                        <div class="acumulado-display">
+                                            <div class="acumulado-header">
+                                                <span class="acumulado-label">Acumulado do Dia</span>
+                                                <span class="acumulado-value" id="moagemAcumulado">0 t</span>
+                                            </div>
+                                            <div class="progress-container">
+                                                <div class="progress-bar" id="moagemProgressBar"></div>
+                                            </div>
+                                            <div class="progress-stats">
+                                                <span id="moagemPerc">0%</span> da Meta (<span id="moagemTargetDisplay">25000 t</span>)
+                                            </div>
+                                        </div>
+                                        <div class="meta-setting-rodape-moagem">
+                                            <div class="meta-item-rodape">
+                                                <label for="metaMoagemInput">Meta Moagem (t/h):</label>
+                                                <input type="number" id="metaMoagemInput" value="25000" class="moagem-input-discreto" onchange="window.agriculturalDashboard.saveMeta(this.value, 'metaMoagem')">
+                                            </div>
+                                            <div class="meta-item-rodape">
+                                                <label for="metaRotacaoInput">Meta Rotação (RPM):</label>
+                                                <input type="number" id="metaRotacaoInput" value="1100" class="moagem-input-discreto" onchange="window.agriculturalDashboard.saveMeta(this.value, 'metaRotacao')">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="analytics-card glass-card half-width hover-zoom-card">
+                                    <div class="card-header">
+                                        <div class="header-title-with-tooltip">
+                                            <h3><i class="fas fa-chart-line"></i> Projeção De Moagem</h3>
+                                            <div class="tooltip-container">
+                                                <i class="fas fa-info-circle icon"></i>
+                                                <div class="tooltip-text">Estima se a meta será atingida com base no ritmo atual.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="forecast-panel">
+                                        <div class="forecast-main">
+                                            <span class="forecast-label">Previsão 24h</span>
+                                            <div class="forecast-value-group">
+                                                <span class="forecast-value-big" id="moagemForecast">0 t</span>
+                                                <span class="forecast-diff" id="forecastDifferenceContainer"></span> 
+                                            </div>
+                                            <span class="forecast-badge" id="moagemStatus">Calculando...</span>
+                                            <div class="owner-distribution-container" id="ownerDistributionBarContainer"></div>
+                                            <div class="ritmo-medio-info" id="ritmoAtualFormulaContainer"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="analytics-row">
+                                <div class="analytics-card glass-card full-width hover-zoom-card">
+                                    <div class="card-header">
+                                        <div class="header-title-with-tooltip">
+                                            <h3><i class="fas fa-chart-bar"></i> Visão Horária Detalhada</h3>
+                                            <div class="tooltip-container">
+                                                <i class="fas fa-info-circle icon"></i>
+                                                <div class="tooltip-text">Visualização detalhada do ritmo de moagem (Real, Potencial e Rotação) de hora em hora.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="carousel-container wide" id="hourlyCarouselContainer">
+                                        <div class="carousel-slide active">
+                                            <div class="chart-container-title primary-color">Moagem(t/h)</div>
+                                            <div class="chart-container wide"><canvas id="realHourlyChart"></canvas></div>
+                                        </div>
+                                        <div class="carousel-slide">
+                                            <div class="chart-container-title potencial-color">Potencial(t/h)</div>
+                                            <div class="chart-container wide"><canvas id="potencialHourlyChart"></canvas></div>
+                                        </div>
+                                        <div class="carousel-slide">
+                                            <div class="chart-container-title rotacao-color">Rotação(RPM)</div>
+                                            <div class="chart-container wide"><canvas id="rotacaoHourlyChart"></canvas></div>
+                                        </div>
+                                        
+                                        <button class="carousel-nav prev-btn" aria-label="Gráfico Anterior"><i class="fas fa-chevron-left"></i></button>
+                                        <button class="carousel-nav next-btn" aria-label="Próximo Gráfico"><i class="fas fa-chevron-right"></i></button>
+                                        
+                                        <div class="carousel-indicators" id="carouselIndicators">
+                                            <span class="indicator active" onclick="window.agriculturalDashboard.showSlide(0)" aria-label="Ir para Gráfico 1"></span>
+                                            <span class="indicator" onclick="window.agriculturalDashboard.showSlide(1)" aria-label="Ir para Gráfico 2"></span>
+                                            <span class="indicator" onclick="window.agriculturalDashboard.showSlide(2)" aria-label="Ir para Gráfico 3"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tab-alertas" class="tab-pane">
+                            <div class="analytics-row">
+                                <div class="analytics-card glass-card full-width">
+                                    <div class="card-header">
+                                        <div class="header-title-with-tooltip">
+                                            <h3><i class="fas fa-check-circle"></i> Alertas de Conformidade</h3>
+                                            <div class="tooltip-container">
+                                                <i class="fas fa-info-circle icon"></i>
+                                                <div class="tooltip-text">Inconsistências encontradas nos dados (Pesos, Duplicidades).</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="alert-list" id="alertsContainer"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tab-caminhao" class="tab-pane">
+                            <div class="analytics-row">
+                                <div class="analytics-card glass-card full-width hover-zoom-card">
+                                    <div class="card-header">
+                                        <div class="header-title-with-tooltip">
+                                            <h3><i class="fas fa-chart-bar"></i> Entrega Horária (Própria vs Terceiros)</h3>
+                                            <div class="tooltip-container">
+                                                <i class="fas fa-info-circle icon"></i>
+                                                <div class="tooltip-text">Distribuição horária de peso entre frota própria e terceiros (Ciclo 06:00 - 05:59). Passe o mouse sobre as barras para ver os percentuais.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="chart-container wide"><canvas id="fleetHourlyChartInCaminhoes"></canvas></div>
+                                </div>
+                            </div>
+                            <div class="analytics-row">
+                                <div class="analytics-card glass-card half-width hover-zoom-card min-height-400">
+                                    <div class="card-header">
+                                        <div class="header-title-with-tooltip">
+                                            <h3><i class="fas fa-trophy"></i> Top 5 Caminhões</h3>
+                                            <div class="tooltip-container">
+                                                <i class="fas fa-info-circle icon"></i>
+                                                <div class="tooltip-text">Ranking das frotas com maior volume transportado.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="top-list-container side-by-side">
+                                        <div class="top-list-section" id="topFrotasPropriasContainer">
+                                            <h4>Próprias</h4>
+                                            <div class="top-list" id="topFrotasProprias"></div>
+                                        </div>
+                                        <div class="top-list-section" id="topFrotasTerceirosContainer">
+                                            <h4>Terceiros</h4>
+                                            <div class="top-list" id="topFrotasTerceiros"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="analytics-card glass-card half-width hover-zoom-card min-height-400">
+                                    <div class="card-header">
+                                        <div class="header-title-with-tooltip">
+                                            <h3><i class="fas fa-chart-pie"></i> Distribuição de Peso</h3>
+                                            <div class="tooltip-container">
+                                                <i class="fas fa-info-circle icon"></i>
+                                                <div class="tooltip-text">Proporção entre frota própria e terceirizada.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="chart-container"><canvas id="fleetChart"></canvas></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tab-equipamento" class="tab-pane">
+                            <div class="analytics-row">
+                                <div class="analytics-card glass-card half-width hover-zoom-card">
+                                    <div class="card-header">
+                                        <div class="header-title-with-tooltip">
+                                            <h3><i class="fas fa-tractor"></i> Top 5 Colheita</h3>
+                                            <div class="tooltip-container">
+                                                <i class="fas fa-info-circle icon"></i>
+                                                <div class="tooltip-text">Equipamentos de colheita mais produtivos.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="top-list-container side-by-side">
+                                        <div class="top-list-section">
+                                            <h4>Próprias</h4>
+                                            <div class="top-list" id="topEquipamentosProprios"></div>
+                                        </div>
+                                        <div class="top-list-section">
+                                            <h4>Terceiros</h4>
+                                            <div class="top-list" id="topEquipamentosTerceiros"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="analytics-card glass-card half-width hover-zoom-card">
+                                    <div class="card-header">
+                                        <div class="header-title-with-tooltip">
+                                            <h3><i class="fas fa-chart-pie"></i> Produtividade Colheita</h3>
+                                            <div class="tooltip-container">
+                                                <i class="fas fa-info-circle icon"></i>
+                                                <div class="tooltip-text">Participação de cada grupo de colhedoras no total.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="chart-container"><canvas id="harvestChart"></canvas></div>
+                                </div>
+                            </div>
+                            <div class="analytics-row">
+                                <div class="analytics-card glass-card full-width hover-zoom-card">
+                                    <div class="card-header">
+                                        <div class="header-title-with-tooltip">
+                                            <h3><i class="fas fa-users"></i> Operadores e Transbordos</h3>
+                                            <div class="tooltip-container">
+                                                <i class="fas fa-info-circle icon"></i>
+                                                <div class="tooltip-text">Desempenho individual de operadores e transbordos.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="top-list-container side-by-side">
+                                        <div class="top-list-section">
+                                            <h4>Operadores de Colheita Própria</h4>
+                                            <div class="top-list" id="topOperadoresColheitaPropria"></div>
+                                        </div>
+                                        <div class="top-list-section">
+                                            <h4>Transbordos Terceiros</h4>
+                                            <div class="top-list" id="topTransbordos"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tab-frentes" class="tab-pane">
+                            <div class="analytics-row">
+                                <div class="analytics-card glass-card full-width">
+                                    <div class="card-header">
+                                        <div class="header-title-with-tooltip">
+                                            <h3><i class="fas fa-map-pin"></i> Visão por Frente de Trabalho</h3>
+                                            <div class="tooltip-container">
+                                                <i class="fas fa-info-circle icon"></i>
+                                                <div class="tooltip-text">
+                                                    <strong>Regra de Ranking:</strong><br>
+                                                    1º Maior Ton Total<br>
+                                                    2º Menor Nº Viagens<br>
+                                                    3º Melhor Ton/Viagem<br>
+                                                    4º Maior Nº Análises
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="fronts-grid" id="frontsGrid"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="tab-metas" class="tab-pane">
+                            <div class="analytics-row">
+                                <div class="analytics-card glass-card full-width">
+                                    <div class="card-header">
+                                        <h3><i class="fas fa-bullseye"></i> Metas e Indicadores por Frente</h3>
+                                    </div>
+                                    <div id="frontsMetaContainer" class="fronts-grid"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="tab-horaria" class="tab-pane">
+                            <div class="analytics-row">
+                                <div class="analytics-card glass-card full-width hover-zoom-card">
+                                    <div class="card-header">
+                                        <div class="header-title-with-tooltip">
+                                            <h3><i class="fas fa-clock"></i> Viagens e Análise por Hora</h3>
+                                            <div class="tooltip-container">
+                                                <i class="fas fa-info-circle icon"></i>
+                                                <div class="tooltip-text">Fluxo de viagens e taxa de análise ao longo do dia.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="chart-container wide"><canvas id="timeChart"></canvas></div>
+                                </div>
+                            </div>
+                            <div class="analytics-row">
+                                <div class="analytics-card glass-card full-width hover-zoom-card">
+                                    <div class="card-header">
+                                        <div class="header-title-with-tooltip">
+                                            <h3><i class="fas fa-calendar-alt"></i> Entrega de Peso por Frente</h3>
+                                            <div class="tooltip-container">
+                                                <i class="fas fa-info-circle icon"></i>
+                                                <div class="tooltip-text">Volume horário entregue por cada frente.</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="chart-container wide"><canvas id="frontHourlyChart"></canvas></div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </section>
-        </div>
-    </main>
-    
-    <footer class="dashboard-footer"></footer>
-</div>
-
-<script src="./utils.js"></script>
-<script src="./intelligent-processor.js"></script>
-
-<script src="./data-analyzer-kpis.js"></script>
-<script src="./data-analyzer-rankings.js"></script>
-<script src="./data-analyzer-time.js"></script>
-<script src="./data-analyzer-metas.js"></script> 
-<script src="./dataanalyzer.js"></script> 
-
-<script src="./datavalidator.js"></script>
-
-<script src="./visualizer-kpis.js"></script>
-<script src="./visualizer-charts-base.js"></script>
-<script src="./visualizer-charts-moagem.js"></script>
-<script src="./visualizer-grid.js"></script>
-<script src="./visualizer-metas.js"></script> 
-<script src="./datavisualizer.js"></script>
-
-<script src="./app.js"></script>    
-<script src="./mobile-fixes.js"></script>
-<script src="modtv.js"></script>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const loginScreen = document.getElementById('login-screen');
-        const mainDashboard = document.getElementById('main-dashboard');
-        const loginForm = document.getElementById('login-form');
-        const signupForm = document.getElementById('signup-form');
-        const showSignupLink = document.getElementById('show-signup');
-        const showLoginLink = document.getElementById('show-login');
-        const authError = document.getElementById('auth-error');
-        const logoutBtn = document.getElementById('logout-btn');
-        const currentUserEmail = document.getElementById('current-user-email');
+                </section>
+            </div>
+        </main>
         
-        if (typeof window.agriculturalDashboard !== 'undefined') {
-            window.agriculturalDashboard.initializeEventListeners();
-        }
+        <footer class="dashboard-footer"></footer>
+    </div>
+    
+    <script src="./utils.js"></script>
+    <script src="./intelligent-processor.js"></script>
+    
+    <script src="./data-analyzer-kpis.js"></script>
+    <script src="./data-analyzer-rankings.js"></script>
+    <script src="./data-analyzer-time.js"></script>
+    <script src="./data-analyzer-metas.js"></script> 
+    <script src="./dataanalyzer.js"></script> 
 
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                loginScreen.classList.add('hidden');
-                mainDashboard.classList.remove('hidden');
-                if(user.displayName) {
-                    currentUserEmail.textContent = user.displayName;
-                } else {
-                    let display = user.email || "";
-                    if(display && display.includes('@agro.local')) {
-                        display = display.split('@')[0];
+    <script src="./datavalidator.js"></script>
+
+    <script src="./visualizer-kpis.js"></script>
+    <script src="./visualizer-charts-base.js"></script>
+    <script src="./visualizer-charts-moagem.js"></script>
+    <script src="./visualizer-grid.js"></script>
+    <script src="./visualizer-metas.js"></script> 
+    <script src="./datavisualizer.js"></script>
+
+    <script src="./app.js"></script>
+    
+    <script src="./mobile-fixes.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginScreen = document.getElementById('login-screen');
+            const mainDashboard = document.getElementById('main-dashboard');
+            const loginForm = document.getElementById('login-form');
+            const signupForm = document.getElementById('signup-form');
+            const showSignupLink = document.getElementById('show-signup');
+            const showLoginLink = document.getElementById('show-login');
+            const authError = document.getElementById('auth-error');
+            const logoutBtn = document.getElementById('logout-btn');
+            const currentUserEmail = document.getElementById('current-user-email');
+            
+            if (typeof window.agriculturalDashboard !== 'undefined') {
+                window.agriculturalDashboard.initializeEventListeners();
+            }
+
+            auth.onAuthStateChanged((user) => {
+                if (user) {
+                    loginScreen.classList.add('hidden');
+                    mainDashboard.classList.remove('hidden');
+                    if(user.displayName) {
+                        currentUserEmail.textContent = user.displayName;
+                    } else {
+                        let display = user.email;
+                        if(display.includes('@agro.local')) {
+                            display = display.split('@')[0];
+                        }
+                        currentUserEmail.textContent = display;
                     }
-                    currentUserEmail.textContent = display;
+                    
+                } else {
+                    mainDashboard.classList.add('hidden');
+                    loginScreen.classList.remove('hidden');
                 }
-                
-            } else {
-                mainDashboard.classList.add('hidden');
-                loginScreen.classList.remove('hidden');
-            }
-        });
+            });
 
-        loginForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (typeof window.agriculturalDashboard !== 'undefined' && window.agriculturalDashboard.handleLogin) {
-                window.agriculturalDashboard.handleLogin(e); 
-                return;
-            }
-            const userIdentifier = document.getElementById('login-user').value;
-            const password = document.getElementById('login-password').value;
-            auth.signInWithEmailAndPassword(userIdentifier, password)
-                .then((userCredential) => {
-                    authError.classList.add('hidden');
-                    loginForm.reset();
-                })
-                .catch((error) => {
-                    authError.textContent = error.message;
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (typeof window.agriculturalDashboard !== 'undefined' && window.agriculturalDashboard.handleLogin) {
+                    window.agriculturalDashboard.handleLogin(e); 
+                    return;
+                }
+                const userIdentifier = document.getElementById('login-user').value;
+                const password = document.getElementById('login-password').value;
+                auth.signInWithEmailAndPassword(userIdentifier, password)
+                    .then((userCredential) => {
+                        authError.classList.add('hidden');
+                        loginForm.reset();
+                    })
+                    .catch((error) => {
+                        authError.textContent = error.message;
+                        authError.classList.remove('hidden');
+                    });
+            });
+
+            signupForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                if (typeof window.agriculturalDashboard !== 'undefined' && window.agriculturalDashboard.handleSignup) {
+                    window.agriculturalDashboard.handleSignup(e);
+                } else {
+                    authError.textContent = "Erro: O sistema de cadastro não está pronto. Tente novamente mais tarde.";
                     authError.classList.remove('hidden');
-                });
-        });
-
-        signupForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            if (typeof window.agriculturalDashboard !== 'undefined' && window.agriculturalDashboard.handleSignup) {
-                window.agriculturalDashboard.handleSignup(e);
-            } else {
-                authError.textContent = "Erro: O sistema de cadastro não está pronto. Tente novamente mais tarde.";
-                authError.classList.remove('hidden');
-            }
-        });
-
-        showSignupLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            authError.classList.add('hidden');
-            document.getElementById('auth-success').classList.add('hidden');
-            loginForm.classList.add('hidden');
-            signupForm.classList.remove('hidden');
-        });
-
-        showLoginLink.addEventListener('click', (e) => {
-            e.preventDefault();
-            authError.classList.add('hidden');
-            document.getElementById('auth-success').classList.add('hidden');
-            signupForm.classList.add('hidden');
-            loginForm.classList.remove('hidden');
-        });
-
-        const forgotPasswordLink = document.getElementById('forgot-password-link');
-        if (forgotPasswordLink) {
-             forgotPasswordLink.addEventListener('click', (e) => {
-                 e.preventDefault();
-                 if (typeof window.agriculturalDashboard !== 'undefined' && window.agriculturalDashboard.handleForgotPassword) {
-                     window.agriculturalDashboard.handleForgotPassword(e);
-                 }
-             });
-        }
-
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', () => {
-                auth.signOut().catch((error) => {
-                    console.error('Erro ao fazer logout:', error);
-                });
-            });
-        }
-
-        window.filterFrontChart = function(type) {
-            if (!window.agriculturalDashboard || !window.agriculturalDashboard.data) return;
-            
-            const dashboard = window.agriculturalDashboard;
-            const allData = dashboard.data;
-            const analyzer = dashboard.analyzer;
-            
-            if (!analyzer || !analyzer.timeModule || !analyzer.timeModule.analyzeFrontHourlyComplete) return;
-
-            const fullHourlyData = analyzer.timeModule.analyzeFrontHourlyComplete(allData);
-
-            const propriaSet = new Set();
-            
-            allData.forEach(row => {
-                const frenteCode = String(row.frente || '').trim();
-                const frenteNum = parseInt(frenteCode.replace(/\D/g, '')) || 0;
-                
-                if (frenteNum > 0 && frenteNum < 30) {
-                    propriaSet.add(frenteCode);
                 }
             });
 
-            if (dashboard.visualizer && dashboard.visualizer.chartsBaseRenderer) {
-                const theme = dashboard.visualizer.getThemeConfig();
-                dashboard.visualizer.chartsBaseRenderer.createFrontHourlyChart(fullHourlyData, theme, type, propriaSet);
+            showSignupLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                authError.classList.add('hidden');
+                document.getElementById('auth-success').classList.add('hidden');
+                loginForm.classList.add('hidden');
+                signupForm.classList.remove('hidden');
+            });
+
+            showLoginLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                authError.classList.add('hidden');
+                document.getElementById('auth-success').classList.add('hidden');
+                signupForm.classList.add('hidden');
+                loginForm.classList.remove('hidden');
+            });
+
+            const forgotPasswordLink = document.getElementById('forgot-password-link');
+            if (forgotPasswordLink) {
+                 forgotPasswordLink.addEventListener('click', (e) => {
+                     e.preventDefault();
+                     if (typeof window.agriculturalDashboard !== 'undefined' && window.agriculturalDashboard.handleForgotPassword) {
+                         window.agriculturalDashboard.handleForgotPassword(e);
+                     }
+                 });
             }
-        };
-    });
-</script>
+
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', () => {
+                    auth.signOut().catch((error) => {
+                        console.error('Erro ao fazer logout:', error);
+                    });
+                });
+            }
+        });
+    </script>
 </body>
 </html>

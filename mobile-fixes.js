@@ -1,5 +1,5 @@
 // mobile-fixes.js
-// CorreÃ§Ãµes especÃ­ficas para mobile
+// Correções específicas para mobile
 class MobileOptimizer {
     constructor() {
         this.isMobile = window.innerWidth <= 768;
@@ -14,7 +14,7 @@ class MobileOptimizer {
         // 2. Inicializar menu mobile
         this.initMobileMenu();
         
-        // 3. Corrigir grÃ¡ficos para mobile
+        // 3. Corrigir gráficos para mobile
         this.fixChartsForMobile();
         
         // 4. Adicionar touch events
@@ -31,7 +31,7 @@ class MobileOptimizer {
     }
 
     detectMobile() {
-        // DetecÃ§Ã£o de user agent mais confiÃ¡vel
+        // Detecção de user agent mais confiável
         const userAgent = navigator.userAgent || navigator.vendor || window.opera;
         this.isMobile = /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase()) || (window.innerWidth <= 768);
         
@@ -52,7 +52,7 @@ class MobileOptimizer {
             e.stopPropagation();
             this.toggleMobileMenu();
             
-            // Corrige o bug de clique no desktop (que nÃ£o deveria existir, mas garante)
+            // Corrige o bug de clique no desktop (que não deveria existir, mas garante)
             if (!this.isMobile && menuContainer.classList.contains('open')) {
                 this.closeMobileMenu();
             }
@@ -70,11 +70,11 @@ class MobileOptimizer {
         menuLinks.forEach(link => {
             link.addEventListener('click', () => {
                 if (this.menuOpen) {
-                    // Adiciona um pequeno delay para a transiÃ§Ã£o
+                    // Adiciona um pequeno delay para a transição
                     setTimeout(() => this.closeMobileMenu(), 100);
                 }
                 
-                // No contexto do app.js, a funÃ§Ã£o showTab jÃ¡ trata de fechar o menu, mas adicionamos o fallback aqui.
+                // No contexto do app.js, a função showTab já trata de fechar o menu, mas adicionamos o fallback aqui.
                 if (window.agriculturalDashboard && window.agriculturalDashboard.showTab) {
                     const tabId = link.getAttribute('onclick').match(/showTab\('([^']+)'/)[1];
                     window.agriculturalDashboard.showTab(tabId);
@@ -106,12 +106,12 @@ class MobileOptimizer {
             menuBackdrop.style.display = this.menuOpen ? 'block' : 'none';
         }
         
-        // Previne scroll do body quando menu estÃ¡ aberto
+        // Previne scroll do body quando menu está aberto
         body.classList.toggle('no-scroll', this.menuOpen);
         
         // Garante que o menu do app.js seja notificado (se existir)
         if (window.agriculturalDashboard && window.agriculturalDashboard.toggleMenu) {
-            // O app.js.toggleMenu original Ã© substituÃ­do pelo mÃ©todo aqui para ter controle sobre o DOM
+            // O app.js.toggleMenu original é substituído pelo método aqui para ter controle sobre o DOM
         }
     }
 
@@ -135,7 +135,7 @@ class MobileOptimizer {
     }
 
     fixChartsForMobile() {
-        // Encontra todos os grÃ¡ficos e garante que eles sejam redimensionados.
+        // Encontra todos os gráficos e garante que eles sejam redimensionados.
         if (!this.isMobile) return;
         
         setTimeout(() => {
@@ -148,7 +148,7 @@ class MobileOptimizer {
     addTouchEvents() {
         if (!this.isMobile) return;
         
-        // Touch feedback para botÃµes
+        // Touch feedback para botões
         const buttons = document.querySelectorAll('button, .tab-button, .btn-primary');
         buttons.forEach(button => {
             button.addEventListener('touchstart', () => {
@@ -174,7 +174,7 @@ class MobileOptimizer {
     }
 
     optimizePerformance() {
-        // Regras de performance jÃ¡ estÃ£o principalmente no CSS.
+        // Regras de performance já estão principalmente no CSS.
     }
 
     handleResize() {
@@ -197,16 +197,16 @@ class MobileOptimizer {
 document.addEventListener('DOMContentLoaded', () => {
     window.mobileOptimizer = new MobileOptimizer();
     
-    // Adicionar a funÃ§Ã£o de toggle do MobileOptimizer ao objeto do dashboard
+    // Adicionar a função de toggle do MobileOptimizer ao objeto do dashboard
     if (window.agriculturalDashboard) {
-        // Redefine o toggleMenu do app.js para usar a lÃ³gica do MobileOptimizer
+        // Redefine o toggleMenu do app.js para usar a lógica do MobileOptimizer
         window.agriculturalDashboard.toggleMenu = (forceClose) => window.mobileOptimizer.toggleMobileMenu(forceClose);
     }
 });
 
-// Adicionar ao evento de carregamento da pÃ¡gina
+// Adicionar ao evento de carregamento da página
 window.addEventListener('load', () => {
-    // ForÃ§ar resize dos grÃ¡ficos apÃ³s tudo carregar
+    // Forçar resize dos gráficos após tudo carregar
     setTimeout(() => {
         if (window.mobileOptimizer) {
             window.mobileOptimizer.fixChartsForMobile();

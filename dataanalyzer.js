@@ -1,5 +1,6 @@
-// dataanalyzer.js - VERSÃO FINAL CORRIGIDA (CÁLCULO DA META CORRETO)
+// dataanalyzer.js - VERSÃO FINAL CORRIGIDA (RECEBIMENTO DO ACUMULADO SAFRA)
 
+// Encapsulamento para evitar o erro "Identifier 'DataAnalyzer' has already been declared"
 if (typeof DataAnalyzer === 'undefined') {
     class DataAnalyzer {
         // --- CONSTANTES DE NEGÓCIO ---
@@ -435,21 +436,6 @@ if (typeof DataAnalyzer === 'undefined') {
 
             // --- DELEGAÇÃO PARA o MÓDULO DE METAS ---
             const metaResult = this.rankingsModule.analyzeMetas(metaData, frentes);
-
-            // 🔥 MERGE CORRETO DA META (USANDO A COLUNA 'META' E NÃO 'POTENCIAL')
-            if (frentes && metaResult) {
-                frentes.forEach(f => {
-                    const meta = metaResult.get(String(f.codFrente));
-                    if (meta) {
-                        // CORREÇÃO: Usa 'meta.meta' (Soma da Coluna META) em vez de 'potencial_entrega_total'
-                        const rawMeta = meta.meta; 
-                        let metaVal = typeof rawMeta === 'number' ? rawMeta : parseFloat(rawMeta);
-                        f.potencialTotal = isNaN(metaVal) ? 0 : metaVal;
-                    } else {
-                        f.potencialTotal = 0;
-                    }
-                });
-            }
 
             return {
                 totalViagens: contagemViagens.total,

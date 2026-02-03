@@ -1,4 +1,4 @@
-// data-analyzer-kpis.js - Cálculo de KPIs Básicos (VERSÃO FINAL - CORREÇÃO DE LEITURA TIPO PROPRIETÁRIO)
+// data-analyzer-kpis.js - Cálculo de KPIs Básicos (VERSÃO FINAL - CORREÇÃO DE LEITURA ACUMULADO)
 
 if (typeof DataAnalyzerKPIs === 'undefined') {
     class DataAnalyzerKPIs {
@@ -15,7 +15,7 @@ if (typeof DataAnalyzerKPIs === 'undefined') {
             if (!val) return 0;
             
             // Remove espaços e converte para string
-            let str = String(val).trim().replace(/\s/g, '');
+            let str = String(val).trim();
             
             // Se já for formato americano simples (ex: "1000.50"), converte direto
             if (!str.includes(',') && !str.includes('.') && !isNaN(parseFloat(str))) {
@@ -40,117 +40,117 @@ if (typeof DataAnalyzerKPIs === 'undefined') {
          * Procura inteligentemente a coluna de peso na planilha AcmSafra
          */
         calculateAcumuladoSafra(productionData, acmSafraData) {
-            let dataToUse = acmSafraData || [];
+            // Prioriza os dados do AcmSafra. Se não tiver, tenta usar produção (mas geralmente produção é só do dia)
+            let dataToUse = acmSafraData;
             
             if (!dataToUse || !Array.isArray(dataToUse) || dataToUse.length === 0) {
                 console.warn("[KPIs] AcmSafra vazio ou inválido.");
                 return 0;
             }
 
+            console.log(`[KPIs] Calculando Acumulado Safra com ${dataToUse.length} registros.`);
+
+            // 1. Identificar qual coluna contém o peso
             const firstRow = dataToUse[0];
-            const possibleColumns = ['PESO LIQUIDO', 'PESO_LIQUIDO', 'PESO.LIQUIDO', 
-                                   'LIQUIDO', 'LÍQUIDO', 
-                                   'TONELADAS', 'TON', 'TONS', 
-                                   'PESO', 'VLR_PESO', 
-                                   'TOTAL', 'ACUMULADO', 'MOAGEM'];
-                                   
+            const possibleColumns = [
+                'PESO LIQUIDO', 'PESO_LIQUIDO', 'PESO.LIQUIDO', 
+                'LIQUIDO', 'LÍQUIDO', 
+                'TONELADAS', 'TON', 'TONS', 
+                'PESO', 'VLR_PESO', 
+                'TOTAL', 'ACUMULADO', 'MOAGEM'
+            ];
+
             let weightCol = null;
+
+            // Busca exata ou parcial (case insensitive)
             const keys = Object.keys(firstRow);
             
+            // Tentativa 1: Busca exata nas chaves
             for (const col of possibleColumns) {
-                weightCol = keys.find(k => k.toUpperCase().includes(col));
-                if (weightCol) break;
+                const match = keys.find(k => k.toUpperCase().trim() === col);
+                if (match) {
+                    weightCol = match;
+                    break;
+                }
             }
 
-            if (!weightCol) return 0;
+            // Tentativa 2: Busca por string contida (ex: "SOMA DE PESO LIQUIDO")
+            if (!weightCol) {
+                for (const col of possibleColumns) {
+                    const match = keys.find(k => k.toUpperCase().includes(col));
+                    if (match) {
+                        weightCol = match;
+                        break;
+                    }
+                }
+            }
+            
+            // Tentativa 3: Se não achou, pega a primeira coluna que parece ser numérica e tem valor alto
+            if (!weightCol) {
+                for (const key of keys) {
+                    const val = this._parseBRNumber(firstRow[key]);
+                    if (val > 100) { // Assume que peso acumulado será um valor considerável
+                        weightCol = key;
+                        console.warn(`[KPIs] Coluna de peso não identificada por nome. Usando provável coluna numérica: ${key}`);
+                        break;
+                    }
+                }
+            }
 
+            if (!weightCol) {
+                console.error("[KPIs] Não foi possível identificar a coluna de Peso no arquivo AcmSafra.");
+                console.log("Colunas disponíveis:", keys);
+                return 0;
+            }
+
+            console.log(`[KPIs] Usando coluna '${weightCol}' para cálculo do Acumulado Safra.`);
+
+            // 2. Somar os valores
             let totalAcumulado = 0;
+            
             dataToUse.forEach(row => {
-                if (this.analyzer.isAggregationRow(row)) return;
+                // Pula linha de total geral se houver (para não duplicar)
+                const valuesStr = Object.values(row).join(' ').toUpperCase();
+                if (valuesStr.includes('TOTAL GERAL') || valuesStr.includes('AGREGADO')) return;
+
                 const val = this._parseBRNumber(row[weightCol]);
                 totalAcumulado += val;
             });
-            
+
             return totalAcumulado;
         }
 
-        /**
-         * 🛠️ CÁLCULO DE TAXA DE ANÁLISE FRACIONADA POR CARGA
-         * Regra: Se a viagem tem 3 cargas e 1 foi analisada, soma 0.333.
-         */
-        calculateAnalysisRateByTrip(data) {
-            if (!data || data.length === 0) return 0;
-
-            // Mapa: { viagemId: { cargasTotais: Set, cargasAnalisadas: Set } }
-            const tripMap = new Map();
-
-            data.forEach(row => {
-                if (this.analyzer.isAggregationRow(row)) return;
-
-                const v = row.viagem || row.idViagem;
-                // Tenta pegar o ticket/carga, se não tiver, usa a viagem como identificador único
-                const c = row.carga || row.ticket || row.viagem; 
-                
-                if (!v) return;
-
-                const vStr = String(v).trim();
-                const cStr = String(c).trim();
-
-                if (!tripMap.has(vStr)) {
-                    tripMap.set(vStr, { totalCargas: new Set(), analisadas: new Set() });
-                }
-
-                const tripData = tripMap.get(vStr);
-                tripData.totalCargas.add(cStr);
-
-                const val = row.analisado;
-                const isAnalysed = val === true || val === 'SIM' || val === 'S' || val === 1 || 
-                                 val === '1' || val === '1,00' ||
-                                 (typeof val === 'string' && val.toUpperCase().includes('ANALISADO'));
-
-                if (isAnalysed) {
-                    tripData.analisadas.add(cStr);
-                }
-            });
-
-            let totalNumerator = 0; // Soma das frações (ex: 0.33 + 1.0 + 0.5)
-            let totalTrips = tripMap.size;
-
-            tripMap.forEach((stats) => {
-                const nTotal = stats.totalCargas.size;
-                const nAnalisadas = stats.analisadas.size;
-
-                if (nTotal > 0) {
-                    // Cada carga analisada vale 1 / nTotal. 
-                    // Se analisou todas, soma 1.0. Se analisou 1 de 3, soma 0.333333
-                    totalNumerator += (nAnalisadas / nTotal);
-                }
-            });
-
-            const taxa = totalTrips > 0 ? (totalNumerator / totalTrips) * 100 : 0;
-            return parseFloat(taxa.toFixed(2));
-        }
-
-        // --- MÉTODOS DE APOIO ORIGINAIS ---
+        // =========================================================================
+        // MÉTODOS ORIGINAIS DE KPIS (MANTIDOS E PROTEGIDOS)
+        // =========================================================================
 
         countUniqueTrips(data) {
             const uniqueTrips = new Set();
             const uniqueProprias = new Set();
             const uniqueTerceiros = new Set();
-            
+            const uniqueFrotaMotriz = new Set();
+
             data.forEach(row => {
                 if (this.analyzer.isAggregationRow(row)) return;
-                const vId = row.viagem || row.idViagem;
-                if (!vId) return;
-                
-                const idStr = String(vId).trim();
+
+                const viagemId = row.viagem || row.idViagem;
+                if (!viagemId) return;
+
+                const idStr = String(viagemId).trim();
                 uniqueTrips.add(idStr);
-                
+
                 if (this.analyzer.isPropria(row)) uniqueProprias.add(idStr);
-                else uniqueTerceiros.add(idStr);
+                else if (this.analyzer.isTerceiro(row)) uniqueTerceiros.add(idStr);
+
+                if (row.frota) uniqueFrotaMotriz.add(String(row.frota).trim());
             });
-            
-            return { total: uniqueTrips.size, proprias: uniqueProprias.size, terceiros: uniqueTerceiros.size };
+
+            return {
+                total: uniqueTrips.size,
+                proprias: uniqueProprias.size,
+                terceiros: uniqueTerceiros.size,
+                frotaMotrizDistinta: uniqueFrotaMotriz.size
+            };
         }
 
         calculateTotalWeightComplete(data) {
@@ -167,11 +167,30 @@ if (typeof DataAnalyzerKPIs === 'undefined') {
             data.forEach(row => {
                 if (this.analyzer.isAggregationRow(row)) return;
                 const peso = parseFloat(row.peso) || 0;
-                
                 if (this.analyzer.isPropria(row)) p += peso;
-                else t += peso;
+                else if (this.analyzer.isTerceiro(row)) t += peso;
             });
             return { propria: p, terceiros: t };
+        }
+
+        calculateAnalysisRateByTrip(data) {
+            const trips = new Set();
+            const analysedTrips = new Set();
+
+            data.forEach(row => {
+                if (this.analyzer.isAggregationRow(row)) return;
+                const v = row.viagem || row.idViagem;
+                if (!v) return;
+                const vStr = String(v).trim();
+                trips.add(vStr);
+                
+                const val = row.analisado;
+                const isAnalysed = val === true || val === 'SIM' || val === 'S' || val === 1 || (typeof val === 'string' && val.toUpperCase() === 'ANALISADO');
+                
+                if (isAnalysed) analysedTrips.add(vStr);
+            });
+
+            return trips.size > 0 ? (analysedTrips.size / trips.size) * 100 : 0;
         }
         
         getEquipmentDistribution(data) {
@@ -182,48 +201,61 @@ if (typeof DataAnalyzerKPIs === 'undefined') {
                  const peso = parseFloat(row.peso) || 0;
                  if (peso <= 0) return;
 
-                 if (this.analyzer.isPropria(row)) propria += peso;
-                 else terceiros += peso;
+                 // Verifica pelo equipamento
+                 let equip = row.equipamento;
+                 if (!equip && row.equipamentos && row.equipamentos.length > 0) {
+                     equip = row.equipamentos[0];
+                 }
+                 
+                 if (equip) {
+                     const equipStr = String(equip).trim();
+                     const isProprio = DataAnalyzer.EQUIPAMENTO_PROPRIO.some(prefix => equipStr.startsWith(prefix));
+                     const isTerceiro = DataAnalyzer.EQUIPAMENTO_TERCEIROS.some(prefix => equipStr.startsWith(prefix));
+                     
+                     if (isProprio) propria += peso;
+                     else if (isTerceiro) terceiros += peso;
+                     else {
+                         // Fallback para frota se equipamento não for conclusivo
+                         if (this.analyzer.isPropria(row)) propria += peso;
+                         else terceiros += peso;
+                     }
+                 } else {
+                     if (this.analyzer.isPropria(row)) propria += peso;
+                     else terceiros += peso;
+                 }
              });
              
              return { propria, terceiros };
         }
 
-        /**
-         * Análise de Tipo de Proprietário (Própria vs Fornecedor)
-         * 🔥 CORREÇÃO AQUI: Usa 'tipoProprietarioFa' mapeado do IntelligentProcessor
-         * e adiciona fallback para Frota se o campo de texto estiver vazio.
-         */
         analyzeOwnerType(data) {
             let propriaTons = 0;
             let fornecedorTons = 0;
             
+            const fazendaMap = new Map();
+
             data.forEach(row => {
                 if (this.analyzer.isAggregationRow(row)) return;
 
                 const peso = parseFloat(row.peso) || 0;
+                const tipoProp = (row.dscTipoPropriedade || '').toUpperCase().trim();
                 
-                // 1. Tenta identificar pelo texto da coluna "Tipo Proprietario (F.A.)"
-                // O IntelligentProcessor mapeia essa coluna para 'tipoProprietarioFa'
-                const tipoProp = (row.tipoProprietarioFa || row.dscTipoPropriedade || '').toUpperCase().trim();
+                // Lógica principal baseada no campo dscTipoPropriedade
+                if (tipoProp.includes('FORNECEDOR') || tipoProp.includes('PARCERIA')) {
+                    fornecedorTons += peso;
+                } else if (tipoProp.includes('ARRENDAMENTO') || tipoProp.includes('AGRICOLA') || tipoProp.includes('PROPRIA')) {
+                    propriaTons += peso;
+                } else {
+                    // Fallback se o campo estiver vazio
+                    if (this.analyzer.isPropria(row)) propriaTons += peso;
+                    else fornecedorTons += peso;
+                }
                 
-                // Verifica se existe texto válido na coluna
-                if (tipoProp.length > 0) {
-                    if (tipoProp.includes('FORNECEDOR') || tipoProp.includes('PARCERIA') || tipoProp.includes('TERCEIRO') || tipoProp.includes('FRETISTA')) {
-                        fornecedorTons += peso;
-                    } else {
-                        // Assume Própria para "ARRENDAMENTO", "PROPRIA", "AGRICOLA", etc.
-                        propriaTons += peso;
-                    }
-                } 
-                else {
-                    // 2. Fallback de Segurança: Se a coluna de texto estiver vazia,
-                    // usa a lógica de prefixo de frota (isTerceiro / isPropria) definida no DataAnalyzer
-                    if (this.analyzer.isTerceiro(row)) {
-                        fornecedorTons += peso;
-                    } else {
-                        propriaTons += peso;
-                    }
+                // Coleta dados para ranking de fazendas
+                if (row.descFazenda) {
+                    const fazenda = row.descFazenda;
+                    if (!fazendaMap.has(fazenda)) fazendaMap.set(fazenda, 0);
+                    fazendaMap.set(fazenda, fazendaMap.get(fazenda) + peso);
                 }
             });
 
@@ -237,28 +269,36 @@ if (typeof DataAnalyzerKPIs === 'undefined') {
                 fornecedorPercent: total > 0 ? (fornecedorTons / total) * 100 : 0,
             };
         }
-
+        
         calculateLastTripAverage(data) {
             const tripWeights = [];
             const uniqueTrips = new Set();
             
             for (let i = data.length - 1; i >= 0 && tripWeights.length < 3; i--) {
                 const row = data[i];
-                const v = row.viagem || row.idViagem;
+                const viagem = row.viagem || row.idViagem;
                 const peso = parseFloat(row.peso) || 0;
                 
-                if (peso > 0 && v && !this.analyzer.isAggregationRow(row)) {
-                    if (!uniqueTrips.has(v)) { 
-                        tripWeights.push(peso); 
-                        uniqueTrips.add(v); 
+                if (peso > 0 && viagem && !this.analyzer.isAggregationRow(row)) {
+                    const tripKey = String(viagem).trim();
+                    
+                    if (!uniqueTrips.has(tripKey)) {
+                        tripWeights.push(peso);
+                        uniqueTrips.add(tripKey);
                     }
                 }
             }
             
-            const sum = tripWeights.reduce((a, b) => a + b, 0);
-            return { average: tripWeights.length > 0 ? sum / tripWeights.length : 0, count: tripWeights.length };
+            const sum = tripWeights.reduce((acc, weight) => acc + weight, 0);
+            const count = tripWeights.length;
+
+            return {
+                average: count > 0 ? sum / count : 0,
+                count: count,
+                weights: tripWeights
+            };
         }
     }
-    
+
     window.DataAnalyzerKPIs = DataAnalyzerKPIs;
 }

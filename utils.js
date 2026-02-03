@@ -1,10 +1,10 @@
-// utils.js - FunÃ§Ãµes UtilitÃ¡rias
+// utils.js - Funções Utilitárias
 class Utils {
 
     /**
-     * Formata um nÃºmero para o padrÃ£o brasileiro (ex: 12.345,67).
-     * @param {number} num O nÃºmero a ser formatado.
-     * @returns {string} O nÃºmero formatado como string.
+     * Formata um número para o padrão brasileiro (ex: 12.345,67).
+     * @param {number} num O número a ser formatado.
+     * @returns {string} O número formatado como string.
      */
     static formatNumber(num) {
         if (typeof num !== 'number' || isNaN(num)) return '0,00';
@@ -15,15 +15,15 @@ class Utils {
     }
 
     /**
-     * Formata um peso (toneladas) para exibiÃ§Ã£o.
-     * Se o valor for inteiro, retorna sem decimais. Se nÃ£o, retorna com duas decimais.
+     * Formata um peso (toneladas) para exibição.
+     * Se o valor for inteiro, retorna sem decimais. Se não, retorna com duas decimais.
      * @param {number} num O peso a ser formatado.
      * @returns {string} O peso formatado (ex: "123" ou "123,45").
      */
     static formatWeight(num) {
         if (typeof num !== 'number' || isNaN(num)) return '0';
         
-        // Se o nÃºmero for um inteiro, formata como inteiro.
+        // Se o número for um inteiro, formata como inteiro.
         if (num === Math.floor(num)) {
             return new Intl.NumberFormat('pt-BR', { 
                 minimumFractionDigits: 0, 
@@ -31,7 +31,7 @@ class Utils {
             }).format(num);
         }
 
-        // Caso contrÃ¡rio, usa a formataÃ§Ã£o padrÃ£o com decimais.
+        // Caso contrário, usa a formatação padrão com decimais.
         return this.formatNumber(num);
     }
 
@@ -65,7 +65,7 @@ class Utils {
         return Array.isArray(value) ? value : [];
     }
 
-    // FunÃ§Ã£o para cÃ¡lculo de quantis
+    // Função para cálculo de quantis
     static getQuantile(arr, q) {
         arr = this.safeArray(arr);
         if (arr.length === 0) return 0;
@@ -84,7 +84,7 @@ class Utils {
     }
     
     /**
-     * Adiciona a lÃ³gica de cor por Tier (para ranking).
+     * Adiciona a lógica de cor por Tier (para ranking).
      */
     static getTierColor(index, totalItems) {
         const tierSize = Math.ceil(totalItems / 3);
