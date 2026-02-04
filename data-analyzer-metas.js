@@ -95,8 +95,8 @@ class DataAnalyzerMetas {
                 tempo: activeRow.tempo || 'N/A',
                 previsao_mudanca: activeRow.previsao_mudanca || 'N/A',
                 potencial_entrega_total: activeRow.potencial || 'N/A',
-                maturador: checkBooleanStatus(activeRow.maturador) ? 'SIM' : 'NÃO',
-                possivel_reforma: checkBooleanStatus(activeRow.possivel_reforma) ? 'SIM' : 'NÃO',
+                maturador: checkBooleanStatus(activeRow.maturador) ? 'SIM' : 'NÃƒO',
+                possivel_reforma: checkBooleanStatus(activeRow.possivel_reforma) ? 'SIM' : 'NÃƒO',
             };
             
             finalMetasCards.set(frente, card);

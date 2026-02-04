@@ -1,4 +1,6 @@
-// datavisualizer.js - CORE DO VISUALIZER (ORQUESTRAÇÃO E TEMA)
+// datavisualizer.js - VERSÃO FINAL BLINDADA
+// Este arquivo orquestra todos os submódulos de visualização.
+
 class DataVisualizer {
     constructor() {
         this.charts = {};
@@ -15,23 +17,32 @@ class DataVisualizer {
             tier2: '#00D4FF', 
             tier3: '#FFB800', 
             tier4: '#FF2E63',
-            // Cores específicas (Moagem/Potencial)
             potencial_color: '#00F5A0',
             rotacao_color: '#FF8C00',
             real_moagem_color: '#00D4FF',
             meta_horaria_color: '#FF2E63' 
         };
         
+        // Registra plugins do Chart.js se existirem
         if (typeof Chart !== 'undefined' && typeof ChartDataLabels !== 'undefined') {
-            Chart.register(ChartDataLabels);
+            try {
+                Chart.register(ChartDataLabels);
+            } catch (e) {
+                console.warn("[DataVisualizer] ChartDataLabels já registrado ou erro:", e);
+            }
         }
         
-        // Inicializa Submódulos de Visualização
-        this.kpisRenderer = new VisualizerKPIs(this);
-        this.chartsBaseRenderer = new VisualizerChartsBase(this);
-        this.chartsMoagemRenderer = new VisualizerChartsMoagem(this);
-        this.gridRenderer = new VisualizerGrid(this);
-        this.metasRenderer = new VisualizerMetas(this); 
+        // Inicializa Submódulos com verificação de segurança
+        // Se um arquivo falhar, não quebra todo o visualizador
+        try {
+            this.kpisRenderer = (typeof VisualizerKPIs !== 'undefined') ? new VisualizerKPIs(this) : null;
+            this.chartsBaseRenderer = (typeof VisualizerChartsBase !== 'undefined') ? new VisualizerChartsBase(this) : null;
+            this.chartsMoagemRenderer = (typeof VisualizerChartsMoagem !== 'undefined') ? new VisualizerChartsMoagem(this) : null;
+            this.gridRenderer = (typeof VisualizerGrid !== 'undefined') ? new VisualizerGrid(this) : null;
+            this.metasRenderer = (typeof VisualizerMetas !== 'undefined') ? new VisualizerMetas(this) : null;
+        } catch (e) {
+            console.error("[DataVisualizer] Erro ao inicializar submódulos:", e);
+        }
     }
 
     getThemeConfig() {
@@ -68,24 +79,28 @@ class DataVisualizer {
 
             this._updateLastWeighingDisplay(analysis.lastExitTimestamp, analysis.data);
             
-            this.kpisRenderer.updateHeaderStats(analysis);
-            this.kpisRenderer.updateTopLists(analysis);
+            if(this.kpisRenderer) {
+                this.kpisRenderer.updateHeaderStats(analysis);
+                this.kpisRenderer.updateTopLists(analysis);
+            }
             
-            if (analysis.frentes) {
+            if (this.gridRenderer && analysis.frentes) {
                 this.gridRenderer.updateFrontsGrid(analysis.frentes);
             }
             
-            if (analysis.metaData) {
+            if (this.metasRenderer && analysis.metaData) {
                 this.metasRenderer.updateMetasGrid(analysis.metaData);
             }
             
-            this.chartsBaseRenderer.createFleetChart(analysis.distribuicaoFrota, theme);
-            this.chartsBaseRenderer.createHarvestChart(analysis.equipmentDistribution, theme); 
-            this.chartsBaseRenderer.createTimeChart(analysis.analise24h, theme);
-            this.chartsBaseRenderer.createFleetHourlyChart(analysis.fleetHourly, theme); 
-            
-            const hourlyData = analysis.analyzeFrontHourly ? analysis.analyzeFrontHourly(analysis.data) : { labels: [], datasets: [] };
-            this.chartsBaseRenderer.createFrontHourlyChart(hourlyData, theme);
+            if (this.chartsBaseRenderer) {
+                this.chartsBaseRenderer.createFleetChart(analysis.distribuicaoFrota, theme);
+                this.chartsBaseRenderer.createHarvestChart(analysis.equipmentDistribution, theme); 
+                this.chartsBaseRenderer.createTimeChart(analysis.analise24h, theme);
+                this.chartsBaseRenderer.createFleetHourlyChart(analysis.fleetHourly, theme); 
+                
+                const hourlyData = analysis.analyzeFrontHourly ? analysis.analyzeFrontHourly(analysis.data) : { labels: [], datasets: [] };
+                this.chartsBaseRenderer.createFrontHourlyChart(hourlyData, theme);
+            }
             
             this.updateMoagemTab(analysis, theme);
 
@@ -120,9 +135,9 @@ class DataVisualizer {
         if(moagemProgressBar) moagemProgressBar.style.width = percent + "%";
         if(moagemPerc) moagemPerc.textContent = percent + "%";
         
-        this.kpisRenderer.updateOwnerDistributionBar(analysis);
+        if(this.kpisRenderer) this.kpisRenderer.updateOwnerDistributionBar(analysis);
         
-        // --- PROJEÇÃO COM FORMATAÇÃO DE VALORES ABAIXO/BATER META ---
+        // --- PROJEÇÃO ---
         const projection = analysis.projecaoMoagem || { forecast: 0, status: 'Calculando...' };
         const moagemForecastEl = document.getElementById('moagemForecast');
         const moagemStatusEl = document.getElementById('moagemStatus');
@@ -133,51 +148,45 @@ class DataVisualizer {
         }
         
         if (moagemStatusEl) {
-            // Calcula a porcentagem e diferença para a formatação detalhada
             const diffTons = Math.abs(projection.forecastDifference || 0);
             const diffPerc = target > 0 ? (diffTons / target * 100).toFixed(1) : "0.0";
-            
             let statusHTML = `<div style="line-height: 1.2;">${projection.status}</div>`;
-            
-            // Se não estiver consolidado, mostra a linha de detalhe (Porcentagem e Toneladas)
             if (!projection.status.includes('Consolidado') && target > 0) {
-                statusHTML += `
-                    <div style="font-size: 0.85em; opacity: 0.9; margin-top: 4px; font-weight: normal;">
-                        ${diffPerc}% (${Utils.formatNumber(diffTons)} t)
-                    </div>
-                `;
+                statusHTML += `<div style="font-size: 0.85em; opacity: 0.9; margin-top: 4px; font-weight: normal;">${diffPerc}% (${Utils.formatNumber(diffTons)} t)</div>`;
             }
-
             moagemStatusEl.innerHTML = statusHTML;
-
-            // Define classe de cor
             let statusClass = 'forecast-badge warning';
-            if (projection.status.includes('Consolidado') || projection.status.includes('Bateu')) {
-                statusClass = 'forecast-badge success';
-            } else if (projection.status.includes('Abaixo')) {
-                statusClass = 'forecast-badge danger';
-            }
+            if (projection.status.includes('Consolidado') || projection.status.includes('Bateu')) statusClass = 'forecast-badge success';
+            else if (projection.status.includes('Abaixo')) statusClass = 'forecast-badge danger';
             moagemStatusEl.className = statusClass;
         }
 
         // --- GRÁFICOS DO CARROSSEL ---
-        const hourlyData = analysis.analise24h || []; 
-        const realLabels = hourlyData.map(d => d.time); 
-        const moagemReal = hourlyData.map(d => d.peso); 
-        const metaDinamicaFull = analysis.requiredHourlyRates || realLabels.map(() => 0); 
+        if (this.chartsMoagemRenderer) {
+            const hourlyData = analysis.analise24h || []; 
+            const realLabels = hourlyData.map(d => d.time); 
+            const moagemReal = hourlyData.map(d => d.peso); 
+            const metaDinamicaFull = analysis.requiredHourlyRates || realLabels.map(() => 0); 
 
-        const potData = this.chartsMoagemRenderer._processPotentialByHour(analysis.potentialRawData);
-        
-        const sparseMeta = potData.labels.map(label => {
-            const index = realLabels.indexOf(label);
-            return index !== -1 ? metaDinamicaFull[index] : 0;
-        });
+            // Processa potencial se disponível
+            let potData = { labels: [], potencial: [], rotacao: [] };
+            if (this.chartsMoagemRenderer._processPotentialByHour) {
+                potData = this.chartsMoagemRenderer._processPotentialByHour(analysis.potentialRawData);
+            }
+            
+            const sparseMeta = potData.labels.map(label => {
+                const index = realLabels.indexOf(label);
+                return index !== -1 ? metaDinamicaFull[index] : 0;
+            });
 
-        this.chartsMoagemRenderer.createRealHourlyChart(realLabels, moagemReal, metaDinamicaFull, config);
-        this.chartsMoagemRenderer.createPotencialHourlyChart(potData.labels, potData.potencial, sparseMeta, config);
-        this.chartsMoagemRenderer.createRotacaoHourlyChart(potData.labels, potData.rotacao, config); 
+            this.chartsMoagemRenderer.createRealHourlyChart(realLabels, moagemReal, metaDinamicaFull, config);
+            this.chartsMoagemRenderer.createPotencialHourlyChart(potData.labels, potData.potencial, sparseMeta, config);
+            this.chartsMoagemRenderer.createRotacaoHourlyChart(potData.labels, potData.rotacao, config); 
+        }
 
-        this.gridRenderer.renderFleetAndAvailabilityCards(analysis.potentialRawData, analysis);
+        if (this.gridRenderer) {
+            this.gridRenderer.renderFleetAndAvailabilityCards(analysis.potentialRawData, analysis);
+        }
     }
 
     destroyAllCharts() {
@@ -217,6 +226,8 @@ class DataVisualizer {
     }
 }
 
-if (typeof DataVisualizer === 'undefined') {
+// Garante a exportação global
+if (typeof window !== 'undefined') {
     window.DataVisualizer = DataVisualizer;
+    console.log("✅ DataVisualizer registrado no window com sucesso.");
 }

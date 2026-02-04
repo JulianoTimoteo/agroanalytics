@@ -1,4 +1,4 @@
-// modtv.js - Gerenciador de Modo Apresentação (TV/Quiosque) - INTEGRADO AO TEMA
+// modtv.js - Gerenciador de Modo Apresentação (TV/Quiosque) - VERSÃO MINIMALISTA
 class PresentationManager {
     constructor() {
         this.isPresentationActive = false;
@@ -9,10 +9,10 @@ class PresentationManager {
         this.escHandler = null;
         this.fullscreenHandler = null;
         
-        this.intervalSeconds = 30;
+        this.intervalSeconds = 20; // Padrão 20 segundos por slide
+        // Abas para apresentação (sem alertas e usuários)
         this.allTabs = [
             'tab-moagem', 
-            'tab-alertas', 
             'tab-caminhao', 
             'tab-equipamento', 
             'tab-frentes', 
@@ -27,7 +27,7 @@ class PresentationManager {
         const timerInput = document.getElementById('presentation-timer');
         if (timerInput) {
             timerInput.addEventListener('change', (e) => {
-                this.intervalSeconds = parseInt(e.target.value) || 30;
+                this.intervalSeconds = parseInt(e.target.value) || 20;
                 if (this.isPresentationActive) this.restartInterval();
             });
         }
@@ -41,81 +41,96 @@ class PresentationManager {
     togglePresentation() {
         this.isPresentationActive ? this.stopPresentation() : this.startPresentation();
     }
-    
-    startPresentation() {
-        const dashboard = window.agriculturalDashboard;
-        
-        // Filtra abas baseadas nas permissões do usuário logado
-        this.presentationTabs = this.allTabs.filter(tabId => {
-            return !dashboard || !dashboard.canAccessTab || dashboard.canAccessTab(tabId);
-        });
 
+    startPresentation() {
+        if (this.isPresentationActive) return;
+        this.isPresentationActive = true;
+        
+        // 1. Apenas adiciona a classe - CSS cuida do resto
+        document.body.classList.add('presentation-mode');
+        
+        // 2. Entra em tela cheia (sem mudar cores)
+        this.enterFullscreen();
+        
+        // 3. Atualiza botão
+        this.updateButtonUI(true);
+        
+        // 4. Configura listeners
+        this.setupListeners();
+        
+        // 5. Define abas para apresentação
+        if (window.agriculturalDashboard && window.agriculturalDashboard.canAccessTab) {
+            this.presentationTabs = this.allTabs.filter(tab => window.agriculturalDashboard.canAccessTab(tab));
+        } else {
+            this.presentationTabs = [...this.allTabs];
+        }
+        
         if (this.presentationTabs.length === 0) {
-            alert("Sem permissão para as abas da apresentação.");
+            alert("Nenhuma aba disponível para apresentação.");
+            this.stopPresentation();
             return;
         }
 
-        this.isPresentationActive = true;
-        
-        // Ativa a classe no body (O CSS cuidará do visual do tema)
-        document.body.classList.add('presentation-mode');
-        
-        this.enterFullscreen();
-        this.createIndicator();
-
         this.currentPresentationTabIndex = 0;
-        this.showCurrentSlide();
+        this.showCurrentTab();
         this.restartInterval();
-        this.setupListeners();
-        this.updateButtonUI(true);
-    }
-
-    createIndicator() {
-        if (document.getElementById('tv-indicator')) return;
-        const indicator = document.createElement('div');
-        indicator.className = 'presentation-indicator';
-        indicator.id = 'tv-indicator';
-        indicator.innerHTML = `<i class="fas fa-tv"></i> MODO APRESENTAÇÃO ATIVO`;
-        document.body.appendChild(indicator);
     }
 
     stopPresentation() {
+        if (!this.isPresentationActive) return;
         this.isPresentationActive = false;
-        if (this.presentationInterval) clearInterval(this.presentationInterval);
         
+        // 1. Remove apenas a classe
         document.body.classList.remove('presentation-mode');
-        const indicator = document.getElementById('tv-indicator');
-        if (indicator) indicator.remove();
         
+        // 2. Sai do modo tela cheia
         this.exitFullscreen();
-        this.removeListeners();
+        
+        // 3. Atualiza botão
         this.updateButtonUI(false);
         
-        if (window.agriculturalDashboard) window.agriculturalDashboard.showTab('tab-moagem');
-    }
-
-    showCurrentSlide() {
-        const dashboard = window.agriculturalDashboard;
-        const tabId = this.presentationTabs[this.currentPresentationTabIndex];
-        if (dashboard && dashboard.showTab) {
-            dashboard.showTab(tabId);
+        // 4. Remove listeners
+        this.removeListeners();
+        
+        // 5. Limpa intervalo
+        if (this.presentationInterval) {
+            clearInterval(this.presentationInterval);
+            this.presentationInterval = null;
         }
+    }
+    
+    restartInterval() {
+        if (this.presentationInterval) clearInterval(this.presentationInterval);
+        this.presentationInterval = setInterval(() => {
+            this.nextSlide();
+        }, this.intervalSeconds * 1000);
     }
 
     nextSlide() {
-        this.currentPresentationTabIndex = (this.currentPresentationTabIndex + 1) % this.presentationTabs.length;
-        this.showCurrentSlide();
+        this.currentPresentationTabIndex++;
+        if (this.currentPresentationTabIndex >= this.presentationTabs.length) {
+            this.currentPresentationTabIndex = 0;
+        }
+        this.showCurrentTab();
     }
 
-    restartInterval() {
-        if (this.presentationInterval) clearInterval(this.presentationInterval);
-        this.presentationInterval = setInterval(() => this.nextSlide(), this.intervalSeconds * 1000);
+    showCurrentTab() {
+        const tabId = this.presentationTabs[this.currentPresentationTabIndex];
+        if (window.agriculturalDashboard && window.agriculturalDashboard.showTab) {
+            window.agriculturalDashboard.showTab(tabId);
+        }
     }
 
     setupListeners() {
         this.escHandler = (e) => {
             if (e.key === 'Escape') this.stopPresentation();
             if (e.key === 'ArrowRight') { this.nextSlide(); this.restartInterval(); }
+            if (e.key === 'ArrowLeft') { 
+                this.currentPresentationTabIndex = this.currentPresentationTabIndex > 0 ? 
+                    this.currentPresentationTabIndex - 1 : this.presentationTabs.length - 1;
+                this.showCurrentTab();
+                this.restartInterval();
+            }
         };
         document.addEventListener('keydown', this.escHandler);
         
@@ -132,22 +147,39 @@ class PresentationManager {
 
     enterFullscreen() {
         const elem = document.documentElement;
-        if (elem.requestFullscreen) elem.requestFullscreen();
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen();
+        } else if (elem.webkitRequestFullscreen) {
+            elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) {
+            elem.msRequestFullscreen();
+        }
     }
 
     exitFullscreen() {
-        if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen();
+        if (document.fullscreenElement) {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+        }
     }
 
     updateButtonUI(active) {
         const btn = document.querySelector('.presentation-controls .btn-primary');
         if (btn) {
-            btn.innerHTML = active ? '<i class="fas fa-stop"></i> PARAR TV' : '<i class="fas fa-play"></i> INICIAR TV';
+            btn.innerHTML = active ? 
+                '<i class="fas fa-stop"></i> SAIR MODO TV' : 
+                '<i class="fas fa-tv"></i> MODO TV';
             btn.style.backgroundColor = active ? 'var(--danger)' : 'var(--primary)';
         }
     }
 }
 
+// Inicializa
 document.addEventListener('DOMContentLoaded', () => {
     window.presentationManager = new PresentationManager();
 });

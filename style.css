@@ -1,4 +1,5 @@
-/* style.css - ARQUIVO COMPLETO CORRIGIDO (VERSÃO FINAL 3.9 - CORREÇÃO CARD VIAGENS) */
+/* style.css - ARQUIVO COMPLETO CORRIGIDO (VERSÃO FINAL 4.0 - AJUSTE DE ALTURA E LAYOUT) 
+   COM CORREÇÃO PARA MODAL DO INFORMATIVO */
 
 /* Reset e Variáveis */
 :root {
@@ -72,46 +73,37 @@
     --menu-shadow: 0 0 15px rgba(0, 0, 0, 0.15);
 }
 
-/* 📥 NOVO: ESTILOS PARA MODO APRESENTAÇÃO EXCLUSIVO */
-body.presentation-mode {
-    background: #000 !important;
-    overflow: hidden !important;
-}
-
+/* Garante que os elementos corretos sejam escondidos no modo apresentação */
 body.presentation-mode .dashboard-header,
 body.presentation-mode .tabs-nav-container,
 body.presentation-mode .upload-fixed-top,
 body.presentation-mode .dashboard-footer,
 body.presentation-mode #particles-js,
-body.presentation-mode .btn-cssbuttons {
+body.presentation-mode .btn-cssbuttons,
+body.presentation-mode header,
+body.presentation-mode .sidebar,
+body.presentation-mode .actions,
+body.presentation-mode .page-title,
+body.presentation-mode .sub-header {
     display: none !important;
 }
 
-body.presentation-mode main.dashboard-main {
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    max-width: none !important;
-    overflow: hidden !important;
+/* Mantém o botão de controle visível */
+body.presentation-mode .presentation-controls {
+    display: block !important;
+    position: fixed !important;
+    top: 15px !important;
+    right: 15px !important;
+    z-index: 99999 !important;
 }
 
+/* Garante que o conteúdo principal ocupe toda a tela */
+body.presentation-mode .dashboard-content,
+body.presentation-mode .main-content,
 body.presentation-mode .analytics-container {
-    width: 100%;
-    height: 100%;
-}
-
-body.presentation-mode .tab-pane.active {
-    display: flex !important;
-    flex-direction: column;
-    justify-content: center;
-    height: 100%;
-    animation: fadeInPresentation 0.8s ease-in-out;
-}
-
-@keyframes fadeInPresentation {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    width: 100% !important;
+    height: 100% !important;
+    padding: 15px !important;
 }
 
 /* 📥 NOVO: INTERFACE DE GERENCIAMENTO DE USUÁRIOS REFEITA */
@@ -1538,46 +1530,57 @@ main {
     flex-grow: 1;
 }
 
+/* 🔥 AJUSTE SOLICITADO: REDUÇÃO DE ALTURA DOS CARDS DE STATUS DA FROTA */
 .fleet-status-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); 
-    gap: 0.75rem;
-    padding: 1rem 0 0 0;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 0.5rem !important; /* Espaçamento menor entre cards */
+    padding: 0.5rem 0 !important;
 }
 
 .status-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 0.4rem 0.3rem !important; /* Padding reduzido para achatar o card */
+    text-align: center;
+    transition: transform 0.2s;
+    min-height: 52px !important; /* Altura mínima reduzida conforme solicitado */
     display: flex;
     flex-direction: column;
-    align-items: center;
-    gap: 0.3rem; /* Reduzido o gap */
-    padding: 0.6rem 0.4rem; /* Padding reduzido para densidade */
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 0.4rem;
-    transition: background 0.3s ease;
-    min-width: 0;
+    justify-content: center;
 }
 
 .status-item:hover {
     background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-2px);
 }
 
 .status-item .value {
-    font-size: 1.0rem; /* Reduzido */
+    display: block;
+    font-size: 1rem !important; /* Fonte ligeiramente menor */
     font-weight: 700;
-    color: var(--text);
+    color: var(--primary);
+    line-height: 1;
+    margin-bottom: 2px;
 }
 
 .status-item .label {
-    font-size: 0.6rem; /* Mínimo para leitura */
+    display: block;
+    font-size: 0.58rem !important; /* Texto da legenda mais compacto */
     color: var(--text-secondary);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    text-align: center;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.total-fleet-card {
-    grid-column: span 2 / span 2;
+/* Destaque para o primeiro card (Total) */
+.status-item:first-child, .total-fleet-card {
     background: rgba(0, 212, 255, 0.1) !important;
+    border-color: var(--primary) !important;
+    grid-column: span 2; /* O total ocupa 2 espaços */
 }
 
 .kpi-box.full {
@@ -1764,6 +1767,416 @@ main {
     width: 100%;
     border-collapse: collapse;
     min-width: 1800px; /* Valor seguro para colunas completas */
+}
+
+/* Layout das Seções de Informativo Operacional */
+.averages-container, .disp-container {
+    display: flex;
+    gap: 1rem;
+    width: 100%;
+    flex-wrap: wrap;
+}
+
+/* Utilitários de Card */
+.glass-card { 
+    background: var(--glass); 
+    border: 1px solid var(--glass-border); 
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1); 
+    -webkit-backdrop-filter: blur(10px); 
+    backdrop-filter: blur(10px); 
+    border-radius: 8px;
+    padding: 1.2rem; 
+    transition: transform 0.3s ease, box-shadow 0.3s ease; 
+}
+
+/* Layout unificado para o informativo */
+.info-kpi-wrapper {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 colunas iguais no topo */
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+/* 🟢 CORREÇÃO: Grid com larguras DIFERENTES para os 6 cards inferiores */
+.info-mini-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr); /* 6 colunas iguais */
+    grid-template-rows: auto; /* Apenas 1 linha */
+    gap: 0.8rem;
+    width: 100%;
+    margin-bottom: 1rem;
+}
+
+
+/* Card 1 (MÉDIA POTENCIAL) - Linha 1, ocupa coluna 1 */
+.info-mini-cards-grid .status-item:nth-child(1) {
+    grid-column: 1 / 2;
+    grid-row: 1 / 2;
+}
+
+/* Card 2 (MÉDIA ROTAÇÃO) - Linha 1, ocupa coluna 2 */
+.info-mini-cards-grid .status-item:nth-child(2) {
+    grid-column: 2 / 3;
+    grid-row: 1 / 2;
+}
+
+/* Card 3 (MÉDIA MOAGEM) - Linha 2, coluna 1 */
+.info-mini-cards-grid .status-item:nth-child(3) {
+    grid-column: 1 / 2;
+    grid-row: 2 / 3;
+}
+
+/* Card 4 (DISP COLHEDORA) - Linha 2, coluna 2 */
+.info-mini-cards-grid .status-item:nth-child(4) {
+    grid-column: 2 / 3;
+    grid-row: 2 / 3;
+}
+
+/* Card 5 (DISP TRANSBORDO) - Linha 3, coluna 2 (só ocupa coluna 2, deixando espaço vazio à esquerda) */
+.info-mini-cards-grid .status-item:nth-child(5) {
+    grid-column: 2 / 3;
+    grid-row: 3 / 4;
+}
+
+/* Card 6 (DISP CAMINHÕES) - Linha 3, coluna 1 */
+.info-mini-cards-grid .status-item:nth-child(6) {
+    grid-column: 1 / 2;
+    grid-row: 3 / 4;
+}
+
+/* 🟢 CORREÇÃO: Estilo base dos cards SEM borda verde */
+.info-mini-cards-grid .status-item {
+    /* Remove grid-column e grid-row específicos */
+    grid-column: auto !important;
+    grid-row: auto !important;
+    
+    background: rgba(255, 255, 255, 0.03) !important;
+    border: 1px solid var(--glass-border) !important;
+    min-height: 100px !important;
+    padding: 1rem !important;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    border-radius: 8px;
+    transition: transform 0.2s, background 0.2s;
+}
+
+/* Responsividade para telas médias */
+@media (max-width: 1200px) {
+    .info-mini-cards-grid {
+        grid-template-columns: repeat(3, 1fr); /* 3 colunas em 2 linhas */
+        grid-template-rows: repeat(2, auto);
+    }
+}
+
+/* Responsividade para telas pequenas */
+@media (max-width: 768px) {
+    .info-mini-cards-grid {
+        grid-template-columns: repeat(2, 1fr); /* 2 colunas em 3 linhas */
+        grid-template-rows: repeat(3, auto);
+    }
+}
+
+/* Responsividade para telas muito pequenas */
+@media (max-width: 480px) {
+    .info-mini-cards-grid {
+        grid-template-columns: 1fr; /* 1 coluna em 6 linhas */
+        grid-template-rows: repeat(6, auto);
+    }
+}
+
+.info-mini-cards-grid .status-item:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    transform: translateY(-2px);
+}
+
+/* 🟢 CORREÇÃO: Remover bordas verdes específicas de todos os elementos */
+#tab-moagem .analytics-card:first-child,
+#tab-moagem .analytics-card:first-child .glass-card,
+.info-kpi-wrapper .glass-card,
+.info-kpi-wrapper .glass-card.stat-card-mini,
+.info-mini-cards-grid .status-item:first-child {
+    border-left: 1px solid var(--glass-border) !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+}
+
+/* 🟢 CORREÇÃO: Valores padronizados */
+.info-mini-cards-grid .status-item .value {
+    font-size: 1.4rem !important;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1.2;
+    margin-bottom: 6px;
+    width: 100%;
+    text-align: center;
+}
+
+/* 🟢 CORREÇÃO: Labels padronizados */
+.info-mini-cards-grid .status-item .label {
+    font-size: 0.7rem !important;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    line-height: 1.2;
+    padding: 0 4px;
+    width: 100%;
+    text-align: center;
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+/* ========================================================================= */
+/* 📊 ESTILO PARA MODAL DO INFORMATIVO (IGUAL AO STATUS DA FROTA) */
+/* ========================================================================= */
+
+/* Container principal do modal (igual ao fleet-status-grid) */
+.modal-info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.8rem;
+    width: 100%;
+    padding: 0.5rem 0;
+}
+
+/* Estilo dos cards no modal (igual ao status-item) */
+.modal-info-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 1rem 0.5rem !important;
+    text-align: center;
+    transition: transform 0.2s;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-info-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-2px);
+}
+
+/* Estilo do valor (igual ao status-item .value) */
+.modal-info-item .modal-value {
+    display: block;
+    font-size: 1.5rem !important;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1;
+    margin-bottom: 4px;
+}
+
+/* Estilo do label (igual ao status-item .label) */
+.modal-info-item .modal-label {
+    display: block;
+    font-size: 0.7rem !important;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: normal;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 0 4px;
+    line-height: 1.2;
+}
+
+/* Destaque para o primeiro card (Acumulado Safra) */
+.modal-info-item:first-child {
+    background: rgba(0, 212, 255, 0.1) !important;
+    border-color: var(--primary) !important;
+    grid-column: span 3; /* Ocupa 3 espaços (linha inteira) */
+}
+
+.modal-info-item:first-child .modal-value {
+    font-size: 2rem !important;
+    color: var(--success);
+}
+
+/* Responsividade para o modal */
+@media (max-width: 768px) {
+    .modal-info-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .modal-info-item:first-child {
+        grid-column: span 2; /* Ocupa 2 espaços em mobile */
+    }
+    
+    .modal-info-item {
+        min-height: 70px;
+        padding: 0.8rem 0.4rem !important;
+    }
+    
+    .modal-info-item .modal-value {
+        font-size: 1.3rem !important;
+    }
+    
+    .modal-info-item:first-child .modal-value {
+        font-size: 1.6rem !important;
+    }
+    
+    .modal-info-item .modal-label {
+        font-size: 0.65rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .modal-info-item:first-child {
+        grid-column: span 1; /* Ocupa 1 espaço em telas muito pequenas */
+    }
+}
+
+/* ========================================================================= */
+/* 📊 ESTILO PARA CARDS DO INFORMATIVO EM LINHA HORIZONTAL (COM SCROLL) */
+/* ========================================================================= */
+
+/* Container principal horizontal */
+.info-horizontal-scroll {
+    display: flex;
+    overflow-x: auto;
+    gap: 0.8rem;
+    width: 100%;
+    padding: 0.5rem 0 1rem 0;
+    margin: 0 -0.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) transparent;
+}
+
+/* Remove scrollbar no Webkit */
+.info-horizontal-scroll::-webkit-scrollbar {
+    height: 6px;
+}
+
+.info-horizontal-scroll::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+}
+
+.info-horizontal-scroll::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 3px;
+}
+
+/* Cards do informativo em linha */
+.info-horizontal-card {
+    flex: 0 0 auto;
+    width: 200px;
+    min-height: 120px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    border-left: 5px solid var(--primary);
+}
+
+.info-horizontal-card:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Destaque para cards principais */
+.info-horizontal-card.highlight {
+    background: rgba(0, 212, 255, 0.1) !important;
+    border-color: var(--success) !important;
+    width: 220px;
+}
+
+/* Estilo do ícone */
+.info-horizontal-card .card-icon {
+    font-size: 1.4rem;
+    margin-bottom: 10px;
+    color: var(--primary);
+}
+
+/* Estilo do valor */
+.info-horizontal-card .card-value {
+    font-size: 1.5rem !important;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1.2;
+    margin-bottom: 5px;
+    display: block;
+}
+
+/* Estilo do label */
+.info-horizontal-card .card-label {
+    font-size: 0.7rem !important;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    line-height: 1.2;
+    display: block;
+    margin-bottom: 4px;
+}
+
+/* Informação adicional */
+.info-horizontal-card .card-subinfo {
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+/* Status colors para bordas */
+.info-horizontal-card.success-border {
+    border-left-color: var(--success) !important;
+}
+.info-horizontal-card.warning-border {
+    border-left-color: var(--warning) !important;
+}
+.info-horizontal-card.danger-border {
+    border-left-color: var(--danger) !important;
+}
+.info-horizontal-card.primary-border {
+    border-left-color: var(--primary) !important;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .info-horizontal-scroll {
+        gap: 0.6rem;
+        padding: 0.5rem 0 0.8rem 0;
+    }
+    
+    .info-horizontal-card {
+        width: 160px;
+        min-height: 100px;
+        padding: 0.8rem;
+    }
+    
+    .info-horizontal-card.highlight {
+        width: 180px;
+    }
+    
+    .info-horizontal-card .card-icon {
+        font-size: 1.2rem;
+        margin-bottom: 8px;
+    }
+    
+    .info-horizontal-card .card-value {
+        font-size: 1.2rem !important;
+    }
+    
+    .info-horizontal-card .card-label {
+        font-size: 0.65rem !important;
+    }
 }
 
 
@@ -2065,6 +2478,31 @@ main {
         width: 100%;
         flex: none;
     }
+    
+    /* Layout responsivo para containers */
+    .averages-container, .disp-container {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    /* Ajuste no grid de status da frota para mobile */
+    .fleet-status-grid {
+        grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+        gap: 0.4rem;
+    }
+    
+    .status-item {
+        padding: 0.35rem 0.2rem !important;
+        min-height: 48px !important;
+    }
+    
+    .status-item .value {
+        font-size: 0.9rem !important;
+    }
+    
+    .status-item .label {
+        font-size: 0.55rem !important;
+    }
 }
 /* Estilos para gerenciamento de usuários (mantidos para garantir cores) */
 .user-table {
@@ -2282,7 +2720,7 @@ html, body {
     /* KPIs com scroll horizontal */
     .kpi-fixed-top-moagem {
         display: flex;
-        overflow-x: a;
+        overflow-x: auto;
         scrollbar-width: none;
         gap: 0.75rem;
         padding: 0.5rem 0 1rem;
@@ -3076,4 +3514,68 @@ body.snapshot-mode canvas#particles-js {
     font-size: 0.6rem; /* Garante tamanho correto */
     letter-spacing: 0.5px;
 }
+/* ========================================================================= */
+/* 🔘 SWITCH DESMARCAR/MARCAR (Estilo solicitado) */
+/* ========================================================================= */
 
+.radio {
+  border: 0;
+  display: flex;
+  background: rgba(0, 0, 0, 0.2); /* Fundo sutil para contraste no dashboard */
+  border-radius: 20px;
+  padding: 2px;
+}
+
+/* Hide default radio */
+.radio input[type="radio"] {
+  position: absolute;
+  visibility: hidden;
+  display: none;
+  opacity: 0;
+  z-index: -1;
+}
+
+/* Customizing label */
+.radio label {
+  position: relative;
+  padding: 6px 15px 6px 20px; /* Ajustado para caber melhor no card */
+  cursor: pointer;
+  border-radius: 20px;
+  color: #00D4FF; /* Cor Primary do Dashboard */
+  margin: 0px 2px;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem; /* Fonte um pouco menor para o contexto do gráfico */
+  transition: .25s all ease;
+}
+
+/* Borda indicativa */
+.radio label::before {
+  box-sizing: border-box;
+  content: " ";
+  position: absolute;
+  top: 50%;
+  left: 5px;
+  transform: translateY(-50%);
+  width: 0.8em;
+  height: 0.8em;
+  border: 2px solid #00D4FF;
+  border-radius: 50%;
+  transition: .25s all ease;
+}
+
+/* Checked toggle */
+.radio input[type="radio"]:checked + label {
+  color: #fff;
+  background: #00D4FF; /* Cor Primary */
+  z-index: 1;
+}
+
+.radio input[type="radio"]:checked + label::before {
+  border-color: #fff;
+  background-color: #fff;
+}
+
+.radio:hover input[type="radio"]:checked + label {
+  box-shadow: 0px 0px 10px rgba(0, 212, 255, 0.4);
+}
