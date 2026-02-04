@@ -62,6 +62,32 @@
     </script>
 
     <style>
+        /* ESTILO CORRIGIDO PARA MOBILE GRID */
+        @media (max-width: 768px) {
+            .info-grid-container {
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr) !important;
+                grid-auto-rows: minmax(80px, auto) !important;
+                gap: 10px !important;
+                width: 100% !important;
+            }
+            
+            .info-compact-card {
+                min-height: 80px !important;
+                padding: 10px !important;
+            }
+            
+            /* Acumulado Safra ocupa 2 colunas */
+            .info-compact-card:first-child {
+                grid-column: 1 / -1 !important;
+            }
+            
+            /* Remove regras conflitantes */
+            .info-compact-card:nth-child(n) {
+                grid-row: auto !important;
+            }
+        }
+        
         .checkbox-container {
             display: flex;
             align-items: center;
@@ -130,6 +156,7 @@
             width: 100%;
         }
         
+        /* Grid padrão para Desktop */
         .info-grid-container {
             display: grid;
             grid-template-columns: repeat(9, 1fr);
@@ -265,24 +292,9 @@
             .info-compact-card { min-height: 55px; padding: 0.5rem 0.3rem !important; }
         }
 
-        @media (max-width: 768px) {
-            .info-grid-container {
-                grid-template-columns: repeat(2, 1fr);
-                grid-template-rows: repeat(5, auto);
-                gap: 0.4rem;
-            }
-            .info-compact-card { min-height: 50px; padding: 0.4rem 0.2rem !important; }
-            .info-compact-card.highlight { min-height: 60px; }
-            .info-compact-card:nth-child(1), .info-compact-card:nth-child(2) { grid-row: 1; }
-            .info-compact-card:nth-child(3) { grid-row: 2; }
-        }
+        /* Removido o bloco conflitante aqui - as regras do topo corrigem o mobile */
 
         @media (max-width: 480px) {
-            .info-grid-container {
-                grid-template-columns: 1fr;
-                grid-template-rows: repeat(9, auto);
-                gap: 0.3rem;
-            }
             .info-compact-card { min-height: 45px; }
         }
         
@@ -1001,6 +1013,12 @@
             </div>
         </main>
         <footer class="dashboard-footer"></footer>
+    </div>
+
+    <div id="orientation-alert">
+        <i class="fas fa-mobile-alt" style="font-size: 4rem; color: #00D4FF; margin-bottom: 20px; animation: rotate-phone 2s infinite ease-in-out;"></i>
+        <h2 style="color: #E0E0E0; margin-bottom: 10px; font-size: 1.5rem; font-family: sans-serif;">Gire o celular</h2>
+        <p style="color: #A0A0A0; font-size: 1rem; max-width: 300px; font-family: sans-serif;">Para visualizar os gráficos, por favor use o aparelho na horizontal.</p>
     </div>
 
     <script src="./utils.js"></script>

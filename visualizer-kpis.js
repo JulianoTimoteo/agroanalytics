@@ -1,4 +1,4 @@
-// visualizer-kpis.js - VERSÃO 5.3 - CORREÇÃO DEFINITIVA DE DISPONIBILIDADE
+// visualizer-kpis.js - VERSÃO 5.3 - CORREÇÃO DEFINITIVA DE DISPONIBILIDADE E LAYOUT MOBILE
 
 if (typeof VisualizerKPIs === 'undefined') {
     class VisualizerKPIs {
@@ -21,6 +21,67 @@ if (typeof VisualizerKPIs === 'undefined') {
             };
 
             this._injectTooltipStyles();
+            this._injectCriticalMobileStyles(); // 🔥 NOVO: Força o layout correto no celular
+        }
+
+        /**
+         * 🔥 ESTILOS CRÍTICOS INJETADOS VIA JS
+         * Garante que o Grid de 2 colunas funcione mesmo se o CSS externo falhar ou estiver em cache
+         */
+        _injectCriticalMobileStyles() {
+            if (document.getElementById('kpi-mobile-fix')) return;
+            const style = document.createElement('style');
+            style.id = 'kpi-mobile-fix';
+            style.innerHTML = `
+                @media (max-width: 768px) {
+                    /* Força o container a ser Grid de 2 colunas */
+                    .info-grid-container {
+                        display: grid !important;
+                        grid-template-columns: repeat(2, 1fr) !important;
+                        grid-auto-rows: minmax(80px, auto) !important;
+                        gap: 10px !important;
+                        width: 100% !important;
+                        padding: 5px !important;
+                        box-sizing: border-box !important;
+                    }
+                    
+                    /* O primeiro card (Acumulado) ocupa as 2 colunas */
+                    .info-compact-card:first-child {
+                        grid-column: 1 / -1 !important;
+                        margin-bottom: 5px !important;
+                    }
+
+                    /* Reseta posições fixas que podem quebrar o layout */
+                    .info-compact-card:nth-child(n+2) {
+                        grid-row: auto !important;
+                        grid-column: auto !important;
+                    }
+
+                    /* Garante que os cards tenham tamanho adequado */
+                    .info-compact-card {
+                        min-height: 80px !important;
+                        height: auto !important;
+                        padding: 10px !important;
+                        display: flex !important;
+                        flex-direction: column !important;
+                        justify-content: center !important;
+                        align-items: center !important;
+                        text-align: center !important;
+                    }
+
+                    /* Ajusta tamanho das fontes para não quebrar */
+                    .info-compact-card .card-value {
+                        font-size: 1.1rem !important;
+                        word-break: break-word !important;
+                    }
+                    .info-compact-card .card-label {
+                        font-size: 0.7rem !important;
+                        white-space: normal !important;
+                        line-height: 1.1 !important;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
         }
 
         _injectTooltipStyles() {
@@ -647,7 +708,8 @@ if (typeof VisualizerKPIs === 'undefined') {
         
         updateOwnerDistributionBar(analysis) {
             const container = document.getElementById('ownerDistributionBarContainer');
-            
+            if (!container) return;
+
             let data = analysis.ownerTypeData || {};
             if (!data.total || data.total === 0) {
                 const distFrota = analysis.distribuicaoFrota || { propria: 0, terceiros: 0 };

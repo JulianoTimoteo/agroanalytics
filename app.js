@@ -1,4 +1,40 @@
-// app.js - VERSÃO COMPLETA CORRIGIDA (ACESSO TOTAL PARA TODOS)
+// app.js - VERSÃO COMPLETA CORRIGIDA (COM ORIENTATION TOAST, ACESSO TOTAL E CRIPTOGRAFIA)
+
+// Utilitário de Criptografia para Segurança Local (Obfuscação)
+const SimpleCrypto = {
+    _key: 'AgroKey_2026_Secure',
+    
+    encrypt: function(data) {
+        if (!data) return null;
+        try {
+            const jsonStr = JSON.stringify(data);
+            let result = '';
+            for (let i = 0; i < jsonStr.length; i++) {
+                result += String.fromCharCode(jsonStr.charCodeAt(i) ^ this._key.charCodeAt(i % this._key.length));
+            }
+            return btoa(result); // Base64
+        } catch (e) {
+            console.error("Erro na criptografia:", e);
+            return null;
+        }
+    },
+    
+    decrypt: function(encryptedData) {
+        if (!encryptedData) return null;
+        try {
+            const str = atob(encryptedData);
+            let result = '';
+            for (let i = 0; i < str.length; i++) {
+                result += String.fromCharCode(str.charCodeAt(i) ^ this._key.charCodeAt(i % this._key.length));
+            }
+            return JSON.parse(result);
+        } catch (e) {
+            // Fallback: Tenta ler como JSON puro se não estiver criptografado (migração)
+            try { return JSON.parse(encryptedData); } catch (err) { return null; }
+        }
+    }
+};
+
 class AgriculturalDashboard {
     constructor() {
         // Inicializa módulos se disponíveis
@@ -23,6 +59,7 @@ class AgriculturalDashboard {
         this.carouselInterval = null; 
         this.refreshIntervalId = null; 
         this.refreshTimeoutId = null; 
+        this.orientationTimeout = null;
         
         // 🟥 SISTEMA DE USUÁRIOS LOCAL (sem Firebase)
         this.userList = this.loadUsersFromStorage();
@@ -54,6 +91,7 @@ class AgriculturalDashboard {
         this.loadMeta(); 
         this.initShiftTracker(); 
         this.clearResults(); 
+        this.initOrientationListener();
         
         this.startLoadingProcess(); 
         this.setupAutoRefresh();
@@ -107,8 +145,44 @@ class AgriculturalDashboard {
                 border-color: rgba(255,255,255,0.2); 
             }
             
+            /* --- TOAST DE ORIENTAÇÃO --- */
+            #orientation-toast {
+                position: fixed; 
+                top: 20px; 
+                left: 50%;
+                transform: translateX(-50%) translateY(-150%);
+                background-color: #0A0E17; 
+                border: 1px solid #00D4FF; 
+                color: #00D4FF;
+                padding: 12px 24px; 
+                border-radius: 50px;
+                box-shadow: 0 5px 20px rgba(0,0,0,0.8);
+                z-index: 10000; 
+                display: flex; 
+                align-items: center; 
+                gap: 12px;
+                font-weight: 600; 
+                font-size: 0.95rem; 
+                opacity: 0;
+                transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+                pointer-events: none; 
+                white-space: nowrap;
+            }
+            #orientation-toast.show { 
+                transform: translateX(-50%) translateY(0);
+                opacity: 1; 
+            }
+            #orientation-toast i { 
+                font-size: 1.2rem; 
+                animation: icon-wobble 2s infinite ease-in-out; 
+            }
+            @keyframes icon-wobble { 
+                0%, 100% { transform: rotate(0deg); } 
+                25% { transform: rotate(-15deg); } 
+                75% { transform: rotate(15deg); } 
+            }
+            
             /* --- CORREÇÃO CIRÚRGICA DE SCREENSHOT --- */
-            /* Remove efeitos de vidro/transparência durante o print para garantir legibilidade */
             body.snapshot-mode .tab-pane.active {
                 background: none !important;
                 box-shadow: none !important;
@@ -171,13 +245,15 @@ class AgriculturalDashboard {
         document.head.appendChild(style);
     }
 
-    // =================== SISTEMA DE ARMAZENAMENTO LOCAL ===================
+    // =================== SISTEMA DE ARMAZENAMENTO LOCAL (COM CRIPTOGRAFIA) ===================
 
     loadUsersFromStorage() {
         try {
-            const users = localStorage.getItem('agricultural_users');
-            if (users) {
-                return JSON.parse(users);
+            const usersEncrypted = localStorage.getItem('agricultural_users');
+            if (usersEncrypted) {
+                // Tenta descriptografar. Se falhar (ex: dado antigo não criptografado), tenta ler direto.
+                const decrypted = SimpleCrypto.decrypt(usersEncrypted);
+                return decrypted || JSON.parse(usersEncrypted);
             } else {
                 // Cria usuários padrão incluindo o master
                 const defaultUsers = this.getDefaultUsers();
@@ -237,7 +313,10 @@ class AgriculturalDashboard {
 
     saveUsersToStorage(users = null) {
         try {
-            localStorage.setItem('agricultural_users', JSON.stringify(users || this.userList));
+            const dataToSave = users || this.userList;
+            // Salva CRIPTOGRAFADO para segurança no console
+            const encrypted = SimpleCrypto.encrypt(dataToSave);
+            localStorage.setItem('agricultural_users', encrypted);
         } catch (e) {
             console.error("Erro ao salvar usuários:", e);
         }
@@ -365,8 +444,10 @@ class AgriculturalDashboard {
 
     getCurrentUser() {
         try {
-            const user = localStorage.getItem('agricultural_current_user');
-            return user ? JSON.parse(user) : null;
+            const encrypted = localStorage.getItem('agricultural_current_user');
+            // Criptografa sessão também para evitar manipulação direta no console
+            const decrypted = SimpleCrypto.decrypt(encrypted);
+            return decrypted || (encrypted ? JSON.parse(encrypted) : null);
         } catch (e) {
             console.error("Erro ao carregar usuário atual:", e);
             return null;
@@ -376,7 +457,9 @@ class AgriculturalDashboard {
     setCurrentUser(user) {
         try {
             if (user) {
-                localStorage.setItem('agricultural_current_user', JSON.stringify(user));
+                // Salva sessão criptografada
+                const encrypted = SimpleCrypto.encrypt(user);
+                localStorage.setItem('agricultural_current_user', encrypted);
                 this.currentUser = user;
                 this.currentUserRole = user.role;
                 this.currentUserCustomPermissions = user.customPermissions || null;
@@ -441,6 +524,9 @@ class AgriculturalDashboard {
              this.stopCarousel();
         }
 
+        // Verifica orientação para mostrar toast
+        this.checkOrientation();
+
         // Se entrar na aba usuários, carrega a tabela principal
         if (tabId === 'tab-usuarios') {
             if (this.isCurrentUserAdminOrMaster()) {
@@ -474,6 +560,36 @@ class AgriculturalDashboard {
             this.loadRegistrationRequests();
         } else if (subTabId === 'subtab-permissoes-abas') {
             this.loadTabPermissionsPanel();
+        }
+    }
+
+    // =================== ORIENTATION TOAST ===================
+
+    initOrientationListener() {
+        window.addEventListener('resize', () => this.checkOrientation());
+        setTimeout(() => this.checkOrientation(), 1000);
+    }
+
+    checkOrientation() {
+        const toast = document.getElementById('orientation-toast');
+        if (!toast) return;
+
+        const isMobile = window.innerWidth <= 768;
+        const isPortrait = window.innerHeight > window.innerWidth;
+        const activeTab = document.querySelector('.tab-pane.active');
+        const isChartsTab = activeTab && activeTab.id === 'tab-moagem';
+
+        if (isMobile && isPortrait && isChartsTab) {
+            toast.classList.add('show');
+            
+            if (this.orientationTimeout) clearTimeout(this.orientationTimeout);
+            
+            this.orientationTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3500);
+        } else {
+            toast.classList.remove('show');
+            if (this.orientationTimeout) clearTimeout(this.orientationTimeout);
         }
     }
 
@@ -2613,7 +2729,8 @@ class AgriculturalDashboard {
             document.getElementById('particles-js'),
             document.querySelector('.header-controls'),
             document.querySelector('.menu-toggle-btn'),
-            document.getElementById('menu-backdrop')
+            document.getElementById('menu-backdrop'),
+            document.getElementById('orientation-toast')
         ].filter(el => el);
 
         const originalDisplay = toHide.map(el => {
@@ -2639,7 +2756,8 @@ class AgriculturalDashboard {
                 imageTimeout: 0,
                 ignoreElements: (element) => {
                     return element.classList.contains('header-controls') || 
-                           element.id === 'particles-js';
+                           element.id === 'particles-js' ||
+                           element.id === 'orientation-toast';
                 }
             });
 
@@ -2686,10 +2804,6 @@ class AgriculturalDashboard {
             }
         }
     }
-
-    // =================== MÉTODOS ADICIONAIS ===================
-    
-    // =================== MÉTODO updateFleetStatus() MOVIDO PARA CIMA ===================
 }
 
 document.addEventListener('DOMContentLoaded', () => {

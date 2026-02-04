@@ -1273,7 +1273,7 @@ main {
 .btn-export { background: var(--accent); color: #fff; border: none; padding: 0.8rem 1.5rem; border-radius: 0.4rem; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 5px; }
 
 .fronts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
-.front-card { background: rgba(255, 255, 255, 0.05); border-radius: 0.4rem; padding: 1.5rem; position: relative; overflow: hidden; text-align: center; display: flex; flex-direction: column; gap: 0.5rem; transition: transform 0.3s ease, box-shadow 0.3s ease; }
+.front-card { background: rgba(255, 255, 255, 0.05); border-radius: 0.4rem; padding: 1.5rem; position: relative; overflow: hidden; text-align: center; display: flex; flex-direction column; gap: 0.5rem; transition: transform 0.3s ease, box-shadow 0.3s ease; }
 [data-theme="light"] .front-card { background: #fff; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
 .front-card:hover { transform: scale(1.05); box-shadow: 0 15px 35px rgba(0,0,0,0.3); z-index: 10; background: rgba(255,255,255,0.08); }
 
@@ -1873,9 +1873,20 @@ main {
 
 /* Responsividade para telas pequenas */
 @media (max-width: 768px) {
+    /* CORREÇÃO CRÍTICA: Informativo Operacional em Grid 2 Colunas */
     .info-mini-cards-grid {
-        grid-template-columns: repeat(2, 1fr); /* 2 colunas em 3 linhas */
-        grid-template-rows: repeat(3, auto);
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        grid-template-rows: auto !important;
+        gap: 10px !important;
+    }
+
+    /* Reseta comportamentos específicos de coluna/linha do desktop */
+    .info-mini-cards-grid .status-item,
+    .info-mini-cards-grid .status-item:nth-child(n) {
+        grid-column: auto !important;
+        grid-row: auto !important;
+        min-height: 80px !important;
     }
 }
 
@@ -2502,6 +2513,32 @@ main {
     
     .status-item .label {
         font-size: 0.55rem !important;
+    }
+
+    /* CORREÇÃO DO INFORMATIVO OPERACIONAL */
+    .stats-row {
+        display: grid !important;
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+        width: 100% !important;
+        margin: 0 !important;
+    }
+
+    .stats-row .stat-item {
+        width: auto !important;
+        min-width: 0 !important;
+        flex: none !important;
+        margin: 0 !important;
+        /* Estilo de card */
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--glass-border);
+        border-radius: 8px;
+        padding: 10px;
+    }
+
+    /* Remove separadores verticais antigos */
+    .stats-row .stat-item::after {
+        display: none !important;
     }
 }
 /* Estilos para gerenciamento de usuários (mantidos para garantir cores) */
@@ -3578,4 +3615,37 @@ body.snapshot-mode canvas#particles-js {
 
 .radio:hover input[type="radio"]:checked + label {
   box-shadow: 0px 0px 10px rgba(0, 212, 255, 0.4);
+}
+
+/* ========================================================================= */
+/* 🔥 6. TRAVA DE ROTAÇÃO (ORIENTATION LOCK) 🔥 */
+/* ========================================================================= */
+#orientation-alert {
+    display: none; /* Controlado via JS (app.js) */
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: #050A14;
+    z-index: 999999; /* Z-Index máximo */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+}
+
+#orientation-alert i {
+    font-size: 4rem;
+    color: var(--primary);
+    margin-bottom: 20px;
+    animation: rotate-phone 2s infinite ease-in-out;
+}
+
+#orientation-alert h2 { color: var(--text); margin-bottom: 10px; font-size: 1.5rem; }
+#orientation-alert p { color: var(--text-secondary); font-size: 1rem; max-width: 300px; }
+
+@keyframes rotate-phone {
+    0%, 10% { transform: rotate(0deg); }
+    40%, 60% { transform: rotate(90deg); }
+    90%, 100% { transform: rotate(0deg); }
 }

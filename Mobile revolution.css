@@ -19,6 +19,48 @@
 }
 
 /* ============================================
+   TRAVA DE ORIENTAÇÃO (OVERLAY)
+   ============================================ */
+#orientation-alert {
+    display: none; /* Controlado via JS (app.js) */
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: #050A14;
+    z-index: 999999; /* Z-Index altíssimo para cobrir tudo */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+}
+
+#orientation-alert i {
+    font-size: 4rem;
+    color: #00D4FF; /* Var Primary */
+    margin-bottom: 20px;
+    animation: rotate-phone 2s infinite ease-in-out;
+}
+
+#orientation-alert h2 {
+    color: #E0E0E0;
+    margin-bottom: 10px;
+    font-size: 1.5rem;
+}
+
+#orientation-alert p {
+    color: #A0A0A0;
+    font-size: 1rem;
+    max-width: 300px;
+}
+
+@keyframes rotate-phone {
+    0%, 10% { transform: rotate(0deg); }
+    40%, 60% { transform: rotate(90deg); }
+    90%, 100% { transform: rotate(0deg); }
+}
+
+/* ============================================
    DETECÇÃO DE ORIENTAÇÃO
    ============================================ */
 @media (max-width: 768px) and (orientation: portrait) {
@@ -141,6 +183,33 @@
     .card-header h3 {
         font-size: 1rem;
     }
+
+    /* 🔥 CORREÇÃO: INFORMATIVO OPERACIONAL IGUAL AO STATUS FROTA 🔥 */
+    /* Transforma a linha de status (Flex) em Grid de 2 colunas */
+    .stats-row {
+        display: grid !important; 
+        grid-template-columns: repeat(2, 1fr) !important; 
+        gap: 10px !important;
+    }
+
+    /* Estilo de Card para os itens */
+    .stat-item {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 10px;
+        min-width: auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* Remove a linha separadora vertical antiga */
+    .stat-item:not(:last-child)::after { display: none; }
+
+    .stat-value { font-size: 1.2rem; margin-bottom: 2px; }
+    .stat-label { font-size: 0.75rem; opacity: 0.8; }
 
     /* KPI Cards - Grid 2x2 ou Scroll Horizontal */
     .info-grid-container {
