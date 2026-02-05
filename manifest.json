@@ -6,7 +6,7 @@
   "display": "standalone",
   "background_color": "#050A14",
   "theme_color": "#00D4FF",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "icons": [
     {
       "src": "https://usinapitangueiras.com.br/wp-content/uploads/2020/10/cropped-favicon-180x180.png",
@@ -24,7 +24,10 @@
       "type": "image/png"
     }
   ],
-  "categories": ["business", "productivity"],
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "shortcuts": [
     {
       "name": "Dashboard",
