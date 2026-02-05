@@ -17,6 +17,7 @@ class MobileRevolution {
         this.touchStartY = 0;
         this.pullRefreshThreshold = 80;
         this.isPulling = false;
+        this.orientationTimeout = null; // Adicionado para controle do Toast
         
         // Configurações de gestos
         this.gestureConfig = {
@@ -30,12 +31,15 @@ class MobileRevolution {
     }
 
     init() {
-        if (!this.isMobile) return;
+        // Inicializa listeners mesmo em desktop para redimensionamento responsivo
+        // if (!this.isMobile) return; // Removido para garantir funcionamento híbrido
 
         console.log('🚀 Mobile Revolution iniciado');
 
-        // 1. Setup inicial
+        // 1. Setup inicial e injeção de estilos
         this.setupMobileEnvironment();
+        this._injectOrientationStyles(); // Migrado do app.js
+        this._createOrientationToast();  // Migrado do app.js
         
         // 2. Detectar orientação
         this.handleOrientationChange();
@@ -63,6 +67,9 @@ class MobileRevolution {
 
         // 10. Skeleton loaders
         this.initSkeletonLoaders();
+
+        // Verificação inicial de orientação
+        setTimeout(() => this.checkOrientation(), 1000);
     }
 
     // ==========================================
@@ -124,6 +131,90 @@ class MobileRevolution {
     }
 
     // ==========================================
+    // LÓGICA DE VISUALIZAÇÃO E TOAST (MIGRADO)
+    // ==========================================
+
+    _createOrientationToast() {
+        if (!document.getElementById('orientation-toast')) {
+            const toast = document.createElement('div');
+            toast.id = 'orientation-toast';
+            toast.innerHTML = '<i class="fas fa-sync-alt"></i> Gire para ver melhor os gráficos';
+            document.body.appendChild(toast);
+        }
+    }
+
+    _injectOrientationStyles() {
+        if (document.getElementById('mobile-rev-styles')) return;
+        
+        const style = document.createElement('style');
+        style.id = 'mobile-rev-styles';
+        style.innerHTML = `
+            #orientation-toast {
+                position: fixed; 
+                top: 20px; 
+                left: 50%;
+                transform: translateX(-50%) translateY(-150%);
+                background-color: #0A0E17; 
+                border: 1px solid #00D4FF; 
+                color: #00D4FF;
+                padding: 12px 24px; 
+                border-radius: 50px;
+                box-shadow: 0 5px 20px rgba(0,0,0,0.8);
+                z-index: 10000; 
+                display: flex; 
+                align-items: center; 
+                gap: 12px;
+                font-weight: 600; 
+                font-size: 0.95rem; 
+                opacity: 0;
+                transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+                pointer-events: none; 
+                white-space: nowrap;
+            }
+            #orientation-toast.show { 
+                transform: translateX(-50%) translateY(0);
+                opacity: 1; 
+            }
+            #orientation-toast i { 
+                font-size: 1.2rem; 
+                animation: icon-wobble 2s infinite ease-in-out; 
+            }
+            @keyframes icon-wobble { 
+                0%, 100% { transform: rotate(0deg); } 
+                25% { transform: rotate(-15deg); } 
+                75% { transform: rotate(15deg); } 
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    checkOrientation() {
+        const toast = document.getElementById('orientation-toast');
+        if (!toast) return;
+
+        const isMobile = window.innerWidth <= 768;
+        const isPortrait = window.innerHeight > window.innerWidth;
+        
+        // Tenta detectar a aba ativa (compatível com app.js)
+        const activeTab = document.querySelector('.tab-pane.active');
+        const isChartsTab = activeTab && activeTab.id === 'tab-moagem';
+
+        // Mostra o aviso se: for mobile, estiver em pé (portrait) e na aba de gráficos
+        if (isMobile && isPortrait && isChartsTab) {
+            toast.classList.add('show');
+            
+            if (this.orientationTimeout) clearTimeout(this.orientationTimeout);
+            
+            this.orientationTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3500);
+        } else {
+            toast.classList.remove('show');
+            if (this.orientationTimeout) clearTimeout(this.orientationTimeout);
+        }
+    }
+
+    // ==========================================
     // ORIENTAÇÃO E ROTAÇÃO
     // ==========================================
     
@@ -135,19 +226,15 @@ class MobileRevolution {
                 this.orientation = newOrientation;
                 document.body.setAttribute('data-orientation', newOrientation);
                 
-                console.log(`📱 Orientação mudou para: ${newOrientation}`);
-                
-                // Fecha menu se aberto durante rotação
-                if (this.menuOpen) {
-                    this.closeMobileMenu();
-                }
+                // Fecha menu se aberto
+                if (this.menuOpen) this.closeMobileMenu();
 
                 // Redimensiona gráficos
                 this.resizeChartsForOrientation();
-                
-                // Toast de feedback
-                this.showToast(`Modo ${newOrientation === 'landscape' ? 'paisagem' : 'retrato'} ativado`, 'info', 2000);
             }
+            
+            // Verifica se precisa mostrar o toast
+            this.checkOrientation();
         };
 
         // Listeners de orientação
@@ -168,7 +255,7 @@ class MobileRevolution {
                 window.agriculturalDashboard.visualizer.resizeCharts();
             }
 
-            // Atualiza container de gráficos
+            // Atualiza container de gráficos manualmente se necessário
             const chartContainers = document.querySelectorAll('.chart-container');
             chartContainers.forEach(container => {
                 const canvas = container.querySelector('canvas');

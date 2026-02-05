@@ -1,7 +1,5 @@
-/* style.css - ARQUIVO COMPLETO CORRIGIDO (VERSÃO FINAL 4.0 - AJUSTE DE ALTURA E LAYOUT) 
-   COM CORREÇÃO PARA MODAL DO INFORMATIVO */
+/* style.css - VERSÃO CORRIGIDA (SINTAXE + LAYOUT FINAL) */
 
-/* Reset e Variáveis */
 :root {
     --primary: #00D4FF;
     --secondary: #7B61FF;
@@ -21,32 +19,26 @@
     --bg-dark-container: #0A0E17;
     --chart-grid-color: rgba(255, 255, 255, 0.1);
     
-    /* NOVAS CORES PARA A LEGENDA DO GRÁFICO CONSOLIDADO */
     --potencial-color: #00F5A0;
     --rotacao-color: #FF8C00;
     --real_moagem_color: #00D4FF;
     --meta_horaria_color: #FF2E63;
 
-    /* COR DA ZONA DE DRAG & DROP */
     --dropzone-bg: rgba(0, 212, 255, 0.05);
     --dropzone-border: var(--primary);
     
-    /* VARIÁVEIS PARA META DISCRETA */
     --meta-label-color: #666;
 
-    /* Novas variáveis para tema light/dark */
     --card-bg: var(--glass);
     --border-color: var(--glass-border);
     --input-bg: rgba(255, 255, 255, 0.05);
     --text-color: var(--text);
 
-    /* Off-Canvas Menu */
     --menu-width: 250px;
     --menu-bg: var(--bg-header);
     --menu-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
-/* Tema Claro (Pérola Suave) */
 [data-theme="light"] {
     --bg-main: linear-gradient(135deg, #Fdfbf7 0%, #F5F5F5 100%);
     --bg-header: #FFFFFF;
@@ -73,7 +65,7 @@
     --menu-shadow: 0 0 15px rgba(0, 0, 0, 0.15);
 }
 
-/* Garante que os elementos corretos sejam escondidos no modo apresentação */
+/* Modos de Exibição Especiais */
 body.presentation-mode .dashboard-header,
 body.presentation-mode .tabs-nav-container,
 body.presentation-mode .upload-fixed-top,
@@ -88,7 +80,6 @@ body.presentation-mode .sub-header {
     display: none !important;
 }
 
-/* Mantém o botão de controle visível */
 body.presentation-mode .presentation-controls {
     display: block !important;
     position: fixed !important;
@@ -97,7 +88,6 @@ body.presentation-mode .presentation-controls {
     z-index: 99999 !important;
 }
 
-/* Garante que o conteúdo principal ocupe toda a tela */
 body.presentation-mode .dashboard-content,
 body.presentation-mode .main-content,
 body.presentation-mode .analytics-container {
@@ -106,7 +96,7 @@ body.presentation-mode .analytics-container {
     padding: 15px !important;
 }
 
-/* 📥 NOVO: INTERFACE DE GERENCIAMENTO DE USUÁRIOS REFEITA */
+/* Checkbox Grid (Permissões) */
 .checkbox-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -131,6 +121,7 @@ body.presentation-mode .analytics-container {
     margin: 0 !important;
 }
 
+/* Reset Geral */
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { 
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
@@ -144,7 +135,7 @@ body {
 }
 #particles-js { position: fixed; width: 100%; height: 100%; top: 0; left: 0; z-index: -1; display: block; }
 
-/* 🟥 ESTRUTURA DE LOGIN */
+/* Login */
 .full-screen-overlay {
     position: fixed;
     top: 0;
@@ -262,10 +253,8 @@ body {
     background: rgba(64, 128, 12, 0.1);
     border: 1px solid var(--success);
 }
-/* FIM 🟥 ESTRUTURA DE LOGIN */
 
-
-/* --- NOVO: ESTRUTURA DE MODAL --- */
+/* Modals */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -318,8 +307,6 @@ body {
     font-size: 1.2rem;
     cursor: pointer;
 }
-/* --- FIM NOVO: MODAL --- */
-
 
 /* Header */
 .dashboard-header { 
@@ -349,9 +336,7 @@ body {
 .logo { display: flex; align-items: center; color: var(--primary); gap: 10px; }
 .header-controls { display: flex; align-items: center; gap: 15px; }
 
-/* ========================================================================= */
-/* --- BOTÃO AÇÕES: VERSÃO DESKTOP (PADRÃO) --- */
-/* ========================================================================= */
+/* Botões CSS Buttons */
 .btn-cssbuttons {
     --btn-color: var(--primary);
     position: relative;
@@ -479,7 +464,7 @@ body {
 .btn-icon { background: var(--glass); color: var(--text); border: 1px solid var(--glass-border); border-radius: 50%; width: 35px; height: 35px; cursor: pointer; transition: background 0.3s; display: flex; align-items: center; justify-content: center; }
 .btn-icon:hover { background: rgba(255, 255, 255, 0.2); }
 
-/* --- DISPLAY DE TURNO --- */
+/* Display Turno */
 .turno-display-container {
     position: relative;
     width: 220px;
@@ -698,7 +683,7 @@ main {
 }
 .glass-card:hover, .hover-zoom-card:hover { transform: scale(1.02); z-index: 10; box-shadow: 0 15px 35px rgba(0,0,0,0.3); }
 
-/* 🔥 CORREÇÃO DA COR LATERAL (Movido para DEPOIS de .glass-card) */
+/* Stat Card Mini */
 .stat-card-mini { 
     display: flex; 
     align-items: center; 
@@ -751,9 +736,9 @@ main {
     position: static;
     width: 100%; 
     height: auto;
-    padding: 0 2rem; /* Alinha com o MAIN */
+    padding: 0 2rem; 
     margin: 0 auto 2rem auto;
-    max-width: 1400px; /* ALINHAMENTO IGUAL AO HEADER */
+    max-width: 1400px; 
     background: transparent;
     transform: translateX(0);
     z-index: 10;
@@ -766,7 +751,7 @@ main {
     justify-content: space-around; 
     align-items: center; 
     background: var(--bg-dark-container); 
-    border-radius: 0.4rem; /* Mais quadrado (era 0.75rem) */
+    border-radius: 0.4rem; 
     padding: 0.5rem; 
     margin-bottom: 0; 
     width: 100%;
@@ -783,7 +768,7 @@ main {
     cursor: pointer; 
     font-size: 1rem; 
     font-weight: 500; 
-    border-radius: 0.25rem; /* Mais quadrado (era 0.5rem) */
+    border-radius: 0.25rem; 
     border-bottom: 2px solid transparent; 
     transition: all 0.2s;
     display: flex;
@@ -873,7 +858,7 @@ main {
     color: #fff;
     border: none;
     padding: 0.5rem 1rem;
-    border-radius: 0.25rem; /* Mais quadrado (era 0.5rem) */
+    border-radius: 0.25rem; 
     cursor: pointer;
     font-weight: 600;
     font-size: 0.9rem;
@@ -889,6 +874,7 @@ main {
     font-size: 1rem;
 }
 
+/* Tooltip Container */
 .tooltip-container {
     position: relative;
     display: inline-block;
@@ -1273,7 +1259,7 @@ main {
 .btn-export { background: var(--accent); color: #fff; border: none; padding: 0.8rem 1.5rem; border-radius: 0.4rem; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 5px; }
 
 .fronts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
-.front-card { background: rgba(255, 255, 255, 0.05); border-radius: 0.4rem; padding: 1.5rem; position: relative; overflow: hidden; text-align: center; display: flex; flex-direction column; gap: 0.5rem; transition: transform 0.3s ease, box-shadow 0.3s ease; }
+.front-card { background: rgba(255, 255, 255, 0.05); border-radius: 0.4rem; padding: 1.5rem; position: relative; overflow: hidden; text-align: center; display: flex; flex-direction: column; gap: 0.5rem; transition: transform 0.3s ease, box-shadow 0.3s ease; }
 [data-theme="light"] .front-card { background: #fff; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
 .front-card:hover { transform: scale(1.05); box-shadow: 0 15px 35px rgba(0,0,0,0.3); z-index: 10; background: rgba(255,255,255,0.08); }
 
